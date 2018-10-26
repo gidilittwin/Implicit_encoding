@@ -13,7 +13,7 @@ from src.models import voxels as CNN
 #from src.utilities import Voxels as VOXELS
 from skimage import measure
 #import scipy.ndimage as ndi
-from scipy.interpolate import RegularGridInterpolator
+#from scipy.interpolate import RegularGridInterpolator
 #import src.utilities.binvox_rw as binvox_rw
 from provider_binvox import ShapeNet as ShapeNet 
 
@@ -22,8 +22,8 @@ from provider_binvox import ShapeNet as ShapeNet
 
 grid_size   = 32
 canvas_size = grid_size
-levelset    = 0.00
-BATCH_SIZE  = 5
+levelset    = 0.1
+BATCH_SIZE  = 1
 num_samples = 1000
 
 
@@ -100,7 +100,15 @@ evals_target['y']     = samples_sdf
 evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
-theta                 = mpx_function_wrapper(encoding,[mode_node,layers])
+#theta                 = mpx_function_wrapper(encoding,[mode_node,layers])
+theta = []
+theta.append({'w':3,'b':32})
+theta.append({'w':32,'b':32})
+theta.append({'w':32,'b':32})
+theta.append({'w':32,'b':32})
+theta.append({'w':32,'b':3})
+
+
 #theta                 = CNN_function_wrapper(images,[mode_node,layers])
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,theta],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
 
@@ -136,7 +144,7 @@ with tf.variable_scope('optimization',reuse=tf.AUTO_REUSE):
     dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
     loss_check    = tf.is_nan(loss)
     loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
-    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'multiplexer_model')
+    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
     optimizer     = tf.train.AdamOptimizer(lr_node, beta1=0.5)
     #optimizer = tf.train.MomentumOptimizer(lr_node, momentum=0.9) 
@@ -166,7 +174,7 @@ for step in range(100000):
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
     
 
-    feed_dict = {lr_node            :0.00001, 
+    feed_dict = {lr_node            :0.01, 
                  encoding           :batch['code'], 
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
                  samples_sdf        :samples_sdf_np}  
@@ -178,7 +186,7 @@ for step in range(100000):
 
 
 #%%
-example = 4
+example = 0
 session.run(mode_node.assign(True)) 
 samples_xyz_np = np.tile(np.reshape(np.stack((xx,yy,zz),axis=-1),(1,-1,3)),(BATCH_SIZE,1,1))
 
@@ -197,11 +205,11 @@ cubed_plot = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/1
 MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='cubed')
 
 
-verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], levelset)
-cubed = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/grid_size*2-1}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
-print(batch['code'])
+#verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], levelset)
+#cubed = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/grid_size*2-1}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
+##MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
+#print(batch['code'])
 
 
 

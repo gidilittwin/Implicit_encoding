@@ -43,8 +43,8 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-            c1 = tf.nn.relu(c1)
-#            c1 = tf.tanh(c1)
+#            c1 = tf.nn.relu(c1)
+            c1 = tf.tanh(c1)
         c1 = tf.squeeze(c1,2)
     return c1
 
@@ -111,8 +111,8 @@ def deep_sdf3(xyz, mode_node, theta):
         else:
             act=False
 
-        image = cell_2d_cnn (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
-#        image = cell_2d (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
+#        image = cell_2d_cnn (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
+        image = cell_2d (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
    
 #    closest_point = image
 #    sdf = tf.sqrt(tf.reduce_sum(tf.square(closest_point-xyz),axis=2,keep_dims=True))
