@@ -95,14 +95,7 @@ class ShapeNet(object):
                 outer_volume       = np.logical_not(voxels_)
                 sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-#                closest_point_o      = np.transpose(closest_point_o,(1,2,3,0)).astype(np.float32)/(self.grid_size-1)*2-1
-#                closest_point_i      = np.transpose(closest_point_i,(1,2,3,0)).astype(np.float32)/(self.grid_size-1)*2-1
-#                mask                 = np.stack((outer_volume,outer_volume,outer_volume),axis=-1)
-#                closest_point        = np.where(mask,closest_point_o,closest_point_i)
                 sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
-#                closest_point_vec    = self.grid - closest_point 
-#                sdf_grads            = closest_point_vec/np.sqrt(np.sum(closest_point_vec**2,axis=-1,keepdims=True))
-#                sdf_grads            = sdf_grads*np.expand_dims(outer_volume,-1)
                 sdf.append(sdf_)      
         voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))

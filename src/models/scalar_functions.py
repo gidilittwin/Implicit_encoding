@@ -56,8 +56,8 @@ def cell_2d_cnn(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=Fals
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-#            c1 = tf.nn.relu(c1)
-            c1 = tf.tanh(c1)
+            c1 = tf.nn.relu(c1)
+#            c1 = tf.tanh(c1)
     return c1
 
 
