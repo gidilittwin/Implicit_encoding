@@ -105,6 +105,82 @@ def mesh_plot(obj,idx=0,type_='mesh'):
         autosize=False,
         title='Mesh',
         scene=dict(
+            xaxis=dict(range=[-1, 1],
+                gridcolor='rgb(255, 255, 255)',
+#                zerolinecolor='rgb(255, 255, 255)',
+                showbackground=True,
+                backgroundcolor='rgb(230, 230,230)'),
+            yaxis=dict(range=[-1, 1],
+                gridcolor='rgb(255, 255, 255)',
+#                zerolinecolor='rgb(255, 255, 255)',
+                showbackground=True,
+                backgroundcolor='rgb(230, 230,230)'),
+            zaxis=dict(range=[-1, 1],
+                gridcolor='rgb(255, 255, 255)',
+#                zerolinecolor='rgb(255, 255, 255)',
+                showbackground=True,
+                backgroundcolor='rgb(28,76,96)')
+            ),)
+
+
+    fig = dict(data=traces, layout=layout)
+#    py.offline.plot(fig,auto_open=True, filename='/Users/gidilittwin/Desktop/plotly_'+type_+'_'+str(idx)+'.html')
+    py.offline.plot(fig)
+    
+    
+    
+    
+def double_mesh_plot(obj,idx=0,type_='mesh'):
+    
+
+    traces = []
+
+
+    
+    # Grid limits
+    traces.append(go.Scatter3d(x=[-1,-1,-1,-1,1,1,1,1],
+                               y=[-1,-1,1,1,-1,-1,1,1],
+                               z=[-1,1,-1,1,-1,1,-1,1],
+                               mode='markers',
+                               opacity=0.0,
+                               marker=dict(size=0.0,opacity=0.0 ))   ) 
+        
+    # Mesh
+    vertices = obj[0]['vertices']
+    faces    = obj[0]['faces']    
+    traces.append(go.Mesh3d(x=vertices[:,0],
+                            y=vertices[:,1],
+                            z=vertices[:,2],
+                            colorscale = [['0'  , 'rgba(20,29,67,0.6)'], 
+                                          ['0.5', 'rgba(51,255,255 ,0.6)'], 
+                                          ['1'  , 'rgba(255  ,191,0,0.6)']],                                           
+                            intensity = vertices[:,2]*255,
+                            opacity=1.0,
+                            i=faces[:,0],
+                            j=faces[:,1],
+                            k=faces[:,2]))
+
+    vertices = obj[1]['vertices']
+    faces    = obj[1]['faces']    
+    traces.append(go.Mesh3d(x=vertices[:,0],
+                            y=vertices[:,1],
+                            z=vertices[:,2],
+                            colorscale = [['0'  , 'rgba(255,45,25 ,0.6)'], 
+                                          ['0.5', 'rgba(255,45,25 ,0.6)'], 
+                                          ['1'  , 'rgba(255,45,25 ,0.6)']],                                           
+                            intensity = vertices[:,2]*110,
+                            opacity=0.2,
+                            i=faces[:,0],
+                            j=faces[:,1],
+                            k=faces[:,2]))
+ 
+
+    layout = dict(
+        width=1200,
+        height=1200,
+        autosize=False,
+        title='Mesh',
+        scene=dict(
             xaxis=dict(range=[-1.1, 1.1],
                 gridcolor='rgb(255, 255, 255)',
 #                zerolinecolor='rgb(255, 255, 255)',
@@ -129,9 +205,6 @@ def mesh_plot(obj,idx=0,type_='mesh'):
     
     
     
-    
-    
-
 
 def cloud_plot(pointcloud,cloud_gt,reprojected,idx=0):
     

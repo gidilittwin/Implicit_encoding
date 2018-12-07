@@ -43,22 +43,22 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-#            c1 = tf.nn.relu(c1)
-            c1 = tf.tanh(c1)
+            c1 = tf.nn.relu(c1)
+#            c1 = tf.tanh(c1)
         c1 = tf.squeeze(c1,2)
     return c1
 
-def cell_2d_cnn(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
-    with tf.variable_scope(scope):
-        if normalize==True:
-            weights = weights/tf.norm(weights,axis=1,keep_dims=True)
-        c1 = tf.matmul(in_node,weights) + bias
-        if bn==True:
-            c1 = BatchNorm(c1,mode,scope)
-        if act==True:
-            c1 = tf.nn.relu(c1)
-#            c1 = tf.tanh(c1)
-    return c1
+#def cell_2d_cnn(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
+#    with tf.variable_scope(scope):
+#        if normalize==True:
+#            weights = weights/tf.norm(weights,axis=1,keep_dims=True)
+#        c1 = tf.matmul(in_node,weights) + bias
+#        if bn==True:
+#            c1 = BatchNorm(c1,mode,scope)
+#        if act==True:
+#            c1 = tf.nn.relu(c1)
+##            c1 = tf.tanh(c1)
+#    return c1
 
 
 def softargmax_3d(pred, grid_size_gt, name=None):
@@ -99,27 +99,50 @@ def softargmax_3d(pred, grid_size_gt, name=None):
 
 
 
+def deep_sdf2(xyz, mode_node, theta):
+    image        = xyz
+    for ii in range(len(theta)):
+        if ii<len(theta)-1:
+            act=True
+            bn = False
+        else:
+            act=False
+            bn = False
+        in_size = image.get_shape().as_list()[-1]
+        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
+        image = cell_2d (image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
+    
+    sdf = image
+#    grads = tf.gradients(sdf,xyz)[0]
+#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
+#    sdf = sdf/grads_norm
+    
+    
+    
+    return sdf
+
+
 
 
 
 def deep_sdf3(xyz, mode_node, theta):
-    image = xyz
-
+    image        = xyz
+    feature_maps = []
     for ii in range(len(theta)):
         if ii<len(theta)-1:
             act=True
+            bn = False
         else:
             act=False
-
-#        image = cell_2d_cnn (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
-        image = cell_2d (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
-   
-#    closest_point = image
-#    sdf = tf.sqrt(tf.reduce_sum(tf.square(closest_point-xyz),axis=2,keep_dims=True))
-    sdf = image[:,:,0:1]
-    closest_point = image
+            bn = False
+        feature_maps.append(image)
+        input_  = tf.concat(feature_maps,axis=-1)
+        in_size = input_.get_shape().as_list()[-1]
+        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
+        image = cell_2d (input_,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
     
-    return sdf,closest_point
+    sdf = image
+    return sdf
 
 
 
@@ -174,7 +197,7 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
                                         dtype=tf.float32)   
         samples = samples*tf.pow(U,1/3.)
         
-    response, tensor    = model_fn(samples,args)
+    response    = model_fn(samples,args)
     dy_dx   = []
     d2y_dx2 = []
     for ii in range(shape[0]):
@@ -186,7 +209,7 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
     d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
     dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
     mask    = tf.cast(tf.greater(response,0.),tf.float32)
-    evals = {'x':samples,'y':response,'dydx':dy_dx,'d2ydx2':d2y_dx2,'dydx_norm':dy_dx_n,'mask':mask,'cp':tensor}
+    evals = {'x':samples,'y':response,'dydx':dy_dx,'d2ydx2':d2y_dx2,'dydx_norm':dy_dx_n,'mask':mask}
     return evals
         
 

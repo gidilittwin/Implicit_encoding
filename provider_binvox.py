@@ -16,11 +16,11 @@ import scipy.ndimage as ndi
 
     
 class ShapeNet(object):
-    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0):
+    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,list_=['02691156']):
         self.path_ = path_
-        self.train_files = self.getModelNet10Files('train')
-        self.test_files  = self.getModelNet10Files('test')
-        self.debug_files = self.getModelNet10Files('debug')
+        self.train_files = self.getModelNet10Files('train',list_=list_)
+        self.test_files  = self.getModelNet10Files('test',list_=list_)
+        self.debug_files = self.getModelNet10Files('debug',list_=list_)
         self.train_size  = len(self.train_files)
         self.test_size   =  len(self.test_files) 
         self.debug_size   =  len(self.debug_files)      
@@ -37,8 +37,7 @@ class ShapeNet(object):
 
 
 
-    def getModelNet10Files(self,type_):
-        list_ = ['02691156']
+    def getModelNet10Files(self,type_,list_):
         all_files = []
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
@@ -62,6 +61,10 @@ class ShapeNet(object):
         
     def get_batch(self,type_):
         size = self.batch_size
+        if self.train_step+size>self.train_size:
+            self.reset()
+        
+        
         if type_=='train':
             indexes = np.arange(self.train_step,self.train_step+size)    
             indexes = indexes%self.train_size
@@ -89,6 +92,7 @@ class ShapeNet(object):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
                 voxels_ = m1.data
+                voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
                 voxels.append(voxels_)
                 
                 inner_volume       = voxels_
@@ -102,7 +106,7 @@ class ShapeNet(object):
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':indexes}
+        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1)}
 
 
     def convert2np(self,type_,up_samp):

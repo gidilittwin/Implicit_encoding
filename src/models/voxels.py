@@ -76,22 +76,36 @@ def resnet(data_node, mode_node,layers):
 
 
 
-def multiplexer(data_node, mode_node,layers):
-    shape = data_node.get_shape().as_list()
-    weights = []
-    with tf.variable_scope("input"):
-        data_node = cell1D(data_node,128, mode_node, SCOPE='l1', with_act=True, with_bn=False)        
-        data_node = cell1D(data_node,256, mode_node, SCOPE='l2', with_act=True, with_bn=False)        
-        data_node = cell1D(data_node,512, mode_node, SCOPE='l3', with_act=True, with_bn=False)        
-        data_node = cell1D(data_node,1024, mode_node, SCOPE='l4', with_act=True, with_bn=False)          
-        with tf.variable_scope("fully"):
-            for ii in range(len(layers)-1):
-                layer_in = layers[ii]
-                layer_out = layers[ii+1]
-                w = tf.reshape(cell1D(data_node,layer_in*layer_out, mode_node, SCOPE='w'+str(ii), with_act=False, with_bn=False),(shape[0],layer_in,layer_out) )
-                b = tf.reshape(cell1D(data_node,layer_out, mode_node, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(shape[0],1,layer_out) )
-                weights.append({'w':w,'b':b})
-    return weights
+#def multiplexer(data_node, mode_node,layers):
+#    shape = data_node.get_shape().as_list()
+#    weights = []
+#    with tf.variable_scope("input"):
+#        data_node = cell1D(data_node,128, mode_node, SCOPE='l1', with_act=True, with_bn=False)        
+#        data_node = cell1D(data_node,256, mode_node, SCOPE='l2', with_act=True, with_bn=False)        
+#        data_node = cell1D(data_node,512, mode_node, SCOPE='l3', with_act=True, with_bn=False)        
+#        data_node = cell1D(data_node,1024, mode_node, SCOPE='l4', with_act=True, with_bn=False)          
+#        with tf.variable_scope("fully"):
+#            for ii in range(len(layers)-1):
+#                layer_in = layers[ii]
+#                layer_out = layers[ii+1]
+#                w = tf.reshape(cell1D(data_node,layer_in*layer_out, mode_node, SCOPE='w'+str(ii), with_act=False, with_bn=False),(shape[0],layer_in,layer_out) )
+#                b = tf.reshape(cell1D(data_node,layer_out, mode_node, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(shape[0],1,layer_out) )
+#                weights.append({'w':w,'b':b})
+#    return weights
+
+def multiplexer(data_node, mode_node):
+    with tf.variable_scope("Multiplexer"):
+        current = cell1D(data_node,64, mode_node, SCOPE='l1', with_act=False, with_bn=False)        
+#        current = cell1D(current,256, mode_node, SCOPE='l2', with_act=True, with_bn=False)
+#        current = cell1D(current,256, mode_node, SCOPE='l3', with_act=False, with_bn=False)
+        current = tf.tanh(current)
+    return current
+
+
+
+
+
+
 
 
 

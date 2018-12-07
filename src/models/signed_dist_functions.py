@@ -26,12 +26,11 @@ def torus(grid,s_):
 
 
     
-def sphere(grid,s):
-    return tf.sqrt(tf.reduce_sum(tf.pow(grid,2),axis=-1)) - s
+def sphere(grid,theta):
+    return tf.sqrt(tf.reduce_sum(tf.pow(grid-theta[1],2),axis=-1))- theta[0]
     
-def box(grid,s_):
-    dim = np.expand_dims(np.expand_dims(np.array([s_]),0),0)
-    box = tf.abs(grid) - dim
+def box(grid,theta):
+    box = tf.abs(grid-theta[1]) - tf.reshape(theta[0],(1,1,1,1))
     return tf.reduce_max(box,axis=-1)
     
 
