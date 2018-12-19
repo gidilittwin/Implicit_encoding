@@ -38,11 +38,11 @@ levelset    = 0.0
 BATCH_SIZE  = 1
 num_samples = 1000
 type_ = ''
-list_ = ['02691156']
+list_ = ['planes']
 
 #%%
-path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
-#path = '/media/gidi/SSD/DropboxContainer/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetVox32/'
+#path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
+path = '/media/gidi/SSD/DropboxContainer/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
 
 SN    = ShapeNet(path,rand=True,batch_size=BATCH_SIZE,grid_size=grid_size,levelset=levelset,list_=list_,type_=type_)
 batch = SN.get_batch(type_=type_)
@@ -53,7 +53,7 @@ size_ = SN.train_size
 
 verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][0,:,:,:], levelset)
 cubed = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/grid_size*2-1}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
+MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
 
 
