@@ -1,23 +1,48 @@
 import numpy as np
 import tensorflow as tf
-from model_ops_2 import cell1D,cell2D_res,CONV2D,BatchNorm
 import signed_dist_functions as SDF
+from tensorflow.python.ops import control_flow_ops
+from tensorflow.python.training import moving_averages
+from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
+
+
 
 def mydropout(mode_node, x, prob):
   # TODO: test if this is a tensor scalar of value 1.0
 
     return tf.cond(mode_node, lambda: tf.nn.dropout(x, prob), lambda: x)
+ 
+
+def BatchNorm(inputT, is_training=True, scope=None):
+    # Note: is_training is tf.placeholder(tf.bool) type
+    return tf.cond(is_training,  
+                lambda: batch_norm(inputT, is_training=True,  
+                                   center=True, scale=True, decay=0.9, updates_collections=None, scope=scope),  
+                lambda: batch_norm(inputT, is_training=False,  
+                                   center=True, scale=True, decay=0.9, updates_collections=None, scope=scope, reuse = True))  
+
     
+    
+
+def CONV2D(shape):
+#   initializer = tf.variance_scaling_initializer(factor=1.0, mode='FAN_IN') 
+   initializer = tf.random_normal_initializer( stddev=1./np.sqrt(shape[0]*shape[1]*shape[2]))
+#   initializer = tf.random_normal_initializer( stddev=np.sqrt(2./(shape[0]*shape[1]*shape[2])))
+   conv_weights = tf.get_variable('weights',shape, initializer = initializer)
+   conv_biases  = tf.get_variable('biases',[shape[-1]], initializer=tf.constant_initializer(0.0))
+   tf.add_to_collection('l2_res',(tf.nn.l2_loss(conv_weights)))
+   return conv_weights, conv_biases
+
+
+
+
+
+
+
 #%% DETECTION
         
 
-def volumetric_softmax(node,name):
-#    T = tf.get_variable(name='Temperature', initializer = [1.],trainable = False, dtype='float32')
-#    node = node/T
-    sums = tf.reduce_sum(tf.exp(node), axis=[1,2,3], keep_dims=True)
-    softmax = tf.divide(tf.exp(node),sums,name=name)
-    return softmax
-    
+
 #def cell_2d(image,output_dim,scope,mode,act=True):
 #    with tf.variable_scope(scope):
 #        input_dim = image.get_shape().as_list()[-1]
@@ -37,13 +62,20 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
         output_dim = bias
         conv1_w, conv1_b = CONV2D([1,1,input_dim,output_dim])
         if normalize==True:
-            conv1_w = conv1_w/tf.norm(conv1_w,axis=-1,keep_dims=True)
+#            conv1_w = conv1_w/tf.norm(conv1_w,axis=-1,keep_dims=True)
+            #        matrix = tf.nn.l2_normalize(matrix,(0,1))
+            matrix = tf.squeeze(conv1_w,axis=(0,1))
+            e,v  = tf.linalg.eigh(tf.matmul(tf.transpose(matrix),matrix))
+            large_e = e[-1]
+            conv1_w = conv1_w/large_e*2.5
+            
         c1 = tf.nn.conv2d(in_node,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
         c1 = tf.nn.bias_add(c1, conv1_b)
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-            c1 = tf.nn.relu(c1)
+#            c1 = tf.nn.relu(c1)
+            c1 = tf.nn.selu(c1)
 #            c1 = tf.tanh(c1)
         c1 = tf.squeeze(c1,2)
     return c1
@@ -101,6 +133,9 @@ def softargmax_3d(pred, grid_size_gt, name=None):
 
 def deep_sdf2(xyz, mode_node, theta):
     image        = xyz
+    image_shape = image.get_shape().as_list()
+    if len(image_shape)==4:
+        image = tf.reshape(image,(image_shape[0],-1,3))
     for ii in range(len(theta)):
         if ii<len(theta)-1:
             act=True
@@ -110,24 +145,24 @@ def deep_sdf2(xyz, mode_node, theta):
             bn = False
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-        image = cell_2d (image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-    
+        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
     sdf = image
+    if len(image_shape)==4:
+        sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
 #    grads = tf.gradients(sdf,xyz)[0]
 #    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
 #    sdf = sdf/grads_norm
-    
-    
-    
     return sdf
 
 
 
 
-
-def deep_sdf3(xyz, mode_node, theta):
+def deep_sdf4(xyz,embeddings, mode_node, theta):
     image        = xyz
-    feature_maps = []
+    image_shape = image.get_shape().as_list()
+    if len(image_shape)==4:
+        image = tf.reshape(image,(image_shape[0],-1,3))
+    
     for ii in range(len(theta)):
         if ii<len(theta)-1:
             act=True
@@ -135,15 +170,45 @@ def deep_sdf3(xyz, mode_node, theta):
         else:
             act=False
             bn = False
-        feature_maps.append(image)
-        input_  = tf.concat(feature_maps,axis=-1)
-        in_size = input_.get_shape().as_list()[-1]
+        in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-        image = cell_2d (input_,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-    
+        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
     sdf = image
+    if len(image_shape)==4:
+        sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
+
+#    grads = tf.gradients(sdf,xyz)[0]
+#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
+#    sdf = sdf/grads_norm
+
     return sdf
 
+
+
+
+
+
+    
+def deep_sdf3(in_, mode_node, theta):
+
+    image_shape = in_.get_shape().as_list()
+    if len(image_shape)==4:
+        in_ = tf.reshape(in_,(image_shape[0],-1,3))    
+    embeddings = tf.reshape(in_[:,:,3:],(1,-1,64,4))
+    xyz        = in_[:,:,0:3]
+    spheres = []
+    for shape in range(64):
+        theta = []
+        theta.append(embeddings[:,:,shape,0:3])
+        theta.append(embeddings[:,:,shape,3:4])
+        spheres.append(SDF.sphere_net(xyz,theta))
+    merged = tf.concat(spheres,axis=-1)
+    sdf = tf.reduce_min(merged,axis=-1,keepdims=True)
+   
+    if len(image_shape)==4:
+        sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
+
+    return sdf
 
 
 
@@ -207,7 +272,7 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
         d2y_dx2.append(d2ydx2)     
     dy_dx = tf.concat(dy_dx,axis=0) 
     d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
-    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
+    dy_dx_n = tf.norm(dy_dx,axis=-1,keepdims=True)
     mask    = tf.cast(tf.greater(response,0.),tf.float32)
     evals = {'x':samples,'y':response,'dydx':dy_dx,'d2ydx2':d2y_dx2,'dydx_norm':dy_dx_n,'mask':mask}
     return evals

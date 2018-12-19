@@ -8,6 +8,7 @@ import glob
 import tensorflow as tf
 import src.utilities.binvox_rw as binvox_rw
 import scipy.ndimage as ndi
+from scipy import misc
 
 
 
@@ -16,14 +17,12 @@ import scipy.ndimage as ndi
 
     
 class ShapeNet(object):
-    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,list_=['02691156']):
+    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,list_=['02691156'],type_='train'):
         self.path_ = path_
-        self.train_files = self.getModelNet10Files('train',list_=list_)
-        self.test_files  = self.getModelNet10Files('test',list_=list_)
-        self.debug_files = self.getModelNet10Files('debug',list_=list_)
-        self.train_size  = len(self.train_files)
-        self.test_size   =  len(self.test_files) 
-        self.debug_size   =  len(self.debug_files)      
+        self.train_paths = self.getModelPaths(type_,list_=list_)
+        self.train_size  = len(self.train_paths)
+        self.train_files,self.train_image_files = self.getModelFiles()
+
         self.rand = rand
         self.reset()
         self.batch_size = batch_size
@@ -35,29 +34,35 @@ class ShapeNet(object):
         self.grid = np.stack(np.meshgrid(self.x,self.y,self.z),axis=-1)
         self.levelset        = 0.00
 
-
-
-    def getModelNet10Files(self,type_,list_):
-        all_files = []
+    def getModelPaths(self,type_,list_):
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
-            name = '/model.binvox'
-            files = glob.glob(os.path.join(prefix, '*'))
-            all_files = all_files+  [x + name for x in files]            
-        return  all_files   
+            paths = glob.glob(os.path.join(prefix, '*'))
+        return  paths  
 
+    def getModelFiles(self):
+        paths = self.train_paths
+        vox_files = []
+        image_files = []
+        name = '/model.binvox'
+        for i in range(len(paths)):
+            prefix = paths[i]
+            vox_file = prefix+name
+            images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
+#            all_files = all_files+  [x + name for x in files]     
+            vox_files.append(vox_file)
+            image_files.append(images)
+        return  vox_files,  image_files
+
+ 
+    
     def reset(self):
         if self.rand==False:
             self.train_idx = np.arange(self.train_size)
-            self.test_idx = np.arange(self.test_size)
-            self.debug_idx = np.arange(self.debug_size)
         else:
             self.train_idx = np.random.permutation(self.train_size)
-            self.test_idx = np.random.permutation(self.test_size)
-            self.debug_idx = np.random.permutation(self.debug_size)
         self.train_step = 0    
-        self.test_step  = 0 
-        self.debug_step  = 0 
+
         
     def get_batch(self,type_):
         size = self.batch_size
@@ -65,29 +70,17 @@ class ShapeNet(object):
             self.reset()
         
         
-        if type_=='train':
-            indexes = np.arange(self.train_step,self.train_step+size)    
-            indexes = indexes%self.train_size
-            indexes = self.train_idx[indexes]
-            self.train_step = self.train_step+size
-            files = [self.train_files[j] for j in indexes]
-            code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
-        elif type_=='test':
-            indexes = np.arange(self.test_step,self.test_step+size)    
-            indexes = indexes%self.test_size
-            indexes = self.test_idx[indexes]
-            self.test_step = self.test_step+size
-            files = [self.test_files[j] for j in indexes]
-            code   = np.zeros((self.batch_size,self.test_size),dtype=np.int64)
-        elif type_=='debug':
-            indexes = np.arange(self.debug_step,self.debug_step+size)    
-            indexes = indexes%self.debug_size
-            indexes = self.debug_idx[indexes]
-            self.debug_step = self.debug_step+size
-            files = [self.debug_files[j] for j in indexes]        
-            code   = np.zeros((self.batch_size,self.debug_size),dtype=np.int64)
+        indexes = np.arange(self.train_step,self.train_step+size)    
+        indexes = indexes%self.train_size
+        indexes = self.train_idx[indexes]
+        self.train_step = self.train_step+size
+        files = [self.train_files[j] for j in indexes]
+        image_files = [self.train_image_files[j] for j in indexes]
+        code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
         voxels = []
         sdf    = []
+        images = []
+        alpha = []
         for j in range(size):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
@@ -100,13 +93,23 @@ class ShapeNet(object):
                 sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
-                sdf.append(sdf_)      
+                sdf.append(sdf_) 
+                
+            image_file_rand = np.random.randint(0,len(image_files[j]))   
+            with open(image_files[j][image_file_rand], 'rb') as f:
+                image = misc.imread(f).astype(np.float32)
+                images.append(image[:,:,0:3])
+                alpha.append(image[:,:,3:4])
+
         voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
+        images = np.stack(images,axis=0)
+        alpha  = np.stack(alpha,axis=0)      
+        
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1)}
+        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha}
 
 
     def convert2np(self,type_,up_samp):

@@ -28,6 +28,13 @@ def torus(grid,s_):
     
 def sphere(grid,theta):
     return tf.sqrt(tf.reduce_sum(tf.pow(grid-theta[1],2),axis=-1))- theta[0]
+
+def sphere_net(grid,theta):
+    return tf.sqrt(tf.reduce_sum(tf.pow(grid-theta[0],2),axis=-1,keepdims=True))- theta[1]
+
+
+
+
     
 def box(grid,theta):
     box = tf.abs(grid-theta[1]) - tf.reshape(theta[0],(1,1,1,1))

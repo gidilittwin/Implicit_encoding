@@ -5,7 +5,8 @@ from sys import stderr
 import matplotlib.pyplot as plt
 from PIL import Image
 
-CONTENT_LAYERS = ('relu3_1', 'relu4_1','relu5_2',)
+CONTENT_LAYERS = ('relu3_1', 'relu4_1')
+#CONTENT_LAYERS = ('conv3_1',)
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 try:
@@ -92,7 +93,7 @@ def stylize(Ray_render,ray_steps,reset_opp,session, network, initial, initial_no
     Ray_render.trace(session,ray_steps,reset_opp,num_steps=50)
     
     
-    evals_ = session.run(tf.squeeze(initial,axis=0)) # <= returns jpeg data you can write to disk
+#    evals_ = session.run(tf.squeeze(initial,axis=0)) # <= returns jpeg data you can write to disk
 
 
     def print_progress():
@@ -105,15 +106,14 @@ def stylize(Ray_render,ray_steps,reset_opp,session, network, initial, initial_no
         
 #    aa= np.squeeze(net[CONTENT_LAYERS[0]].eval(session=session),0)
 #    bb = np.squeeze(content_features[CONTENT_LAYERS[0]],0)
-#    cc=aa-bb
 #    pic_aa=np.squeeze(content)
 #    pic_bb=np.squeeze(initial.eval(session=session),0)
 #    
-#    fig = plt.figure()
+#    fig = plt.figure(1)
 #    ax2 = fig.add_subplot(1, 1, 1)
 #    ax2.imshow(pic_aa)
 #    
-#    fig = plt.figure()
+#    fig = plt.figure(2)
 #    ax2 = fig.add_subplot(1, 1, 1)
 #    ax2.imshow(pic_bb)    
 #    aa.aa=1 
