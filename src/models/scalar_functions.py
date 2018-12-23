@@ -34,7 +34,9 @@ def CONV2D(shape):
    return conv_weights, conv_biases
 
 
-
+def lrelu(x, leak=0.2, name="LRelU"):
+   with tf.variable_scope(name):
+       return tf.maximum(x, leak*x)        
 
 
 
@@ -67,7 +69,7 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
             matrix = tf.squeeze(conv1_w,axis=(0,1))
             e,v  = tf.linalg.eigh(tf.matmul(tf.transpose(matrix),matrix))
             large_e = e[-1]
-            conv1_w = conv1_w/large_e*2.5
+            conv1_w = conv1_w/large_e
             
         c1 = tf.nn.conv2d(in_node,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
         c1 = tf.nn.bias_add(c1, conv1_b)
@@ -80,17 +82,19 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
         c1 = tf.squeeze(c1,2)
     return c1
 
-#def cell_2d_cnn(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
-#    with tf.variable_scope(scope):
-#        if normalize==True:
-#            weights = weights/tf.norm(weights,axis=1,keep_dims=True)
-#        c1 = tf.matmul(in_node,weights) + bias
-#        if bn==True:
-#            c1 = BatchNorm(c1,mode,scope)
-#        if act==True:
-#            c1 = tf.nn.relu(c1)
-##            c1 = tf.tanh(c1)
-#    return c1
+def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
+    with tf.variable_scope(scope):
+        if normalize==True:
+            weights = weights/tf.norm(weights,axis=1,keep_dims=True)
+        c1 = tf.matmul(in_node,weights['w']) + weights['b']
+        if bn==True:
+            c1 = BatchNorm(c1,mode,scope)
+        if act==True:
+            c1 = tf.nn.relu(c1)
+#            c1 = lrelu(c1)
+#            c1 = tf.nn.selu(c1)
+#            c1 = tf.tanh(c1)
+    return c1
 
 
 def softargmax_3d(pred, grid_size_gt, name=None):
@@ -145,7 +149,8 @@ def deep_sdf2(xyz, mode_node, theta):
             bn = False
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
+#        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
+        image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=False,bn=bn) 
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
@@ -272,7 +277,7 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
         d2y_dx2.append(d2ydx2)     
     dy_dx = tf.concat(dy_dx,axis=0) 
     d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
-    dy_dx_n = tf.norm(dy_dx,axis=-1,keepdims=True)
+    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
     mask    = tf.cast(tf.greater(response,0.),tf.float32)
     evals = {'x':samples,'y':response,'dydx':dy_dx,'d2ydx2':d2y_dx2,'dydx_norm':dy_dx_n,'mask':mask}
     return evals
