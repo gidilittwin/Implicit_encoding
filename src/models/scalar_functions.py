@@ -6,6 +6,13 @@ from tensorflow.python.training import moving_averages
 from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 
 
+def reduce_var(x, axis=None, keepdims=False):
+    m = tf.reduce_mean(x, axis=axis, keep_dims=True)
+    devs_squared = tf.square(x - m)
+    return tf.reduce_mean(devs_squared, axis=axis, keep_dims=keepdims)
+
+def reduce_std(x, axis=None, keepdims=False):
+    return tf.sqrt(reduce_var(x, axis=axis, keepdims=keepdims))
 
 def mydropout(mode_node, x, prob):
   # TODO: test if this is a tensor scalar of value 1.0
@@ -24,12 +31,14 @@ def BatchNorm(inputT, is_training=True, scope=None):
     
     
 
-def CONV2D(shape):
-#   initializer = tf.variance_scaling_initializer(factor=1.0, mode='FAN_IN') 
+def CONV2D(shape,bias=True):
    initializer = tf.random_normal_initializer( stddev=1./np.sqrt(shape[0]*shape[1]*shape[2]))
 #   initializer = tf.random_normal_initializer( stddev=np.sqrt(2./(shape[0]*shape[1]*shape[2])))
    conv_weights = tf.get_variable('weights',shape, initializer = initializer)
-   conv_biases  = tf.get_variable('biases',[shape[-1]], initializer=tf.constant_initializer(0.0))
+   if bias==True:
+       conv_biases  = tf.get_variable('biases',[shape[-1]], initializer=tf.constant_initializer(0.0))
+   else:
+       conv_biases = []
    tf.add_to_collection('l2_res',(tf.nn.l2_loss(conv_weights)))
    return conv_weights, conv_biases
 
@@ -39,23 +48,6 @@ def lrelu(x, leak=0.2, name="LRelU"):
        return tf.maximum(x, leak*x)        
 
 
-
-
-#%% DETECTION
-        
-
-
-#def cell_2d(image,output_dim,scope,mode,act=True):
-#    with tf.variable_scope(scope):
-#        input_dim = image.get_shape().as_list()[-1]
-#        conv1_w, conv1_b = CONV2D([1,1,input_dim,output_dim])
-#        c1 = tf.nn.conv2d(image,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
-#        c1 = tf.nn.bias_add(c1, conv1_b)
-#        if act==True:
-##            c1 = BatchNorm(c1,mode,scope)
-#            c1 = tf.nn.relu(c1)
-#    return c1
-    
 
 def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
@@ -76,8 +68,8 @@ def cell_2d(in_node,scope,mode,weights,bias,act=True,normalize=False,bn=False):
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-#            c1 = tf.nn.relu(c1)
-            c1 = tf.nn.selu(c1)
+            c1 = tf.nn.relu(c1)
+#            c1 = tf.nn.selu(c1)
 #            c1 = tf.tanh(c1)
         c1 = tf.squeeze(c1,2)
     return c1
@@ -97,6 +89,35 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     return c1
 
 
+def cell_2d_cnn_style(in_node,scope,mode,in_size,weights,act=True,normalize=False,bn=False):
+    with tf.variable_scope(scope):
+        output_dim = weights['s'].get_shape().as_list()[-1]
+        conv1_w, _ = CONV2D([1,1,in_size,output_dim],bias=False)
+        in_node    = tf.expand_dims(in_node,2)
+        c1         = tf.nn.conv2d(in_node,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
+        if normalize:
+            c1         -= tf.reduce_mean(c1,axis=-1,keep_dims=True)
+            c1          = c1/reduce_std(c1,axis=-1,keepdims=True)
+        c1         = tf.squeeze(c1,2)*weights['s']
+        c1         = c1 +  weights['b']            
+    return c1
+
+
+
+#%% DETECTION
+        
+
+
+
+
+
+
+
+
+
+
+
+
 def softargmax_3d(pred, grid_size_gt, name=None):
     gt_meshgrid = np.meshgrid(np.linspace(0, grid_size_gt-1, grid_size_gt),np.linspace(0, grid_size_gt-1, grid_size_gt),np.linspace(0, grid_size_gt-1, grid_size_gt))
     grid_x = (gt_meshgrid[0]).astype(np.float32)
@@ -112,28 +133,6 @@ def softargmax_3d(pred, grid_size_gt, name=None):
     return coordinates
          
    
-   
-#def deep_sdf2(xyz, mode_node, theta):
-##    xyz_sq = tf.sqrt(tf.reduce_sum(xyz**2,axis=-1,keep_dims=True))
-##    image = tf.concat((xyz,xyz_sq),axis=-1)
-#    image = xyz
-#
-#    for ii in range(len(theta)):
-#        if ii<len(theta)-1:
-#            act=True
-#        else:
-#            act=False
-##        image = cell_2d_cnn (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=False) 
-#        image = cell_2d (image,   'l'+str(ii),mode_node,theta[ii]['w'],theta[ii]['b'],act=act,normalize=True) 
-#
-#    grads = tf.gradients(image,xyz)[0]
-#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
-#    sdf = image/grads_norm
-##    image = tf.nn.relu(image)
-#    
-#    return sdf, image 
-
-
 
 def deep_sdf2(xyz, mode_node, theta):
     image        = xyz
@@ -162,58 +161,119 @@ def deep_sdf2(xyz, mode_node, theta):
 
 
 
-def deep_sdf4(xyz,embeddings, mode_node, theta):
+def deep_sdf4(xyz, mode_node, theta):
     image        = xyz
     image_shape = image.get_shape().as_list()
+    inputs = []
     if len(image_shape)==4:
         image = tf.reshape(image,(image_shape[0],-1,3))
-    
     for ii in range(len(theta)):
-        if ii<len(theta)-1:
-            act=True
-            bn = False
-        else:
-            act=False
-            bn = False
         in_size = image.get_shape().as_list()[-1]
-        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
+        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))        
+        if ii==0:
+            image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=False,normalize=False,bn=False) 
+            inputs.append(image)
+        elif ii<len(theta)-1:
+            image = tf.nn.selu(image)
+            image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=False,normalize=False,bn=False) 
+            inputs.append(image)
+        else:
+            input_last = tf.concat(inputs,axis=-1)
+            input_last = tf.nn.selu(input_last)
+            image = cell_2d_cnn(input_last,   'l'+str(ii),mode_node,theta[ii],act=False,normalize=False,bn=False) 
+    
+    
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
-
-#    grads = tf.gradients(sdf,xyz)[0]
-#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
-#    sdf = sdf/grads_norm
-
     return sdf
 
 
 
 
-
-
-    
-def deep_sdf3(in_, mode_node, theta):
-
-    image_shape = in_.get_shape().as_list()
+def deep_sdf5(xyz, mode_node, theta):
+    image        = xyz
+    image_shape = image.get_shape().as_list()
+#    inputs = []
     if len(image_shape)==4:
-        in_ = tf.reshape(in_,(image_shape[0],-1,3))    
-    embeddings = tf.reshape(in_[:,:,3:],(1,-1,64,4))
-    xyz        = in_[:,:,0:3]
-    spheres = []
-    for shape in range(64):
-        theta = []
-        theta.append(embeddings[:,:,shape,0:3])
-        theta.append(embeddings[:,:,shape,3:4])
-        spheres.append(SDF.sphere_net(xyz,theta))
-    merged = tf.concat(spheres,axis=-1)
-    sdf = tf.reduce_min(merged,axis=-1,keepdims=True)
-   
+        image = tf.reshape(image,(image_shape[0],-1,3))
+    for ii in range(len(theta)):
+        in_size = image.get_shape().as_list()[-1]
+        print('layer '+str(ii)+' size = ' + str(in_size) )        
+        if ii==0:
+            image = cell_2d_cnn_style(image,   'l'+str(ii),mode_node,in_size,theta[ii],act=False,normalize=False,bn=False) 
+#            inputs.append(image)
+        elif ii<len(theta)-1:
+            image = tf.nn.selu(image)
+            image = cell_2d_cnn_style(image,   'l'+str(ii),mode_node,in_size,theta[ii],act=False,normalize=False,bn=False) 
+#            inputs.append(image)
+        else:
+#            input_last = tf.concat(inputs,axis=-1)
+            image = tf.nn.selu(image)
+            image = cell_2d_cnn_style(image,   'l'+str(ii),mode_node,in_size,theta[ii],act=False,normalize=False,bn=False) 
+    
+    sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
-
     return sdf
+
+
+
+
+
+
+def deep_sdf_res(xyz, mode_node, theta):
+    image        = xyz
+    image_shape = image.get_shape().as_list()
+#    inputs = []
+    if len(image_shape)==4:
+        image = tf.reshape(image,(image_shape[0],-1,3))
+    in_size = image.get_shape().as_list()[-1]
+    print('layer 0'+' size = ' + str(in_size) )  
+
+    current = cell_2d_cnn(image,   'l0',mode_node,theta[0],act=False,normalize=False,bn=False) 
+    
+    res1 = tf.nn.relu(current)
+    res1 = cell_2d_cnn(res1,   'res1_0',mode_node,theta[1],act=False,normalize=False,bn=False) 
+    res1 = tf.nn.relu(res1)
+    res1 = cell_2d_cnn(res1,   'res1_1',mode_node,theta[2],act=False,normalize=False,bn=False) 
+    res1 = res1+current 
+    
+    res2 = tf.nn.relu(res1)
+    res2 = cell_2d_cnn(res2,   'res2_0',mode_node,theta[3],act=False,normalize=False,bn=False) 
+    res2 = tf.nn.relu(res2)
+    res2 = cell_2d_cnn(res2,   'res2_1',mode_node,theta[4],act=False,normalize=False,bn=False) 
+    res2 = res2+res1         
+
+    res3 = tf.nn.relu(res2)
+    res3 = cell_2d_cnn(res3,   'res3_0',mode_node,theta[5],act=False,normalize=False,bn=False) 
+    res3 = tf.nn.relu(res3)
+    res3 = cell_2d_cnn(res3,   'res3_1',mode_node,theta[6],act=False,normalize=False,bn=False) 
+    res3 = res3+res2  
+    
+    out = tf.nn.relu(res3)
+    out = cell_2d_cnn(out,   'out',mode_node,theta[7],act=False,normalize=False,bn=False) 
+
+    sdf = out
+    if len(image_shape)==4:
+        sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
+    return sdf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

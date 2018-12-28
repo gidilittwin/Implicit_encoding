@@ -31,11 +31,10 @@ class MOV_AVG(object):
         return np.mean(np.array(self.list))        
 
 
-#path             = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp3/'
-saved_model_path = checkpoint_path+'-600'
-CHECKPOINT_EVERY = 10000
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp9/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp2/-293148'
+CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size   = 36
 canvas_size = grid_size
@@ -64,7 +63,7 @@ y           = np.linspace(-1, 1, grid_size)
 z           = np.linspace(-1, 1, grid_size)
 xx,yy,zz    = np.meshgrid(x, y, z)
 
-grid_size_lr = grid_size
+grid_size_lr = grid_size*2
 x_lr           = np.linspace(-1, 1, grid_size_lr)
 y_lr           = np.linspace(-1, 1, grid_size_lr)
 z_lr           = np.linspace(-1, 1, grid_size_lr)
@@ -139,9 +138,10 @@ theta        = []
 theta.append({'w':32,'in':3})
 theta.append({'w':32,'in':32})
 theta.append({'w':32,'in':32})
-#theta.append({'w':16,'in':16})
-#theta.append({'w':16,'in':16})
-#theta.append({'w':16,'in':16})
+#theta.append({'w':20,'in':20})
+#theta.append({'w':20,'in':20})
+#theta.append({'w':20,'in':20})
+#theta.append({'w':20,'in':20})
 theta.append({'w':1 ,'in':32})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta])
 
@@ -208,7 +208,7 @@ loss_plot = []
 acc_plot  = []
 
 session.run(mode_node.assign(True)) 
-for step in range(100000000):
+while step < 100000000:
     samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples,3))
     batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
@@ -221,6 +221,7 @@ for step in range(100000000):
                  samples_sdf        :samples_sdf_np}  
               
     _, loss_class_,norm_, accuracy_  = session.run([train_op_net, loss_class, norm,accuracy ],feed_dict=feed_dict) 
+#    loss_class_,norm_, accuracy_  = session.run([loss_class, norm,accuracy ],feed_dict=feed_dict) 
     aa_mov_avg = aa_mov.push(accuracy_)
     bb_mov_avg = bb_mov.push(norm_)
     cc_mov_avg = cc_mov.push(loss_class_)
@@ -230,8 +231,8 @@ for step in range(100000000):
         saver.save(session, checkpoint_path, global_step=step)
         last_saved_step = step
     if step % PLOT_EVERY == 0:
-        acc_plot.append(aa_mov_avg)
-        loss_plot.append(np.log(cc_mov_avg+1))
+        acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
+        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg+1)),axis=-1))
         plt.figure(1)
         plt.plot(acc_plot)
         plt.title('accuracy')
@@ -240,26 +241,29 @@ for step in range(100000000):
         plt.plot(loss_plot)        
         plt.title('loss')
         plt.pause(0.05)
-
+        np.save(checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
+        np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))
+    step+=1
 
 
 
 
 if step % 50==49:
     session.run(mode_node.assign(False)) 
-    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(BATCH_SIZE,1,1))
-#    batch                = SN.get_batch(type_=type_)
+    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+    batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+    samples_sdf_np       = np.expand_dims(batch['sdf'][0:1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
     
-    feed_dict = {encoding         :batch['code'], 
-                 images           :batch['images']/255.,
+    feed_dict = {encoding         :batch['code'][0:1,:], 
+                 images           :batch['images'][0:1,:,:,:]/255.,
                  samples_xyz      :samples_xyz_np,
                  samples_sdf      :samples_sdf_np}
     
     
     evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
-    example            = np.random.randint(BATCH_SIZE)
+#    example            = np.random.randint(BATCH_SIZE)
+    example=0
     field              = np.reshape(evals_function_d[example,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
     

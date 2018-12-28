@@ -47,30 +47,33 @@ def resnet_34(example,args_):
 #        c1 = BatchNorm(c1,mode,SCOPE)
 #        c1 = tf.nn.relu(c1)        
     with tf.variable_scope("Residuals"):
-        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1')
+        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1')#68
         current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r2')
         current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r3')
         
-        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4')
+        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4')#34
         current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r5')
         current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r6')
         current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r7')
 
-        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8')
+        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8')#17
         current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r9')
         current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r10')
         current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r11')
         current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r12')
         current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r13')
 
-        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14')
+        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14')#8
         current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r15')
         current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r16')
         
-        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17')
+        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17')#4
         current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r18')
         current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r19')
-        
+
+#        current = cell2D_res(current, 3, base_size*16, base_size*32, mode, 2, 'r20')
+#        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21')
+
 #    with tf.variable_scope('Pooling'):
 ##        current = BatchNorm(current,mode,SCOPE)
 #        featue_size = current.get_shape().as_list()
@@ -87,11 +90,15 @@ def resnet_34(example,args_):
         featue_size = tf.shape(current)
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
+        
+        # Decoder
+#        features = cell1D(features,4096, mode, SCOPE='decode', with_act=True, with_bn=False)
+        
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
-            
             w = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
+#            s = tf.reshape(cell1D(features,layer_out, mode, SCOPE='s'+str(ii), with_act=False, with_bn=False),(featue_size[0],1,layer_out) )
             b = tf.reshape(cell1D(features,layer_out, mode, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':w,'b':b})
     return weights
