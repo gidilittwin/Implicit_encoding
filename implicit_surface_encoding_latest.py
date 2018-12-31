@@ -32,13 +32,13 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp9/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp2/-293148'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp10/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp9/-795813'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size   = 36
 canvas_size = grid_size
-levelset    = 0.1
+levelset    = 0.0
 BATCH_SIZE  = 16
 num_samples = 1000
 type_ = ''
@@ -54,7 +54,7 @@ size_ = SN.train_size
 
 verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][0,:,:,:], levelset)
 cubed = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/grid_size*2-1}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
+MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
 
 
@@ -199,7 +199,7 @@ saver = tf.train.Saver(var_list=all_vars)
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
-#saver.restore(session, saved_model_path)
+saver.restore(session, saved_model_path)
 step = 0
 aa_mov = MOV_AVG(300) 
 bb_mov = MOV_AVG(300) 
@@ -214,7 +214,7 @@ while step < 100000000:
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
 
-    feed_dict = {lr_node            :0.00001,
+    feed_dict = {lr_node            :0.000001,
                  images             :batch['images']/255.,
                  encoding           :batch['code'], 
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
@@ -268,7 +268,7 @@ if step % 50==49:
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
     
     if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
-        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.00)
+        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
         cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
 #        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='cubed')
         

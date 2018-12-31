@@ -85,6 +85,7 @@ class ShapeNet(object):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
                 voxels_ = m1.data
+                voxels_ = voxels_ + np.flip(voxels_,2)
                 voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
                 voxels.append(voxels_)
                 
