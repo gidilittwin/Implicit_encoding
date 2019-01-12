@@ -9,6 +9,7 @@ import tensorflow as tf
 import src.utilities.binvox_rw as binvox_rw
 import scipy.ndimage as ndi
 from scipy import misc
+from skimage import measure
 
 
 
@@ -17,7 +18,7 @@ from scipy import misc
 
     
 class ShapeNet(object):
-    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,list_=['02691156'],type_='train'):
+    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
         self.path_ = path_
         self.train_paths = self.getModelPaths(type_,list_=list_)
         self.train_size  = len(self.train_paths)
@@ -32,12 +33,17 @@ class ShapeNet(object):
         self.y   = np.linspace(-1, 1, grid_size)
         self.z   = np.linspace(-1, 1, grid_size)
         self.grid = np.stack(np.meshgrid(self.x,self.y,self.z),axis=-1)
-        self.levelset        = 0.00
+        self.levelset    = 0.00
+        self.rec_mode    = rec_mode
+        self.num_samples = num_samples
 
     def getModelPaths(self,type_,list_):
+        paths = []
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
-            paths = glob.glob(os.path.join(prefix, '*'))
+            paths_cat = glob.glob(os.path.join(prefix, '*'))
+            paths_cat = paths_cat[0:10]
+            paths = paths+glob.glob(os.path.join(prefix, '*'))
         return  paths  
 
     def getModelFiles(self):
@@ -81,6 +87,7 @@ class ShapeNet(object):
         sdf    = []
         images = []
         alpha = []
+        vertices = []
         for j in range(size):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
@@ -94,6 +101,18 @@ class ShapeNet(object):
                 sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
+                if self.rec_mode:
+                    verts, faces, normals, values = measure.marching_cubes_lewiner(sdf_, 0.0)
+                    np.save(files[j][0:-12]+'verts.npy',verts)
+                    np.save(files[j][0:-12]+'faces.npy',faces)
+                    np.save(files[j][0:-12]+'normals.npy',normals)
+                else:
+                    verts = np.load(files[j][0:-12]+'verts.npy')
+                    num_points = verts.shape[0]
+                    arr_ = np.arange(0,num_points)
+                    perms = np.random.choice(arr_,self.num_samples)
+                    verts_sampled = verts[perms,:]
+                    vertices.append(verts_sampled[:,(2,0,1)])
                 sdf.append(sdf_) 
                 
             image_file_rand = np.random.randint(0,len(image_files[j]))   
@@ -105,12 +124,14 @@ class ShapeNet(object):
         voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
-        alpha  = np.stack(alpha,axis=0)      
+        alpha  = np.stack(alpha,axis=0)  
+        if self.rec_mode==False:
+            vertices = np.stack(vertices,axis=0)
         
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha}
+        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 
     def convert2np(self,type_,up_samp):

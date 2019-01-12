@@ -92,7 +92,7 @@ def resnet_34(example,args_):
         features    = tf.squeeze(current,axis=(1,2))
         
         # Decoder
-#        features = cell1D(features,4096, mode, SCOPE='decode', with_act=True, with_bn=False)
+#        features = cell1D(features,1024, mode, SCOPE='decode', with_act=True, with_bn=False)
         
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
@@ -101,6 +101,8 @@ def resnet_34(example,args_):
 #            s = tf.reshape(cell1D(features,layer_out, mode, SCOPE='s'+str(ii), with_act=False, with_bn=False),(featue_size[0],1,layer_out) )
             b = tf.reshape(cell1D(features,layer_out, mode, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':w,'b':b})
+#            weights.append({'b':b,'s':s})
+
     return weights
 
 

@@ -3,7 +3,7 @@
 import tensorflow as tf
 import numpy as np
 from src.models import scalar_functions as SF
-from src.models import voxels as CNN
+#from src.models import voxels as CNN
 BATCH_SIZE = 1
 from skimage import measure
 import scipy.ndimage as ndi
