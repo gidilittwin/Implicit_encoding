@@ -168,16 +168,22 @@ def cell1D(in_node,output_size, mode_node, SCOPE=None, stddev=0.02, bias_start=0
 
 
 
-def cell2D_res(in_node, k, M, N, mode_node, stride, SCOPE):
+def cell2D_res(in_node, k, M, N, mode_node, stride, SCOPE,use_bn=True):
     with tf.variable_scope(SCOPE+'_1') as scope:
-        batch1 = BatchNorm(in_node,mode_node,scope)
+        if use_bn:
+            batch1 = BatchNorm(in_node,mode_node,scope)
+        else:
+            batch1 = in_node
         relu1 = tf.nn.relu(batch1)
         conv1_w, conv1_b = CONV2D([k,k,M,N])
         conv1 = tf.nn.conv2d(relu1,conv1_w,strides=[1, stride, stride, 1],padding='SAME')
         conv1 = tf.nn.bias_add(conv1, conv1_b)
         print(conv1.get_shape())
     with tf.variable_scope(SCOPE+'_2') as scope:
-        batch2 = BatchNorm(conv1,mode_node,scope)
+        if use_bn:
+            batch2 = BatchNorm(conv1,mode_node,scope)
+        else:
+            batch2 = conv1            
         relu2 = tf.nn.relu(batch2)
         conv2_w, conv2_b = CONV2D([k,k,N,N])
         conv2 = tf.nn.conv2d(relu2,conv2_w,strides=[1, 1, 1, 1],padding='SAME')

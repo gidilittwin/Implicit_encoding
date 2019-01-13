@@ -87,8 +87,13 @@ def cell_2d_assign(in_node,scope,mode,weights,act=True,normalize=False,bn=False)
         opp3 = weights['w'] - conv_weights
         opp4 = weights['b'] - conv_biases
         cost_ops = [opp3,opp4]
+        opp5 = conv_weights
+        opp6 = conv_biases
+        weights_tensor = [opp5,opp6]        
+
         tf.add_to_collection('assign',assign_ops)
         tf.add_to_collection('cost',cost_ops)
+        tf.add_to_collection('weights',weights_tensor)
         c1 = tf.matmul(in_node,conv_weights) + conv_biases
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
@@ -103,8 +108,29 @@ def cell_2d_assign(in_node,scope,mode,weights,act=True,normalize=False,bn=False)
 def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
         if normalize==True:
+            
+            #Reparametrization
             weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
-        c1 = tf.matmul(in_node,weights['w']) + weights['b']
+            c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']            
+
+            #normalization
+#            weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
+#            c1 = tf.matmul(in_node,weights['w']) + weights['b']
+
+            #Spectral
+#            shape = weights['w'].get_shape()
+#            tmp   = tf.reduce_mean(weights['w'],1)
+#            cov   = tf.matmul(tmp,tf.transpose(tmp))/tf.cast(shape[0],tf.float32)
+#            e,v   = tf.linalg.eigh(cov)
+#            ema   = tf.train.ExponentialMovingAverage(decay=0.998)
+#            ma_var = [tf.sqrt(e[-1])]
+#            ema_op = ema.apply(ma_var)
+#            tf.add_to_collection('ma_ops',(ema_op))
+#            div = tf.cond(mode, lambda: tf.sqrt(e[-1]), lambda: ema.average(ma_var[0]))
+#            c1 = tf.matmul(in_node,weights['w'])/div + weights['b']
+
+        else:
+            c1 = tf.matmul(in_node,weights['w']) + weights['b']
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
@@ -112,6 +138,14 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
 #            c1 = lrelu(c1)
 #            c1 = tf.nn.selu(c1)
 #            c1 = tf.tanh(c1)
+            
+#            shape = weights['w'].get_shape().as_list()[-1]
+#            c_a = c1[:,:,0:shape/2]
+#            c_b = c1[:,:,shape/2:]
+#            c_max = tf.maximum(c_a,c_b)
+#            c_min = tf.minimum(c_a,c_b)
+#            c1 = tf.concat((c_max,c_min),axis=-1)
+            
     return c1
 
 
@@ -200,7 +234,7 @@ def deep_sdf2(xyz, mode_node, theta):
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
 #        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-        image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=False,bn=bn) 
+        image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=True,bn=bn) 
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
@@ -380,7 +414,6 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
         
     response    = model_fn(samples,args)
     dy_dx   = []
-    d2y_dx2 = []
     for ii in range(shape[0]):
         dydx   = tf.gradients(response[ii,:,:],samples)[0]
 #        d2ydx2 = tf.gradients(dydx,samples)[0]

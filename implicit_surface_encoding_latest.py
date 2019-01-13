@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from skimage import measure
 from provider_binvox import ShapeNet as ShapeNet 
 from src.utilities import raytrace as RAY
-
+import matplotlib.pyplot as plt
 
 
 class MOV_AVG(object):
@@ -39,7 +39,7 @@ PLOT_EVERY       = 1000
 grid_size   = 36
 canvas_size = grid_size
 levelset    = 0.0
-BATCH_SIZE  = 16
+BATCH_SIZE  = 64
 num_samples = 1000
 type_ = ''
 list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
@@ -74,6 +74,15 @@ cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces,'vertices_up':cloud_up
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 
+pic = batch['images'][0,:,:,:]
+fig = plt.figure()
+plt.imshow(pic/255.)
+
+
+
+
+
+
 
 x           = np.linspace(-1, 1, grid_size)
 y           = np.linspace(-1, 1, grid_size)
@@ -97,7 +106,7 @@ with tf.variable_scope('mode_node',reuse=tf.AUTO_REUSE):
    
 def function_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
-        evaluated_function = SF.deep_sdf1(coordinates,args_[0],args_[1])
+        evaluated_function = SF.deep_sdf2(coordinates,args_[0],args_[1])
 #        evaluated_function = SF.deep_sdf1(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
 
@@ -139,10 +148,10 @@ Ray_render_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'd
 
 
 #%% Sampling in XYZ domain  
-images                = tf.placeholder(tf.float32,shape=(BATCH_SIZE,137,137,3), name='images')  
-encoding              = tf.placeholder(tf.float32,shape=(BATCH_SIZE,size_), name='encoding')  
-samples_sdf           = tf.placeholder(tf.float32,shape=(BATCH_SIZE,None,1), name='samples_sdf')  
-samples_xyz           = tf.placeholder(tf.float32,shape=(BATCH_SIZE,None,3),   name='samples_xyz')  
+images                = tf.placeholder(tf.float32,shape=(None,137,137,3), name='images')  
+encoding              = tf.placeholder(tf.float32,shape=(None,size_), name='encoding')  
+samples_sdf           = tf.placeholder(tf.float32,shape=(None,None,1), name='samples_sdf')  
+samples_xyz           = tf.placeholder(tf.float32,shape=(None,None,3),   name='samples_xyz')  
 
 evals_target          = {}
 evals_target['x']     = samples_xyz
@@ -166,7 +175,7 @@ embeddings   = CNN_function_wrapper(images,[mode_node,32,theta])
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
 evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
 evals_function['y']   = (evals_function['y']+evals_function_r['y'])/2
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 
 labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(BATCH_SIZE,-1)),levelset),tf.int64)
@@ -179,11 +188,12 @@ accuracy           = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_mean(tf.abs(evals_function['dydx_norm']))
+norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
 #loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
 loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
 loss_y             = tf.reduce_mean(delta_y) 
-loss               = loss_class
+loss               = loss_class 
 
 
 
@@ -193,34 +203,35 @@ loss               = loss_class
 
 
 
-with tf.variable_scope('optimization_mesh',reuse=tf.AUTO_REUSE):
-    dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
-    loss_check    = tf.is_nan(loss)
-    loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
-    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')
-    lr_node_mesh  = tf.placeholder(tf.float32,shape=(), name='learning_rate_mesh') 
-    optimizer     = tf.train.AdamOptimizer(lr_node_mesh,beta1=0.9,beta2=0.999)
-    grads         = optimizer.compute_gradients(loss,var_list=model_vars)
-    global_step   = tf.train.get_or_create_global_step()
-    clip_constant = 1
-    g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
-    train_op_mesh = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
-assign_ops = tf.get_collection('assign')
-
-
-cost_ops = tf.get_collection('cost')
-cnn_cost = tf.constant([])
-for ii in range(len(cost_ops)):
-    cnn_cost = tf.concat((cnn_cost,tf.reshape(cost_ops[ii][0]**2,(-1,)),tf.reshape(cost_ops[ii][1]**2,(-1,))),axis=0)
-cnn_cost = tf.reduce_mean(cnn_cost)
+#with tf.variable_scope('optimization_mesh',reuse=tf.AUTO_REUSE):
+#    dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
+#    loss_check    = tf.is_nan(loss)
+#    loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
+#    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')
+#    lr_node_mesh  = tf.placeholder(tf.float32,shape=(), name='learning_rate_mesh') 
+#    optimizer     = tf.train.AdamOptimizer(lr_node_mesh,beta1=0.9,beta2=0.999)
+#    grads         = optimizer.compute_gradients(loss,var_list=model_vars)
+#    global_step   = tf.train.get_or_create_global_step()
+#    clip_constant = 100
+#    g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
+#    train_op_mesh = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
+#assign_ops = tf.get_collection('assign')
+#
+#
+#cost_ops = tf.get_collection('cost')
+#cnn_cost = tf.constant([])
+#for ii in range(len(cost_ops)):
+#    cnn_cost = tf.concat((cnn_cost,tf.reshape(cost_ops[ii][0]**2,(-1,)),tf.reshape(cost_ops[ii][1]**2,(-1,))),axis=0)
+#cnn_cost = tf.reduce_mean(cnn_cost)
+#weights_vars = tf.get_collection('weights')
 with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 #    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
     optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
-    grads         = optimizer.compute_gradients(cnn_cost,var_list=cnn_vars)
+    grads         = optimizer.compute_gradients(loss,var_list=cnn_vars)
     global_step   = tf.train.get_or_create_global_step()
-    clip_constant = 1
+    clip_constant = 10
     g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
     train_op_cnn  = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
 
@@ -257,18 +268,24 @@ while step < 100000000:
 #    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
     
     
-    feed_dict = {images             :batch['images']/255.}   
-    _ = session.run([assign_ops],feed_dict)
-    feed_dict = {lr_node_mesh       :0.0001,
-                 images             :batch['images']/255.,
+#    feed_dict = {images             :batch['images']/255.}   
+#    _ ,weights_vars_= session.run([assign_ops,weights_vars],feed_dict)
+#    feed_dict = {lr_node_mesh       :0.001,
+#                 samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
+#                 samples_sdf        :samples_sdf_np}     
+#    for k in range(3):
+#        _, loss_class_,norm_, accuracy_, weights_vars_  = session.run([train_op_mesh, loss_class, norm,accuracy ,weights_vars],feed_dict=feed_dict) 
+#
+#    feed_dict = {lr_node            :0.0001,
+#                 images             :batch['images']/255.,} 
+#    _,  = session.run([train_op_cnn],feed_dict=feed_dict) 
+    
+    feed_dict = {images             :batch['images']/255.,
+                 lr_node            :0.01,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
                  samples_sdf        :samples_sdf_np}     
-    for k in range(1):
-        _, loss_class_,norm_, accuracy_  = session.run([train_op_mesh, loss_class, norm,accuracy ],feed_dict=feed_dict) 
-                
-    feed_dict = {lr_node            :0.0001,
-                 images             :batch['images']/255.} 
-    _,  = session.run([train_op_cnn],feed_dict=feed_dict) 
+    _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
+    
 
     aa_mov_avg = aa_mov.push(accuracy_)
     bb_mov_avg = bb_mov.push(norm_)
