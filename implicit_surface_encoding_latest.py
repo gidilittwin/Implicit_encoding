@@ -33,7 +33,7 @@ class MOV_AVG(object):
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
 checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/'
-#saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp10_best_set=0.0/-15959'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp10_best_set=0.0/-15959'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size   = 36
@@ -42,10 +42,10 @@ levelset    = 0.0
 BATCH_SIZE  = 16
 num_samples = 1000
 type_ = ''
-#list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
+list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
 #list_ =['04090263'] #gun
-list_ =['02691156']
+#list_ =['02691156']
 #list_ =['test']
 
 
@@ -56,7 +56,7 @@ SN       = ShapeNet(path,rand=rand,
                  batch_size=BATCH_SIZE,
                  grid_size=grid_size,
                  levelset=levelset,
-                 num_samples=num_samples-100,
+                 num_samples=num_samples,
                  list_=list_,
                  type_=type_,
                  rec_mode=rec_mode)
@@ -158,13 +158,14 @@ theta.append({'w':32,'in':3})
 theta.append({'w':32,'in':32})
 theta.append({'w':32,'in':32})
 #theta.append({'w':32,'in':32})
+#theta.append({'w':32,'in':32})
 theta.append({'w':1 ,'in':32})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta])
 
 
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
 evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
-#evals_function['y']   = (evals_function['y']+evals_function_r['y'])/2
+evals_function['y']   = (evals_function['y']+evals_function_r['y'])/2
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -190,32 +191,49 @@ loss               = loss_class
 
 
 
-with tf.variable_scope('optimization',reuse=tf.AUTO_REUSE):
+
+
+with tf.variable_scope('optimization_mesh',reuse=tf.AUTO_REUSE):
     dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
     loss_check    = tf.is_nan(loss)
     loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
-#    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
-    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
-    lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
-    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
-#    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
-#    optimizer     = tf.train.MomentumOptimizer(lr_node, momentum=0.9) 
+    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')
+    lr_node_mesh  = tf.placeholder(tf.float32,shape=(), name='learning_rate_mesh') 
+    optimizer     = tf.train.AdamOptimizer(lr_node_mesh,beta1=0.9,beta2=0.999)
     grads         = optimizer.compute_gradients(loss,var_list=model_vars)
     global_step   = tf.train.get_or_create_global_step()
-    clip_constant = 10
+    clip_constant = 1
     g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
-    train_op_net  = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
+    train_op_mesh = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
+assign_ops = tf.get_collection('assign')
+
+
+cost_ops = tf.get_collection('cost')
+cnn_cost = tf.constant([])
+for ii in range(len(cost_ops)):
+    cnn_cost = tf.concat((cnn_cost,tf.reshape(cost_ops[ii][0]**2,(-1,)),tf.reshape(cost_ops[ii][1]**2,(-1,))),axis=0)
+cnn_cost = tf.reduce_mean(cnn_cost)
+with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
+#    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
+    cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
+    lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
+    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
+    grads         = optimizer.compute_gradients(cnn_cost,var_list=cnn_vars)
+    global_step   = tf.train.get_or_create_global_step()
+    clip_constant = 1
+    g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
+    train_op_cnn  = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
 
 
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 saver = tf.train.Saver(var_list=all_vars)
-
+loader = tf.train.Saver(var_list=cnn_vars)
 
 #%% Train
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
-#saver.restore(session, saved_model_path)
+#loader.restore(session, saved_model_path)
 step = 0
 aa_mov = MOV_AVG(300) 
 bb_mov = MOV_AVG(300) 
@@ -237,16 +255,21 @@ while step < 100000000:
 #    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
 #    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*num_samples,4))
 #    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
- 
-    feed_dict = {lr_node            :0.0001,
+    
+    
+    feed_dict = {images             :batch['images']/255.}   
+    _ = session.run([assign_ops],feed_dict)
+    feed_dict = {lr_node_mesh       :0.0001,
                  images             :batch['images']/255.,
-                 encoding           :batch['code'], 
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
-#                 samples_xyz        :samples_xyz_np,
-                 samples_sdf        :samples_sdf_np}  
-              
-    _, loss_class_,norm_, accuracy_  = session.run([train_op_net, loss_class, norm,accuracy ],feed_dict=feed_dict) 
-#    loss_class_,norm_, accuracy_  = session.run([loss_class, norm,accuracy ],feed_dict=feed_dict) 
+                 samples_sdf        :samples_sdf_np}     
+    for k in range(1):
+        _, loss_class_,norm_, accuracy_  = session.run([train_op_mesh, loss_class, norm,accuracy ],feed_dict=feed_dict) 
+                
+    feed_dict = {lr_node            :0.0001,
+                 images             :batch['images']/255.} 
+    _,  = session.run([train_op_cnn],feed_dict=feed_dict) 
+
     aa_mov_avg = aa_mov.push(accuracy_)
     bb_mov_avg = bb_mov.push(norm_)
     cc_mov_avg = cc_mov.push(loss_class_)
@@ -278,8 +301,7 @@ if step % 50==49:
     batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][0:1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-    feed_dict = {encoding         :batch['code'][0:1,:], 
-                 images           :batch['images'][0:1,:,:,:]/255.,
+    feed_dict = {images           :batch['images'][0:1,:,:,:]/255.,
                  samples_xyz      :samples_xyz_np,
                  samples_sdf      :samples_sdf_np}
     evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    

@@ -83,18 +83,20 @@ def cell_2d_assign(in_node,scope,mode,weights,act=True,normalize=False,bn=False)
         conv_biases  = tf.get_variable('biases' ,shape_b, initializer=tf.constant_initializer(0.0))
         opp1 = conv_weights.assign( weights['w'])
         opp2 = conv_biases.assign( weights['b'])
-        with tf.control_dependencies([opp1,opp2]):
-            # Now, we are under the dependency scope:
-            # All the operations happening here will only happens after 
-            # the "assign_op" has been computed first
-            c1 = tf.matmul(in_node,conv_weights) + conv_biases
-            if bn==True:
-                c1 = BatchNorm(c1,mode,scope)
-            if act==True:
-                c1 = tf.nn.relu(c1)
-    #            c1 = lrelu(c1)
-    #            c1 = tf.nn.selu(c1)
-    #            c1 = tf.tanh(c1)
+        assign_ops = [opp1,opp2]
+        opp3 = weights['w'] - conv_weights
+        opp4 = weights['b'] - conv_biases
+        cost_ops = [opp3,opp4]
+        tf.add_to_collection('assign',assign_ops)
+        tf.add_to_collection('cost',cost_ops)
+        c1 = tf.matmul(in_node,conv_weights) + conv_biases
+        if bn==True:
+            c1 = BatchNorm(c1,mode,scope)
+        if act==True:
+            c1 = tf.nn.relu(c1)
+#            c1 = lrelu(c1)
+#            c1 = tf.nn.selu(c1)
+#            c1 = tf.tanh(c1)
     return c1
 
 

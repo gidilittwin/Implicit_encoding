@@ -42,8 +42,8 @@ class ShapeNet(object):
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:10]
-            paths = paths+glob.glob(os.path.join(prefix, '*'))
+            paths_cat = paths_cat[0:1]
+            paths = paths+paths_cat
         return  paths  
 
     def getModelFiles(self):
