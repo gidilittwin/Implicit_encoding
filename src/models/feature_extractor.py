@@ -94,8 +94,11 @@ def resnet_34(example,args_):
         features    = tf.squeeze(current,axis=(1,2))
         
         # Decoder
-#        features = cell1D(features,1024, mode, SCOPE='decode', with_act=True, with_bn=False)
-        
+        features = cell1D(features,128, mode, SCOPE='decode1', with_act=True, with_bn=False)
+        features = cell1D(features,256, mode, SCOPE='decode2', with_act=True, with_bn=False)
+
+
+
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']

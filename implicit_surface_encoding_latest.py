@@ -39,7 +39,7 @@ PLOT_EVERY       = 1000
 grid_size   = 36
 canvas_size = grid_size
 levelset    = 0.0
-BATCH_SIZE  = 64
+BATCH_SIZE  = 8
 num_samples = 1000
 type_ = ''
 list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
@@ -163,12 +163,12 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
 theta        = []
-theta.append({'w':32,'in':3})
-theta.append({'w':32,'in':32})
-theta.append({'w':32,'in':32})
-#theta.append({'w':32,'in':32})
-#theta.append({'w':32,'in':32})
-theta.append({'w':1 ,'in':32})
+theta.append({'w':64,'in':3})
+theta.append({'w':64,'in':64})
+theta.append({'w':64,'in':64})
+#theta.append({'w':128,'in':128})
+#theta.append({'w':128,'in':128})
+theta.append({'w':1 ,'in':64})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta])
 
 
@@ -190,8 +190,8 @@ delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_mean(tf.abs(evals_function['dydx_norm']))
 norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
-#loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
-loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
+loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
+#loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
 loss_y             = tf.reduce_mean(delta_y) 
 loss               = loss_class 
 
@@ -281,7 +281,7 @@ while step < 100000000:
 #    _,  = session.run([train_op_cnn],feed_dict=feed_dict) 
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.01,
+                 lr_node            :0.00001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
                  samples_sdf        :samples_sdf_np}     
     _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
