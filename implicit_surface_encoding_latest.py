@@ -33,16 +33,16 @@ class MOV_AVG(object):
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
 checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp18(99.3 -13*10)/-7383'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/-7383'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
-grid_size   = 36
-canvas_size = grid_size
-levelset    = 0.0
-BATCH_SIZE  = 8
-num_samples = 1000
-global_points = 100
-type_ = ''
+grid_size        = 36
+canvas_size      = grid_size
+levelset         = 0.0
+BATCH_SIZE       = 8
+num_samples      = 10000
+global_points    = 100
+type_            = ''
 list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
 #list_ =['04090263'] #gun
@@ -128,8 +128,8 @@ def function_wrapper(coordinates,args_):
 
 def CNN_function_wrapper(image,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
-        return CNN.resnet_34(image,args_)
-
+        current = CNN.resnet_44(image,args_)
+        return CNN.regressor(current,args_)
 
 
 def mpx_function_wrapper(encoding,args_):
@@ -192,15 +192,8 @@ norm               = tf.reduce_mean(tf.abs(evals_function['dydx_norm']))
 norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
 loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
-#loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
 loss_y             = tf.reduce_mean(delta_y) 
 loss               = loss_class 
-
-
-
-
-
-
 
 
 
@@ -259,7 +252,7 @@ acc_plot  = []
 session.run(mode_node.assign(True)) 
 while step < 100000000:
     batch                = SN.get_batch(type_=type_)
-    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,1000,3))
+    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples,3))
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
 
@@ -275,17 +268,17 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.001,
+                 lr_node            :0.0001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
     _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
-    
+
 
     aa_mov_avg = aa_mov.push(accuracy_)
     bb_mov_avg = bb_mov.push(norm_)
     cc_mov_avg = cc_mov.push(loss_class_)
-    print('step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,norm: '+str(bb_mov_avg))
+    print('step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,ortho: '+str(norm_))
 
     if step % CHECKPOINT_EVERY == 0 and step!=0:
         saver.save(session, checkpoint_path, global_step=step)
@@ -303,13 +296,19 @@ while step < 100000000:
         plt.pause(0.05)
         np.save(checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
         np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))
+#        plt.figure(1)
+#        plt.plot(testing_[0][0][0,:])
+#        plt.plot(testing_[1][0][0,:])
+#        plt.plot(testing_[2][0][0,:])
+#        plt.title('eigs')
+#        plt.pause(0.05)        
     step+=1
 
 
 
 if step % 50==49:
     session.run(mode_node.assign(False)) 
-    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+    samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
     batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][0:1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    

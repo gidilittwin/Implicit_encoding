@@ -109,6 +109,9 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
         if normalize==True:
             
+            #regular
+#            c1 = tf.matmul(in_node,weights['w']) + weights['b']
+            
             #Reparametrization
             weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
             c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']            
@@ -119,26 +122,43 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
 
 
             #Spectral
-#            eps = 0.01
+#            eps = 0.1
 #            shapes = weights['w'].get_shape().as_list()
-#            if shapes[1]>=shapes[2]:
+#            if shapes[1]>=shapes[2] and shapes[2]!=1:
 #                WW = []
+#                EE = []
 #                for ii in range(8):
 #                    V     = tf.transpose(weights['w'][ii,:,:],(1,0))
 #                    Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
 #                    cov   = tf.matmul(Vc,tf.transpose(Vc))
-#                    e,v   = tf.linalg.eigh(cov)
-#                    e_diag= 1./tf.sqrt(tf.diag(e+eps,name=None))
-#                    W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag),v,transpose_b=True),Vc)
+#                    e,v   = tf.linalg.eigh(cov+eps*tf.eye(shapes[1]))
+#                    e_diag= tf.diag(1./tf.sqrt(e))
+#                    W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag,transpose_a=False),v,transpose_b=True),Vc)
 #                    WW.append(tf.transpose(W))
-##                    tf.add_to_collection('test',[V,Vc,e,v,e_diag])
+#                    EE.append(e)
 #                WW = tf.stack(WW,axis=0) 
-#
+#                EE = tf.reduce_mean(tf.stack(EE,axis=0) ,axis=0,keep_dims=True)
+#                tf.add_to_collection('test',WW)
 #                c1 = tf.matmul(in_node,WW)*weights['g'] + weights['b']   
 #            else:
 #                weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
 #                c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']  
-                
+
+#            shape = c1.get_shape()
+#            tmp = tf.reduce_mean(x,(1,2))
+#            cov = tf.matmul(tmp,tf.transpose(tmp))/tf.cast(shape[0],tf.float32)
+#            e,v  = tf.linalg.eigh(cov)
+#            ema = tf.train.ExponentialMovingAverage(decay=0.998)
+#            ma_var = [tf.sqrt(e[-1])]
+#            ema_op = ema.apply(ma_var)
+#            tf.add_to_collection('ma_ops',(ema_op))
+#            div = tf.cond(mode_node, lambda: tf.sqrt(e[-1]), lambda: ema.average(ma_var[0]))
+#            x = x/div*num
+
+
+
+
+
         else:
             c1 = tf.matmul(in_node,weights['w']) + weights['b']
         if bn==True:
@@ -148,7 +168,8 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
 #            c1 = lrelu(c1)
 #            c1 = tf.nn.selu(c1)
 #            c1 = tf.tanh(c1)
-            
+#            c1 = tf.nn.elu(c1)
+
 #            shape = weights['w'].get_shape().as_list()[-1]
 #            c_a = c1[:,:,0:shape/2]
 #            c_b = c1[:,:,shape/2:]
