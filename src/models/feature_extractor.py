@@ -98,8 +98,8 @@ def regressor(current,args_):
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
         
-        features = cell1D(features,128, mode, SCOPE='decode1', stddev=tf.sqrt(2./featue_size_[-1]), bias_start=0.0, with_act=True, with_bn=False)
-        features = cell1D(features,256, mode, SCOPE='decode2', stddev=tf.sqrt(2./(128))           , bias_start=0.0, with_act=True, with_bn=False)
+        features = cell1D(features,128, mode, SCOPE='decode1', with_act=True, with_bn=False)
+        features = cell1D(features,256, mode, SCOPE='decode2', with_act=True, with_bn=False)
 #        features = cell1D(features,256, mode, SCOPE='decode3', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
 #        features = cell1D(features,256, mode, SCOPE='decode4', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
 
@@ -107,9 +107,9 @@ def regressor(current,args_):
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
             stdev    = tf.sqrt(2./256)
-            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
-            bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
-            gg = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='g'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
+            bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            gg = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='g'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':ww,'b':bb,'g':gg})
 #            weights.append({'w':ww,'b':bb})
     return weights

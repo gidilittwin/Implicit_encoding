@@ -268,7 +268,7 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.0001,
+                 lr_node            :0.000001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
