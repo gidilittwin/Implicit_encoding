@@ -240,6 +240,9 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 saver = tf.train.Saver(var_list=all_vars)
 loader = tf.train.Saver(var_list=cnn_vars)
+#testing = tf.get_collection('test')
+
+
 
 #%% Train
     
@@ -272,7 +275,7 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.0000001,
+                 lr_node            :0.001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     

@@ -117,18 +117,28 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
 #            weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
 #            c1 = tf.matmul(in_node,weights['w']) + weights['b']
 
-            #Spectral
-#            shape = weights['w'].get_shape()
-#            tmp   = tf.reduce_mean(weights['w'],1)
-#            cov   = tf.matmul(tmp,tf.transpose(tmp))/tf.cast(shape[0],tf.float32)
-#            e,v   = tf.linalg.eigh(cov)
-#            ema   = tf.train.ExponentialMovingAverage(decay=0.998)
-#            ma_var = [tf.sqrt(e[-1])]
-#            ema_op = ema.apply(ma_var)
-#            tf.add_to_collection('ma_ops',(ema_op))
-#            div = tf.cond(mode, lambda: tf.sqrt(e[-1]), lambda: ema.average(ma_var[0]))
-#            c1 = tf.matmul(in_node,weights['w'])/div + weights['b']
 
+            #Spectral
+#            eps = 0.01
+#            shapes = weights['w'].get_shape().as_list()
+#            if shapes[1]>=shapes[2]:
+#                WW = []
+#                for ii in range(8):
+#                    V     = tf.transpose(weights['w'][ii,:,:],(1,0))
+#                    Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
+#                    cov   = tf.matmul(Vc,tf.transpose(Vc))
+#                    e,v   = tf.linalg.eigh(cov)
+#                    e_diag= 1./tf.sqrt(tf.diag(e+eps,name=None))
+#                    W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag),v,transpose_b=True),Vc)
+#                    WW.append(tf.transpose(W))
+##                    tf.add_to_collection('test',[V,Vc,e,v,e_diag])
+#                WW = tf.stack(WW,axis=0) 
+#
+#                c1 = tf.matmul(in_node,WW)*weights['g'] + weights['b']   
+#            else:
+#                weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
+#                c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']  
+                
         else:
             c1 = tf.matmul(in_node,weights['w']) + weights['b']
         if bn==True:
