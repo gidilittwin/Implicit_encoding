@@ -18,12 +18,13 @@ from skimage import measure
 
     
 class ShapeNet(object):
-    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
+    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False,binvox='/model.binvox',obj=''):
         self.path_ = path_
+        self.binvox = binvox
+        self.obj    = obj
         self.train_paths = self.getModelPaths(type_,list_=list_)
         self.train_size  = len(self.train_paths)
         self.train_files,self.train_image_files = self.getModelFiles()
-
         self.rand = rand
         self.reset()
         self.batch_size = batch_size
@@ -48,16 +49,20 @@ class ShapeNet(object):
 
     def getModelFiles(self):
         paths = self.train_paths
-        vox_files = []
+        vox_files   = []
         image_files = []
-        name = '/model.binvox'
+        obj_files   = []
+        binvox_name = self.binvox
+        obj_name    = self.obj
         for i in range(len(paths)):
             prefix = paths[i]
-            vox_file = prefix+name
+            vox_file = prefix+binvox_name
+            obj_file = prefix+obj_name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
 #            all_files = all_files+  [x + name for x in files]     
             vox_files.append(vox_file)
             image_files.append(images)
+            obj_files.append(obj_file)
         return  vox_files,  image_files
 
  
@@ -106,13 +111,13 @@ class ShapeNet(object):
                     np.save(files[j][0:-12]+'verts.npy',verts)
                     np.save(files[j][0:-12]+'faces.npy',faces)
                     np.save(files[j][0:-12]+'normals.npy',normals)
-                else:
-                    verts = np.load(files[j][0:-12]+'verts.npy')
-                    num_points = verts.shape[0]
-                    arr_ = np.arange(0,num_points)
-                    perms = np.random.choice(arr_,self.num_samples)
-                    verts_sampled = verts[perms,:]
-                    vertices.append(verts_sampled[:,(2,0,1)])
+#                else:
+#                    verts = np.load(files[j][0:-12]+'verts.npy')
+#                    num_points = verts.shape[0]
+#                    arr_ = np.arange(0,num_points)
+#                    perms = np.random.choice(arr_,self.num_samples)
+#                    verts_sampled = verts[perms,:]
+#                    vertices.append(verts_sampled[:,(2,0,1)])
                 sdf.append(sdf_) 
                 
             image_file_rand = np.random.randint(0,len(image_files[j]))   
@@ -125,13 +130,13 @@ class ShapeNet(object):
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
-        if self.rec_mode==False:
-            vertices = np.stack(vertices,axis=0)
+#        if self.rec_mode==False:
+#            vertices = np.stack(vertices,axis=0)
         
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha}
 
 
     def convert2np(self,type_,up_samp):

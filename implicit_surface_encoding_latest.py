@@ -31,22 +31,22 @@ class MOV_AVG(object):
         return np.mean(np.array(self.list))        
 
 
-path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/-7383'
+path             = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
+checkpoint_path  = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/Checkpoints/exp19/'
+saved_model_path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/Checkpoints/exp17/-7383'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
 canvas_size      = grid_size
 levelset         = 0.0
 BATCH_SIZE       = 8
-num_samples      = 10000
+num_samples      = 100
 global_points    = 100
 type_            = ''
-list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
+#list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
 #list_ =['04090263'] #gun
-#list_ =['02691156']
+list_ =['02691156']
 #list_ =['test']
 
 
@@ -60,7 +60,10 @@ SN       = ShapeNet(path,rand=rand,
                  num_samples=num_samples,
                  list_=list_,
                  type_=type_,
-                 rec_mode=rec_mode)
+                 rec_mode=rec_mode,
+#                 binvox='/models/model_normalized.solid.binvox')
+                 binvox='/model.binvox')
+
 #for ii in range(0,SN.train_size):
 #    batch = SN.get_batch(type_=type_)
 #    print(str(SN.train_step)+' /'+str(SN.train_size))
@@ -68,10 +71,10 @@ SN       = ShapeNet(path,rand=rand,
 batch = SN.get_batch(type_=type_)
 size_ = SN.train_size
 verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][0,:,:,:], levelset)
-vertices_up = batch['vertices']
+#vertices_up = batch['vertices']
 
-cloud_up = vertices_up[0,:,:]
-cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces,'vertices_up':cloud_up/(grid_size-1)*2-1}
+#cloud_up = vertices_up[0,:,:]
+cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size-1)*2-1}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 
@@ -107,8 +110,8 @@ with tf.variable_scope('mode_node',reuse=tf.AUTO_REUSE):
    
 def function_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
-        evaluated_function = SF.deep_sdf2(coordinates,args_[0],args_[1])
-#        evaluated_function = SF.deep_sdf1(coordinates,args_[0],args_[1],args_[2])
+#        evaluated_function = SF.deep_sdf2(coordinates,args_[0],args_[1])
+        evaluated_function = SF.deep_sdf3(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
 
 #def conditioned_function_wrapper(coordinates,args_):
@@ -173,8 +176,10 @@ theta.append({'w':1 ,'in':64})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
-evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
-evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
+#evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
+#evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
+evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings,theta],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
+evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings,theta],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
 evals_function['y']   = (evals_function['y']+evals_function_r['y'])/2
 
 
@@ -219,8 +224,8 @@ loss               = loss_class
 #cnn_cost = tf.reduce_mean(cnn_cost)
 #weights_vars = tf.get_collection('weights')
 with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
-#    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
-    cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
+    cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
+#    cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
     optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
     grads         = optimizer.compute_gradients(loss,var_list=cnn_vars)
@@ -268,7 +273,7 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.0001,
+                 lr_node            :0.1,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
@@ -279,29 +284,22 @@ while step < 100000000:
     bb_mov_avg = bb_mov.push(norm_)
     cc_mov_avg = cc_mov.push(loss_class_)
     print('step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,ortho: '+str(norm_))
-
-    if step % CHECKPOINT_EVERY == 0 and step!=0:
-        saver.save(session, checkpoint_path, global_step=step)
-        last_saved_step = step
-    if step % PLOT_EVERY == 0:
-        acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
-        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg+1)),axis=-1))
-        plt.figure(1)
-        plt.plot(acc_plot)
-        plt.title('accuracy')
-        plt.pause(0.05)
-        plt.figure(2)
-        plt.plot(loss_plot)        
-        plt.title('loss')
-        plt.pause(0.05)
-        np.save(checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
-        np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))
+#    if step % CHECKPOINT_EVERY == 0 and step!=0:
+#        saver.save(session, checkpoint_path, global_step=step)
+#        last_saved_step = step
+#    if step % PLOT_EVERY == 0:
+#        acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
+#        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg+1)),axis=-1))
 #        plt.figure(1)
-#        plt.plot(testing_[0][0][0,:])
-#        plt.plot(testing_[1][0][0,:])
-#        plt.plot(testing_[2][0][0,:])
-#        plt.title('eigs')
-#        plt.pause(0.05)        
+#        plt.plot(acc_plot)
+#        plt.title('accuracy')
+#        plt.pause(0.05)
+#        plt.figure(2)
+#        plt.plot(loss_plot)        
+#        plt.title('loss')
+#        plt.pause(0.05)
+#        np.save(checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
+#        np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))
     step+=1
 
 
