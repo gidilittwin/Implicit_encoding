@@ -34,15 +34,15 @@ class MOV_AVG(object):
 
 grid_size   = 36
 canvas_size = grid_size
-levelset    = 0.0
+levelset    = 0.1
 BATCH_SIZE  = 1
-num_samples = 10000
+num_samples = 1000
 type_ = ''
 list_ = ['02691156']
 
 #%%
-path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering/'
-#path = '/media/gidi/SSD/DropboxContainer/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
+path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
+#path = '/media/gidi/SSD/DropboxContainer/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetVox32/'
 
 SN    = ShapeNet(path,rand=True,batch_size=BATCH_SIZE,grid_size=grid_size,levelset=levelset,list_=list_,type_=type_)
 batch = SN.get_batch(type_=type_)
@@ -53,7 +53,7 @@ size_ = SN.train_size
 
 verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][0,:,:,:], levelset)
 cubed = {'vertices':verts/grid_size*2-1,'faces':faces,'vertices_up':verts/grid_size*2-1}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
 
 
@@ -86,9 +86,15 @@ def conditioned_function_wrapper(coordinates,args_):
         samps = tf.shape(coordinates)[1,]
         embedding = tf.tile(tf.expand_dims(args_[-1],axis=1),(1,samps,1))
         conditioned_input = tf.concat((coordinates,embedding),axis=-1)
-        evaluated_function = SF.deep_sdf3(conditioned_input,args_[0],args_[1])
+        evaluated_function = SF.deep_sdf2(conditioned_input,args_[0],args_[1])
         return evaluated_function
 
+def style_function_wrapper(coordinates,args_):
+    with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
+        samps = tf.shape(coordinates)[1,]
+        embedding = tf.tile(tf.expand_dims(args_[-1],axis=1),(1,samps,1))
+        evaluated_function = SF.deep_sdf4(coordinates,embedding,args_[0],args_[1])
+        return evaluated_function
 
 def CNN_function_wrapper(image,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
@@ -127,16 +133,20 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
 #embeddings   = CNN_function_wrapper(images,[mode_node,32])
+#embeddings   = mpx_function_wrapper(encoding,[mode_node])
+
 
 in_size      = 3 #+ embeddings.get_shape().as_list()[1]
 theta        = []
-theta.append({'w':784})
-theta.append({'w':784})
-#theta.append({'w':784})
+theta.append({'w':16})
+theta.append({'w':16})
+theta.append({'w':16})
+theta.append({'w':16})
 #theta.append({'w':16})
 #theta.append({'w':16})
-#theta.append({'w':16})
-#theta.append({'w':16})
+#theta.append({'w':64})
+#theta.append({'w':64})
+#theta.append({'w':64})
 theta.append({'w':1})
 
 
@@ -158,9 +168,10 @@ err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_mean(tf.abs(evals_function['dydx_norm']))
 
-sample_w         = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.2),axis=-1)
+sample_w         = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.01),axis=-1)
+#sample_w         = tf.squeeze(tf.abs((evals_target['y']-levelset)*tf.exp(-(evals_target['y']-levelset)**2/0.01)),axis=-1)
 loss_class       = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
-loss_y           = tf.reduce_mean(sample_w*delta_y) 
+loss_y           = tf.reduce_mean(delta_y) 
 loss             = loss_class
 
 
@@ -173,7 +184,7 @@ with tf.variable_scope('optimization',reuse=tf.AUTO_REUSE):
     dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
     loss_check    = tf.is_nan(loss)
     loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
-    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')#+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
+    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'multiplexer_model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
     optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
 #    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
@@ -200,9 +211,8 @@ for step in range(10000000):
     batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-#    samples_sdf_np       = (np.expand_dims(batch['voxels'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1).astype(np.float64)-0.5)*(-2)
 
-    feed_dict = {lr_node            :0.001,
+    feed_dict = {lr_node            :0.0001,
                  images             :batch['images']/255.,
                  encoding           :batch['code'], 
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),

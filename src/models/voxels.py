@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 skeleton = np.array([[0, 1, 2, 3, 4],[0, 5, 6, 7, 8],[0, 9, 10, 11, 12],[0, 13, 14, 15, 16],[0, 17, 18, 19, 20]])
-from model_ops import cell1D,CONV3D,cell3D_res,cell2D_res,cell_deconv_3D,cell3D_res_regular,cell3D,cell3D_res_deconv,CONV2D,BatchNorm,cell3D_regular,cell3D_res_deconv_regular,cell3D_res_gated,reg_etai
+from model_ops import cell1D,cell2D_res,CONV2D,BatchNorm
 
 
 

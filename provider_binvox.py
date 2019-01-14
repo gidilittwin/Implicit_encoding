@@ -84,15 +84,16 @@ class ShapeNet(object):
         for j in range(size):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
-                voxels_ = m1.data
-                voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
-                voxels.append(voxels_)
+                voxels_ = m1.data + np.flip(m1.data,axis=2)
                 
+                voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
                 inner_volume       = voxels_
                 outer_volume       = np.logical_not(voxels_)
                 sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
+                
+                voxels.append(voxels_)
                 sdf.append(sdf_) 
                 
             image_file_rand = np.random.randint(0,len(image_files[j]))   

@@ -60,7 +60,7 @@ BATCH_SIZE  = 1
 
   
 
-#%% Function wrappers   
+# Function wrappers   
 with tf.variable_scope('mode_node',reuse=tf.AUTO_REUSE):
     mode_node = tf.get_variable(name='mode_node',initializer=True,dtype=tf.bool)
    
@@ -71,7 +71,7 @@ theta = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = 'parameters_tar
  
 with tf.variable_scope('parameters_opt',reuse=tf.AUTO_REUSE):
     rad_opt    = tf.get_variable(initializer=np.array([0.8],dtype=np.float32), name='radius',trainable=False)
-    offset_opt = tf.get_variable(initializer=np.array([[[[1.0,2.0,-1.0]]]],dtype=np.float32), name='center',dtype=tf.float32,trainable=True)
+    offset_opt = tf.get_variable(initializer=np.array([[[[1.0,2.1,-1.0]]]],dtype=np.float32), name='center',dtype=tf.float32,trainable=True)
 theta_opt = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = 'parameters_opt')
       
 
@@ -103,12 +103,12 @@ session = tf.Session()
 session.run(tf.initialize_all_variables())
 session.run(mode_node.assign(True)) 
 ray_steps,reset_opp,evals             = Ray_render.eval_func(model_fn = target_wrapper,     args=theta,
-                                                             step_size=0.004, 
+                                                             step_size=None, 
                                                              epsilon = 0.0001, 
                                                              temp=1., 
                                                              ambient_weight=0.3)
 ray_steps_opt,reset_opp_opt,evals_opt = Ray_render_opt.eval_func(model_fn = target_wrapper, args=theta_opt,
-                                                             step_size=0.004, 
+                                                             step_size=None, 
                                                              epsilon = 0.0001, 
                                                              temp=1., 
                                                              ambient_weight=0.3)
@@ -160,10 +160,13 @@ ax2.imshow((((target_render-initial_image)+255)/2.).astype(np.uint8))
 @tf.custom_gradient
 def bleeding_image_grad(x):
     kernel = gaussian_kernel(7,0.,3.)
-#    kernel  = tf.ones((3,3),dtype=tf.float32)/(3.**2)
     kernel_ = tf.expand_dims(tf.stack((kernel,kernel,kernel),axis=-1),-1)
     def grad(dy):
-        return tf.squeeze(tf.nn.depthwise_conv2d(tf.expand_dims(dy,0), kernel_, strides=[1, 1, 1, 1], padding="SAME"),axis=0)
+        return tf.squeeze(tf.nn.depthwise_conv2d(tf.expand_dims(dy,0),
+                                                 kernel_, 
+                                                 strides=[1, 1, 1, 1], 
+                                                 padding="SAME"),
+                                                 axis=0)
     return tf.identity(x), grad
 
 def gaussian_kernel(size,mean,std):
