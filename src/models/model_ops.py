@@ -161,7 +161,7 @@ def cell1D(in_node,output_size, mode_node, SCOPE=None, stddev=0.02, bias_start=0
         if with_bn:
             output = BatchNorm(output,mode_node,scope)
         if with_act:
-            output = lrelu(output)
+            output = act_type(output)
         print(output.get_shape())        
         return output
 

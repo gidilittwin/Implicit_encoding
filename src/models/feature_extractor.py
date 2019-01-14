@@ -86,27 +86,28 @@ def resnet_34(example,args_):
 ##        features         = tf.nn.depthwise_conv2d_native(relu1,conv2_w,strides=[1, 1, 1, 1],padding='VALID')
 #        return tf.squeeze(current,axis=(1,2))
     weights = []
-    theta = args_[-1]
+    theta = args_[2]
+    batch_size = args_[3]
     with tf.variable_scope("fully"):
         featue_size_ = current.get_shape().as_list()
         featue_size = tf.shape(current)
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
         
-        # Decoder
-        features = cell1D(features,128, mode, SCOPE='decode1', with_act=True, with_bn=False)
-        features = cell1D(features,256, mode, SCOPE='decode2', with_act=True, with_bn=False)
-
-
+        stdev    = tf.sqrt(2./(batch_size*base_size*16))
+        features = cell1D(features,256, mode, SCOPE='decode1', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.relu)
+        features = cell1D(features,256, mode, SCOPE='decode2', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.relu)
+#        features = cell1D(features,256, mode, SCOPE='decode3', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
+#        features = cell1D(features,256, mode, SCOPE='decode4', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
 
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
-            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
-            bb = tf.reshape(cell1D(features,layer_out, mode, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
-            gg = tf.reshape(cell1D(features,layer_out, mode, SCOPE='g'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            stdev    = tf.sqrt(2./(batch_size*256))
+            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
+            bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            gg = tf.reshape(1.+cell1D(features,layer_out,          mode, SCOPE='g'+str(ii), stddev=stdev, bias_start=0.0, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':ww,'b':bb,'g':gg})
-#            weights.append({'w':ww,'b':bb})
 
     return weights
 

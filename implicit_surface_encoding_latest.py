@@ -32,8 +32,8 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp10_best_set=0.0/-15959'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp18(99.3 -13*10)/-7383'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size   = 36
@@ -41,6 +41,7 @@ canvas_size = grid_size
 levelset    = 0.0
 BATCH_SIZE  = 8
 num_samples = 1000
+global_points = 100
 type_ = ''
 list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
@@ -169,7 +170,7 @@ theta.append({'w':64,'in':64})
 #theta.append({'w':128,'in':128})
 #theta.append({'w':128,'in':128})
 theta.append({'w':1 ,'in':64})
-embeddings   = CNN_function_wrapper(images,[mode_node,32,theta])
+embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['x'] , use_samps=True)
@@ -258,31 +259,22 @@ while step < 100000000:
     samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,1000,3))
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,100,3))
+
+#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
 #    vertices             = batch['vertices']
-#    gaussian_noise       = np.random.normal(loc=0.0,scale=2.,size=batch['vertices'].shape).astype(np.float32)
+#    gaussian_noise       = np.random.normal(loc=0.0,scale=1.,size=batch['vertices'].shape).astype(np.float32)
 #    vertices             = np.clip((vertices+gaussian_noise)/(grid_size-1)*2-1,-1.0,1.0)
 #    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
 #    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
 #    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*num_samples,4))
 #    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
-    
-    
-#    feed_dict = {images             :batch['images']/255.}   
-#    _ ,weights_vars_= session.run([assign_ops,weights_vars],feed_dict)
-#    feed_dict = {lr_node_mesh       :0.001,
-#                 samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
-#                 samples_sdf        :samples_sdf_np}     
-#    for k in range(3):
-#        _, loss_class_,norm_, accuracy_, weights_vars_  = session.run([train_op_mesh, loss_class, norm,accuracy ,weights_vars],feed_dict=feed_dict) 
-#
-#    feed_dict = {lr_node            :0.0001,
-#                 images             :batch['images']/255.,} 
-#    _,  = session.run([train_op_cnn],feed_dict=feed_dict) 
+#    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
+#    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.00001,
+                 lr_node            :0.0000001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
+#                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
     _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
     
@@ -292,7 +284,7 @@ while step < 100000000:
     cc_mov_avg = cc_mov.push(loss_class_)
     print('step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,norm: '+str(bb_mov_avg))
 
-    if step % CHECKPOINT_EVERY == 0:
+    if step % CHECKPOINT_EVERY == 0 and step!=0:
         saver.save(session, checkpoint_path, global_step=step)
         last_saved_step = step
     if step % PLOT_EVERY == 0:
