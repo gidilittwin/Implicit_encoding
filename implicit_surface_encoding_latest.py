@@ -31,22 +31,22 @@ class MOV_AVG(object):
         return np.mean(np.array(self.list))        
 
 
-path             = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/ShapeNetRendering_test/'
-checkpoint_path  = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/Checkpoints/exp19/'
-saved_model_path = '/Users/gidilittwin/Dropbox/Thesis/Implicit_Encoding/Data/Checkpoints/exp17/-7383'
+path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/-7383'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
 canvas_size      = grid_size
 levelset         = 0.0
 BATCH_SIZE       = 8
-num_samples      = 100
+num_samples      = 10000
 global_points    = 100
 type_            = ''
-#list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
+list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
 #list_ =['04090263'] #gun
-list_ =['02691156']
+#list_ =['02691156']
 #list_ =['test']
 
 
@@ -238,7 +238,7 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 saver = tf.train.Saver(var_list=all_vars)
 loader = tf.train.Saver(var_list=cnn_vars)
-#testing = tf.get_collection('test')
+testing = tf.get_collection('test')
 
 
 
@@ -273,11 +273,11 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.1,
+                 lr_node            :0.00001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
-    _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
+    _, loss_class_,norm_, accuracy_ ,testing_ = session.run([train_op_cnn, loss_class, norm ,accuracy,testing],feed_dict=feed_dict) 
 
 
     aa_mov_avg = aa_mov.push(accuracy_)

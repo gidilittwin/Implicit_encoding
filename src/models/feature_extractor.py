@@ -98,8 +98,8 @@ def regressor(current,args_):
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
         
-        features = cell1D(features,128, mode, SCOPE='decode1', stddev=tf.sqrt(2./featue_size_[-1]), bias_start=0.0, with_act=True, with_bn=False)
-        features = cell1D(features,256, mode, SCOPE='decode2', stddev=tf.sqrt(2./(128))           , bias_start=0.0, with_act=True, with_bn=False)
+        features = cell1D(features,256, mode, SCOPE='decode1', stddev=tf.sqrt(2./featue_size_[-1]), bias_start=0.0, with_act=False, with_bn=False)
+#        features = cell1D(features,256, mode, SCOPE='decode2', stddev=tf.sqrt(2./(128))           , bias_start=0.0, with_act=True, with_bn=False)
 #        features = cell1D(features,256, mode, SCOPE='decode3', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
 #        features = cell1D(features,256, mode, SCOPE='decode4', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
         weights =features

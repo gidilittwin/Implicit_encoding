@@ -31,16 +31,20 @@ def BatchNorm(inputT, is_training=True, scope=None):
     
     
 
-def CONV2D(shape,bias=True):
-   initializer = tf.random_normal_initializer( stddev=1./np.sqrt(shape[0]*shape[1]*shape[2]))
-#   initializer = tf.random_normal_initializer( stddev=np.sqrt(2./(shape[0]*shape[1]*shape[2])))
+def CONV2D(shape,bias=True,scale=False):
+#   initializer = tf.random_normal_initializer( stddev=1./np.sqrt(shape[0]*shape[1]*shape[2]))
+   initializer = tf.random_normal_initializer( stddev=np.sqrt(2./(shape[0]*shape[1]*shape[2])))
    conv_weights = tf.get_variable('weights',shape, initializer = initializer)
    if bias==True:
        conv_biases  = tf.get_variable('biases',[shape[-1]], initializer=tf.constant_initializer(0.0))
    else:
        conv_biases = []
+   if scale==True:
+       conv_scale  = tf.get_variable('scales',[1,1,1,shape[-1]], initializer=tf.constant_initializer(1.0))
+   else:
+       conv_scale = []  
    tf.add_to_collection('l2_res',(tf.nn.l2_loss(conv_weights)))
-   return conv_weights, conv_biases
+   return conv_weights, conv_biases, conv_scale
 
 
 def lrelu(x, leak=0.2, name="LRelU"):
@@ -55,22 +59,29 @@ def cell_2d(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
         input_shape = in_node.get_shape().as_list()[-1]
         input_dim   = input_shape
         output_dim  = weights['w']
-        conv1_w, conv1_b = CONV2D([1,1,input_dim,output_dim])
-        if normalize==True:
-#            conv1_w = conv1_w/tf.norm(conv1_w,axis=-1,keep_dims=True)
-            #        matrix = tf.nn.l2_normalize(matrix,(0,1))
-            matrix = tf.squeeze(conv1_w,axis=(0,1))
-            e,v  = tf.linalg.eigh(tf.matmul(tf.transpose(matrix),matrix))
-            large_e = e[-1]
-            conv1_w = conv1_w/large_e
+        conv1_w, conv1_b, conv1_s = CONV2D([1,1,input_dim,output_dim],bias=True,scale=False)
+        if normalize==True and input_dim!=259:
+#            conv1_w = conv1_w/tf.norm(conv1_w,axis=-2,keep_dims=True)
+#            conv1_w = conv1_w*conv1_s
+            eps = 0.01
+            conv1_w = tf.squeeze(conv1_w,(0,1))
+            V     = tf.transpose(conv1_w,(1,0))
+            Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
+            cov   = tf.matmul(Vc,tf.transpose(Vc))
+            e,v   = tf.linalg.eigh(cov+eps*tf.eye(output_dim))
+            e_diag= tf.diag(1./tf.sqrt(e))
+            W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag,transpose_a=False),v,transpose_b=True),Vc)
+            conv1_w     = tf.expand_dims(tf.expand_dims(tf.transpose(W),axis=0),axis=0)
+
             
         c1 = tf.nn.conv2d(in_node,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
         c1 = tf.nn.bias_add(c1, conv1_b)
+        tf.add_to_collection('test',c1)
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
         if act==True:
-#            c1 = tf.nn.relu(c1)
-            c1 = tf.nn.selu(c1)
+            c1 = tf.nn.relu(c1)
+#            c1 = tf.nn.selu(c1)
 #            c1 = tf.tanh(c1)
 #            c1 = lrelu(c1, leak=0.5)
         c1 = tf.squeeze(c1,2)
@@ -293,7 +304,7 @@ def deep_sdf3(xyz, mode_node,embeddings, theta):
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
 #        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-        image = cell_2d(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=False,bn=bn) 
+        image = cell_2d(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=True,bn=bn) 
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
