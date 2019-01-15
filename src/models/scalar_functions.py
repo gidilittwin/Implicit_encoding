@@ -61,17 +61,17 @@ def cell_2d(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
         output_dim  = weights['w']
         conv1_w, conv1_b, conv1_s = CONV2D([1,1,input_dim,output_dim],bias=True,scale=False)
         if normalize==True and input_dim!=259:
-#            conv1_w = conv1_w/tf.norm(conv1_w,axis=-2,keep_dims=True)
-#            conv1_w = conv1_w*conv1_s
-            eps = 0.01
-            conv1_w = tf.squeeze(conv1_w,(0,1))
-            V     = tf.transpose(conv1_w,(1,0))
-            Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
-            cov   = tf.matmul(Vc,tf.transpose(Vc))
-            e,v   = tf.linalg.eigh(cov+eps*tf.eye(output_dim))
-            e_diag= tf.diag(1./tf.sqrt(e))
-            W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag,transpose_a=False),v,transpose_b=True),Vc)
-            conv1_w     = tf.expand_dims(tf.expand_dims(tf.transpose(W),axis=0),axis=0)
+            conv1_w = conv1_w/tf.norm(conv1_w,axis=-2,keep_dims=True)
+            conv1_w = conv1_w*conv1_s
+#            eps = 0.01
+#            conv1_w = tf.squeeze(conv1_w,(0,1))
+#            V     = tf.transpose(conv1_w,(1,0))
+#            Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
+#            cov   = tf.matmul(Vc,tf.transpose(Vc))
+#            e,v   = tf.linalg.eigh(cov+eps*tf.eye(output_dim))
+#            e_diag= tf.diag(1./tf.sqrt(e))
+#            W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag,transpose_a=False),v,transpose_b=True),Vc)
+#            conv1_w     = tf.expand_dims(tf.expand_dims(tf.transpose(W),axis=0),axis=0)
 
             
         c1 = tf.nn.conv2d(in_node,conv1_w,strides=[1, 1, 1, 1],padding='SAME')
@@ -304,7 +304,7 @@ def deep_sdf3(xyz, mode_node,embeddings, theta):
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
 #        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-        image = cell_2d(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=True,bn=bn) 
+        image = cell_2d(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=False,bn=bn) 
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    

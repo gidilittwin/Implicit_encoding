@@ -32,8 +32,8 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/-7383'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp21/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp21/-7383'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
@@ -167,12 +167,12 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
 theta        = []
-theta.append({'w':64,'in':3})
-theta.append({'w':64,'in':64})
-theta.append({'w':64,'in':64})
+theta.append({'w':256,'in':3})
+theta.append({'w':256,'in':256})
+theta.append({'w':256,'in':256})
 #theta.append({'w':128,'in':128})
 #theta.append({'w':128,'in':128})
-theta.append({'w':1 ,'in':64})
+theta.append({'w':1 ,'in':256})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
