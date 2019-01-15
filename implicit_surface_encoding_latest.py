@@ -32,8 +32,8 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp19/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp17/-7383'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp21/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp20(99.28-13*10)/-131372'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
@@ -241,7 +241,7 @@ loader = tf.train.Saver(var_list=cnn_vars)
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
-#loader.restore(session, saved_model_path)
+loader.restore(session, saved_model_path)
 step = 0
 aa_mov = MOV_AVG(300) 
 bb_mov = MOV_AVG(300) 
@@ -268,7 +268,7 @@ while step < 100000000:
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.000001,
+                 lr_node            :0.0000001,
                  samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
 #                 samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
