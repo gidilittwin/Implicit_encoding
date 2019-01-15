@@ -32,8 +32,8 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp21/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp20(99.28-13*10)/-131372'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp20(99.33-13*10)/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp20(99.33-13*10)/-131372'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
