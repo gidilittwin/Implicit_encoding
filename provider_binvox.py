@@ -33,16 +33,16 @@ class ShapeNet(object):
         self.y   = np.linspace(-1, 1, grid_size)
         self.z   = np.linspace(-1, 1, grid_size)
         self.grid = np.stack(np.meshgrid(self.x,self.y,self.z),axis=-1)
-        self.levelset    = 0.00
+        self.levelset    = levelset
         self.rec_mode    = rec_mode
-        self.num_samples = num_samples
+        self.num_samples = num_samples/len(self.levelset)
 
     def getModelPaths(self,type_,list_):
         paths = []
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:10]
+            paths_cat = paths_cat[0:1]
             paths = paths+paths_cat
         return  paths  
 
@@ -57,6 +57,7 @@ class ShapeNet(object):
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
 #            all_files = all_files+  [x + name for x in files]     
             vox_files.append(vox_file)
+#            image_files.append([images[0]])
             image_files.append(images)
         return  vox_files,  image_files
 
@@ -102,17 +103,21 @@ class ShapeNet(object):
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
                 if self.rec_mode:
-                    verts, faces, normals, values = measure.marching_cubes_lewiner(sdf_, 0.0)
-                    np.save(files[j][0:-12]+'verts.npy',verts)
-                    np.save(files[j][0:-12]+'faces.npy',faces)
-                    np.save(files[j][0:-12]+'normals.npy',normals)
+                    for ll in range(len(self.levelset)):
+                        verts, faces, normals, values = measure.marching_cubes_lewiner(sdf_, self.levelset[ll])
+                        np.save(files[j][0:-12]+'verts'+str(ll)+'.npy',verts)
+                        np.save(files[j][0:-12]+'faces'+str(ll)+'.npy',faces)
+                        np.save(files[j][0:-12]+'normals'+str(ll)+'.npy',normals)
                 else:
-                    verts = np.load(files[j][0:-12]+'verts.npy')
-                    num_points = verts.shape[0]
-                    arr_ = np.arange(0,num_points)
-                    perms = np.random.choice(arr_,self.num_samples)
-                    verts_sampled = verts[perms,:]
-                    vertices.append(verts_sampled[:,(2,0,1)])
+                    Verts = []
+                    for ll in range(len(self.levelset)):
+                        verts = np.load(files[j][0:-12]+'verts.npy')
+                        num_points = verts.shape[0]
+                        arr_ = np.arange(0,num_points)
+                        perms = np.random.choice(arr_,self.num_samples)
+                        verts_sampled = verts[perms,:]
+                        Verts.append(verts_sampled)
+                    vertices.append(np.stack(Verts,axis=-1))
                 sdf.append(sdf_) 
                 
             image_file_rand = np.random.randint(0,len(image_files[j]))   
@@ -132,6 +137,19 @@ class ShapeNet(object):
         code[rows,indexes] = 1
 
         return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def convert2np(self,type_,up_samp):
