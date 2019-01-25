@@ -48,29 +48,30 @@ def resnet_44(example,args_):
 #        c1 = BatchNorm(c1,mode,SCOPE)
 #        c1 = tf.nn.relu(c1)        
     with tf.variable_scope("Residuals"):
-        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1',use_bn=True)#68
-        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r2',use_bn=True)
-        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r3',use_bn=True)
+        BN = True
+        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1',use_bn=BN)#68
+        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r2',use_bn=BN)
+        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r3',use_bn=BN)
         
-        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4',use_bn=True)#34
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r5',use_bn=True)
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r6',use_bn=True)
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r7',use_bn=True)
+        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4',use_bn=BN)#34
+        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r5',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r6',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r7',use_bn=BN)
 
-        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8',use_bn=True)#17
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r9',use_bn=True)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r10',use_bn=True)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r11',use_bn=True)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r12',use_bn=True)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r13',use_bn=True)
+        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8',use_bn=BN)#17
+        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r9',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r10',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r11',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r12',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r13',use_bn=BN)
 
-        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14',use_bn=True)#8
-        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r15',use_bn=True)
-        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r16',use_bn=True)
+        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14',use_bn=BN)#8
+        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r15',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r16',use_bn=BN)
         
-        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17',use_bn=True)#4
-        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r18',use_bn=True)
-        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r19',use_bn=True)
+        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17',use_bn=BN)#4
+        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r18',use_bn=BN)
+        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r19',use_bn=BN)
 
 #        current = cell2D_res(current, 3, base_size*16, base_size*32, mode, 2, 'r20',use_bn=True)#5
 #        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21',use_bn=True)

@@ -40,13 +40,13 @@ grid_size        = 36
 canvas_size      = grid_size
 levelset         = 0.0
 BATCH_SIZE       = 8
-num_samples      = 1000
-global_points    = 100
+num_samples      = 100000
+global_points    = 1000
 type_            = ''
-#list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
+list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
 #list_ =['04090263'] #gun
-list_ =['02691156']
+#list_ =['02691156']
 #list_ =['test']
 
 
@@ -57,7 +57,7 @@ rec_mode = False
 SN       = ShapeNet(path,rand=rand,
                  batch_size=BATCH_SIZE,
                  grid_size=grid_size,
-                 levelset=[-0.02,0.02],
+                 levelset=[0.0],
                  num_samples=num_samples,
                  list_=list_,
                  type_=type_,
@@ -71,18 +71,26 @@ SN       = ShapeNet(path,rand=rand,
 
 batch = SN.get_batch(type_=type_)
 size_ = SN.train_size
-psudo_sdf = batch['voxels'][0,:,:,:].astype(np.float32)-0.5
-verts, faces, normals, values = measure.marching_cubes_lewiner(psudo_sdf, levelset)
-vertices_up = batch['vertices']
+#psudo_sdf = batch['voxels'][0,:,:,:].astype(np.float32)-0.5
+psudo_sdf = batch['sdf'][0,:,:,:]
+verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, -0.01)
+verts1, faces1, normals1, values1 = measure.marching_cubes_lewiner(psudo_sdf, 0.00)
 
-cloud_up = vertices_up[0,:,:]
-cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces,'vertices_up':cloud_up/(grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
 
-pic = batch['images'][0,:,:,:]
-fig = plt.figure()
-plt.imshow(pic/255.)
+cubed0 = {'vertices':verts0/(grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(grid_size-1)*2-1}
+cubed1 = {'vertices':verts1/(grid_size-1)*2-1,'faces':faces1,'vertices_up':verts1/(grid_size-1)*2-1}
+#MESHPLOT.double_mesh_plot([cubed0,cubed1],idx=0,type_='cubed')
+
+
+#vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
+#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
+#
+#    
+#    
+#pic = batch['images'][0,:,:,:]
+#fig = plt.figure()
+#plt.imshow(pic/255.)
 
 
 
@@ -168,11 +176,11 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
 theta        = []
-theta.append({'w':32,'in':3})
-theta.append({'w':32,'in':32})
-theta.append({'w':32,'in':32})
-theta.append({'w':32,'in':32})
-theta.append({'w':1 ,'in':32})
+theta.append({'w':128,'in':3})
+theta.append({'w':128,'in':128})
+theta.append({'w':128,'in':128})
+#theta.append({'w':32,'in':32})
+theta.append({'w':1 ,'in':128})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
@@ -193,8 +201,8 @@ err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_max(tf.abs(evals_function['dydx_norm']))
 norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
-#sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
-loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
+sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
+loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
 loss_y             = tf.reduce_mean(delta_y) 
 loss               = loss_class 
 
@@ -255,19 +263,24 @@ acc_plot  = []
 session.run(mode_node.assign(True)) 
 while step < 100000000:
     batch                = SN.get_batch(type_=type_)
-#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
-#    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-#    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-
-    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
-    vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
-#    gaussian_noise       = np.random.normal(loc=0.0,scale=1.,size=batch['vertices'].shape).astype(np.float32)
-#    vertices             = np.clip((vertices+gaussian_noise)/(grid_size-1)*2-1,-1.0,1.0)
-    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
+    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    batch_idx    = np.tile(np.reshape(np.arange(0,BATCH_SIZE,dtype=np.int32),(BATCH_SIZE,1,1)),(1,num_samples+global_points,1))
-    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*(num_samples+global_points),4))
-    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples+global_points,1))
+    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+    samples_xyz_np       = np.tile(samples_xyz_np,(BATCH_SIZE,1,1))
+
+#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
+##    vertices             = batch['vertices'][:,:,:,0]/(grid_size-1)*2-1
+#    vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
+##    gaussian_noise       = np.random.normal(loc=0.0,scale=0.05,size=vertices.shape).astype(np.float32)
+##    vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+#    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
+#    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
+##    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+#    
+#    
+#    batch_idx            = np.tile(np.reshape(np.arange(0,BATCH_SIZE,dtype=np.int32),(BATCH_SIZE,1,1)),(1,num_samples+global_points,1))
+#    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*(num_samples+global_points),4))
+#    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples+global_points,1))
 #    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     
@@ -306,22 +319,22 @@ while step < 100000000:
 
 if step % 50==49:
     session.run(mode_node.assign(False)) 
+    example=0
     samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
     batch                = SN.get_batch(type_=type_)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    samples_sdf_np       = np.expand_dims(batch['sdf'][0:1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-    feed_dict = {images           :batch['images'][0:1,:,:,:]/255.,
+    samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+    feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
                  samples_xyz      :samples_xyz_np,
                  samples_sdf      :samples_sdf_np}
     evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
 #    example            = np.random.randint(BATCH_SIZE)
-    example=0
-    field              = np.reshape(evals_function_d[example,:,:],(-1,))
+    field              = np.reshape(evals_function_d[0,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
     if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
         verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
         cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
-#        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='cubed')
+#        MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
         
         verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], levelset)
         cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces}

@@ -42,7 +42,7 @@ class ShapeNet(object):
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:1]
+            paths_cat = paths_cat[0:1000]
             paths = paths+paths_cat
         return  paths  
 
@@ -55,10 +55,9 @@ class ShapeNet(object):
             prefix = paths[i]
             vox_file = prefix+name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
-#            all_files = all_files+  [x + name for x in files]     
             vox_files.append(vox_file)
-#            image_files.append([images[0]])
-            image_files.append(images)
+            image_files.append([images[0]])
+#            image_files.append(images)
         return  vox_files,  image_files
 
  
@@ -111,12 +110,12 @@ class ShapeNet(object):
                 else:
                     Verts = []
                     for ll in range(len(self.levelset)):
-                        verts = np.load(files[j][0:-12]+'verts.npy')
+                        verts = np.load(files[j][0:-12]+'verts'+str(ll)+'.npy')
                         num_points = verts.shape[0]
                         arr_ = np.arange(0,num_points)
                         perms = np.random.choice(arr_,self.num_samples)
                         verts_sampled = verts[perms,:]
-                        Verts.append(verts_sampled)
+                        Verts.append(verts_sampled[:,(2,0,1)])
                     vertices.append(np.stack(Verts,axis=-1))
                 sdf.append(sdf_) 
                 

@@ -254,10 +254,10 @@ def deep_sdf1(xyz, mode_node, theta):
 
 
 def deep_sdf2(xyz, mode_node, theta):
-#    image        = xyz
-    x,y,z = tf.split(xyz,[1,1,1],axis=2)
-    x = tf.abs(x)
-    image = tf.concat((x,y,z),axis=2)
+    image        = xyz
+#    x,y,z = tf.split(xyz,[1,1,1],axis=2)
+#    x = tf.abs(x)
+#    image = tf.concat((x,y,z),axis=2)
     
     image_shape = image.get_shape().as_list()
     if len(image_shape)==4:
