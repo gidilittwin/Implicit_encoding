@@ -13,7 +13,7 @@ from skimage import measure
 from provider_binvox import ShapeNet as ShapeNet 
 from src.utilities import raytrace as RAY
 import matplotlib.pyplot as plt
-
+from src.utilities import iou_loss as IOU
 
 class MOV_AVG(object):
     def __init__(self, size):
@@ -32,16 +32,16 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp24/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp21(99.58-13*10)/-152914'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp28/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp27(acc=96.1,iou=88.2,13*1000)/-1564435'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
 canvas_size      = grid_size
 levelset         = 0.0
-BATCH_SIZE       = 8
-num_samples      = 100000
-global_points    = 1000
+BATCH_SIZE       = 32
+num_samples      = 10000
+global_points    = 10000
 type_            = ''
 list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','03636649','03691459','04090263','04256520','04379243','04401088','04530566']
 
@@ -51,40 +51,61 @@ list_ = ['02691156','02828884','02933112','02958343','03001627','03211117','0363
 
 
 #%%
+train_file = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt'
+test_file = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt'
+
 rand     = True
 rec_mode = False
 #BATCH_SIZE = 1
-SN       = ShapeNet(path,rand=rand,
+SN_train       = ShapeNet(path,
+                 files=train_file,
+                 rand=rand,
                  batch_size=BATCH_SIZE,
                  grid_size=grid_size,
-                 levelset=[0.0],
+                 levelset=[-0.02,0.02],
+                 num_samples=num_samples,
+                 list_=list_,
+                 type_=type_,
+                 rec_mode=rec_mode)
+#for ii in range(0,SN_train.train_size):
+#    batch = SN_train.get_batch(type_=type_)
+#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+
+SN_test       = ShapeNet(path,
+                 files=test_file,
+                 rand=rand,
+                 batch_size=BATCH_SIZE,
+                 grid_size=grid_size,
+                 levelset=[-0.02,0.02],
                  num_samples=num_samples,
                  list_=list_,
                  type_=type_,
                  rec_mode=rec_mode)
 
-#for ii in range(0,SN.train_size):
-#    batch = SN.get_batch(type_=type_)
-#    print(str(SN.train_step)+' /'+str(SN.train_size))
+
     
     
 
-batch = SN.get_batch(type_=type_)
-size_ = SN.train_size
+batch = SN_train.get_batch(type_=type_)
+size_ = SN_train.train_size
 #psudo_sdf = batch['voxels'][0,:,:,:].astype(np.float32)-0.5
 psudo_sdf = batch['sdf'][0,:,:,:]
 verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, -0.01)
 verts1, faces1, normals1, values1 = measure.marching_cubes_lewiner(psudo_sdf, 0.00)
 
 
-cubed0 = {'vertices':verts0/(grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(grid_size-1)*2-1}
-cubed1 = {'vertices':verts1/(grid_size-1)*2-1,'faces':faces1,'vertices_up':verts1/(grid_size-1)*2-1}
-#MESHPLOT.double_mesh_plot([cubed0,cubed1],idx=0,type_='cubed')
-
-
+#cubed0 = {'vertices':verts0/(grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(grid_size-1)*2-1}
+#cubed1 = {'vertices':verts1/(grid_size-1)*2-1,'faces':faces1,'vertices_up':verts1/(grid_size-1)*2-1}
+##MESHPLOT.double_mesh_plot([cubed0,cubed1],idx=0,type_='cubed')
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#
+#
 #vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
+#gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
+#vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
 #cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
+  
 #
 #    
 #    
@@ -168,8 +189,6 @@ samples_xyz           = tf.placeholder(tf.float32,shape=(None,None,3),   name='s
 
 evals_target          = {}
 evals_target['x']     = samples_xyz
-#reflect               = tf.constant([[[-1.0,1.0,1.0]]])
-#evals_target['-x']    = evals_target['x']*reflect
 evals_target['y']     = samples_sdf
 evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
@@ -180,14 +199,13 @@ theta.append({'w':128,'in':3})
 theta.append({'w':128,'in':128})
 theta.append({'w':128,'in':128})
 #theta.append({'w':32,'in':32})
+#theta.append({'w':32,'in':32})
+#theta.append({'w':32,'in':32})
 theta.append({'w':1 ,'in':128})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,num_samples],samples=evals_target['x'] , use_samps=True)
-#evals_function_r      = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [BATCH_SIZE,100000],samples=evals_target['-x'] , use_samps=True)
-#evals_function['y']   = (evals_function['y']+evals_function_r['y'])/2
-
 
 
 labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(BATCH_SIZE,-1)),levelset),tf.int64)
@@ -201,10 +219,25 @@ err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_max(tf.abs(evals_function['dydx_norm']))
 norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
-sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/0.1),axis=-1)
-loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'))
-loss_y             = tf.reduce_mean(delta_y) 
-loss               = loss_class 
+
+radius = 0.1
+sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/radius),axis=-1)
+loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'),axis=-1)
+loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
+iou_logit          = logits[:,:,1:2]
+iou_target         = tf.expand_dims(labels_float,-1)
+
+#loss_y             = tf.reduce_mean(delta_y) 
+loss               = tf.reduce_mean(loss_class)
+#loss               = IOU.lovasz_hinge(iou_logit, iou_target, per_image=False)
+
+X                  = tf.cast(labels,tf.bool)
+Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
+iou                = tf.reduce_mean(tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1))
+
+
+
+
 
 
 
@@ -234,6 +267,7 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
     cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
     optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
+#    optimizer     = tf.train.MomentumOptimizer(lr_node, momentum=0.9)     
     grads         = optimizer.compute_gradients(loss,var_list=cnn_vars)
     global_step   = tf.train.get_or_create_global_step()
     clip_constant = 10
@@ -257,52 +291,52 @@ step = 0
 aa_mov = MOV_AVG(300) 
 bb_mov = MOV_AVG(300) 
 cc_mov = MOV_AVG(300) 
+dd_mov = MOV_AVG(300) 
+
 loss_plot = []
 acc_plot  = []
+iou_plot  = []
 
 session.run(mode_node.assign(True)) 
 while step < 100000000:
-    batch                = SN.get_batch(type_=type_)
-    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
+    batch                = SN_train.get_batch(type_=type_)
+#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
+#    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
+#    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+#    samples_xyz_np       = np.tile(samples_xyz_np,(BATCH_SIZE,1,1))
+#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
+    vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
+#    vertices             = batch['vertices'][:,:,:,0]/(grid_size-1)*2-1
+    gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
+    samples_xyz_np             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+#    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
     samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-    samples_xyz_np       = np.tile(samples_xyz_np,(BATCH_SIZE,1,1))
-
-#    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
-##    vertices             = batch['vertices'][:,:,:,0]/(grid_size-1)*2-1
-#    vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
-##    gaussian_noise       = np.random.normal(loc=0.0,scale=0.05,size=vertices.shape).astype(np.float32)
-##    vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
-#    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
-#    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-##    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-#    
-#    
-#    batch_idx            = np.tile(np.reshape(np.arange(0,BATCH_SIZE,dtype=np.int32),(BATCH_SIZE,1,1)),(1,num_samples+global_points,1))
-#    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*(num_samples+global_points),4))
-#    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples+global_points,1))
+    batch_idx            = np.tile(np.reshape(np.arange(0,BATCH_SIZE,dtype=np.int32),(BATCH_SIZE,1,1)),(1,num_samples,1))
+    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*(num_samples),4))
+    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
 #    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
-    
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.00001,
-#                 samples_xyz        :np.tile(samples_xyz_np,(BATCH_SIZE,1,1)),
+                 lr_node            :0.0001,
                  samples_xyz        :samples_xyz_np,
                  samples_sdf        :samples_sdf_np}     
-    _, loss_class_,norm_, accuracy_  = session.run([train_op_cnn, loss_class, norm ,accuracy],feed_dict=feed_dict) 
+    _, loss_,norm_, accuracy_ ,iou_ = session.run([train_op_cnn, loss, norm ,accuracy, iou],feed_dict=feed_dict) 
 
 
     aa_mov_avg = aa_mov.push(accuracy_)
-    bb_mov_avg = bb_mov.push(norm_)
-    cc_mov_avg = cc_mov.push(loss_class_)
-    print('step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,ortho: '+str(norm_))
+    cc_mov_avg = cc_mov.push(loss_)
+    dd_mov_avg = dd_mov.push(iou_)
+
+    print('epoch: '+str(SN_train.epoch)+' step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
 
     if step % CHECKPOINT_EVERY == 0 and step!=0:
         saver.save(session, checkpoint_path, global_step=step)
         last_saved_step = step
     if step % PLOT_EVERY == 0:
         acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
-        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg+1)),axis=-1))
+        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg)),axis=-1))
+        iou_plot.append(np.expand_dims(np.array(dd_mov_avg),axis=-1))
         plt.figure(1)
         plt.plot(acc_plot)
         plt.title('accuracy')
@@ -312,7 +346,8 @@ while step < 100000000:
         plt.title('loss')
         plt.pause(0.05)
         np.save(checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
-        np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))      
+        np.save(checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))  
+        np.save(checkpoint_path+'iou_values.npy',np.concatenate(iou_plot))      
     step+=1
 
 

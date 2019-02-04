@@ -18,9 +18,12 @@ from skimage import measure
 
     
 class ShapeNet(object):
-    def __init__(self , path_,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
+    def __init__(self , path_,files,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
         self.path_ = path_
-        self.train_paths = self.getModelPaths(type_,list_=list_)
+        
+
+        self.train_paths = self.getBenchmark(files)            
+#        self.train_paths = self.getModelPaths(type_,list_=list_)
         self.train_size  = len(self.train_paths)
         self.train_files,self.train_image_files = self.getModelFiles()
 
@@ -36,28 +39,41 @@ class ShapeNet(object):
         self.levelset    = levelset
         self.rec_mode    = rec_mode
         self.num_samples = num_samples/len(self.levelset)
+        self.epoch = 0
 
     def getModelPaths(self,type_,list_):
         paths = []
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:1000]
+            paths_cat = paths_cat[0:10]
             paths = paths+paths_cat
         return  paths  
 
+    def getBenchmark(self,files):
+        paths = []
+        paths.append('')
+        with open(files, 'r') as file:
+            all_lines = file.readlines() 
+            for line in all_lines:
+                cat = line[19:27]
+                name = line[28:-8]
+                path = self.path_+ cat+'/'+name +'/'
+                if paths[-1]!=path:
+                    paths.append(path)
+        return  paths[1:]  
+    
     def getModelFiles(self):
-        paths = self.train_paths
         vox_files = []
         image_files = []
         name = '/model.binvox'
-        for i in range(len(paths)):
-            prefix = paths[i]
+        for i in range(len(self.train_paths)):
+            prefix = self.train_paths[i]
             vox_file = prefix+name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
             vox_files.append(vox_file)
-            image_files.append([images[0]])
-#            image_files.append(images)
+#            image_files.append([images[0]])
+            image_files.append(images)
         return  vox_files,  image_files
 
  
@@ -67,8 +83,8 @@ class ShapeNet(object):
             self.train_idx = np.arange(self.train_size)
         else:
             self.train_idx = np.random.permutation(self.train_size)
-        self.train_step = 0    
-
+        self.train_step = 0  
+        self.epoch+=1
         
     def get_batch(self,type_):
         size = self.batch_size
@@ -95,13 +111,14 @@ class ShapeNet(object):
                 voxels_ = voxels_ + np.flip(voxels_,2)
                 voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
                 voxels.append(voxels_)
-                
                 inner_volume       = voxels_
                 outer_volume       = np.logical_not(voxels_)
                 sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
                 sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2
+                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
+                
                 if self.rec_mode:
+#                    np.save(files[j][0:-12]+'sdf.npy',sdf_)
                     for ll in range(len(self.levelset)):
                         verts, faces, normals, values = measure.marching_cubes_lewiner(sdf_, self.levelset[ll])
                         np.save(files[j][0:-12]+'verts'+str(ll)+'.npy',verts)
@@ -109,6 +126,7 @@ class ShapeNet(object):
                         np.save(files[j][0:-12]+'normals'+str(ll)+'.npy',normals)
                 else:
                     Verts = []
+                    sdf_ = np.load(files[j][0:-12]+'sdf.npy')
                     for ll in range(len(self.levelset)):
                         verts = np.load(files[j][0:-12]+'verts'+str(ll)+'.npy')
                         num_points = verts.shape[0]
@@ -125,7 +143,7 @@ class ShapeNet(object):
                 images.append(image[:,:,0:3])
                 alpha.append(image[:,:,3:4])
 
-        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
+#        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
@@ -135,8 +153,8 @@ class ShapeNet(object):
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
-
+#        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 
 

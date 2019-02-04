@@ -101,16 +101,17 @@ def regressor(current,args_):
         
         features = cell1D(features,512, mode, SCOPE='decode1', with_act=True, with_bn=False)
         features = cell1D(features,512, mode, SCOPE='decode2', with_act=False, with_bn=False)
-#        features = cell1D(features,256, mode, SCOPE='decode3', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
-#        features = cell1D(features,256, mode, SCOPE='decode4', stddev=stdev, bias_start=0.0, with_act=True, with_bn=False, act_type=tf.nn.selu)
-
+        
+#        features = tf.nn.l2_normalize(features,-1)
+        
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
-            stdev    = tf.sqrt(2./256)
-            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii), with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
-            bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
-            gg = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='g'+str(ii), with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+#            stdev    = tf.sqrt(2./1024)
+            stdev    = 0.02
+            ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii),stddev=stdev, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
+            bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            gg = 1.+ tf.reshape(cell1D(features,layer_out,          mode, SCOPE='g'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':ww,'b':bb,'g':gg})
 #            weights.append({'w':ww,'b':bb})
     return weights
