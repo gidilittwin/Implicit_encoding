@@ -32,14 +32,14 @@ class MOV_AVG(object):
 
 
 path             = '/media/gidi/SSD/Thesis/Data/ShapeNetRendering/'
-checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp28/'
-saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp27(acc=96.1,iou=88.2,13*1000)/-1564435'
+checkpoint_path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp31/'
+saved_model_path = '/media/gidi/SSD/Thesis/Data/Checkpoints/exp30/-350000'
 CHECKPOINT_EVERY = 50000
 PLOT_EVERY       = 1000
 grid_size        = 36
 canvas_size      = grid_size
 levelset         = 0.0
-BATCH_SIZE       = 32
+BATCH_SIZE       = 8
 num_samples      = 10000
 global_points    = 10000
 type_            = ''
@@ -74,7 +74,7 @@ SN_train       = ShapeNet(path,
 SN_test       = ShapeNet(path,
                  files=test_file,
                  rand=rand,
-                 batch_size=BATCH_SIZE,
+                 batch_size=1,
                  grid_size=grid_size,
                  levelset=[-0.02,0.02],
                  num_samples=num_samples,
@@ -195,13 +195,10 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 
 
 theta        = []
-theta.append({'w':128,'in':3})
-theta.append({'w':128,'in':128})
-theta.append({'w':128,'in':128})
-#theta.append({'w':32,'in':32})
-#theta.append({'w':32,'in':32})
-#theta.append({'w':32,'in':32})
-theta.append({'w':1 ,'in':128})
+theta.append({'w':32,'in':3})
+theta.append({'w':32,'in':32})
+theta.append({'w':32,'in':32})
+theta.append({'w':1 ,'in':32})
 embeddings   = CNN_function_wrapper(images,[mode_node,32,theta,BATCH_SIZE])
 
 
@@ -222,7 +219,7 @@ norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 
 radius = 0.1
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-levelset)**2/radius),axis=-1)
-loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'),axis=-1)
+loss_class         = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'),axis=-1)
 loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
 iou_logit          = logits[:,:,1:2]
 iou_target         = tf.expand_dims(labels_float,-1)
@@ -239,29 +236,6 @@ iou                = tf.reduce_mean(tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf
 
 
 
-
-
-#with tf.variable_scope('optimization_mesh',reuse=tf.AUTO_REUSE):
-#    dummy_loss    = tf.reduce_mean(tf.constant(np.zeros([0],dtype=np.float32)))
-#    loss_check    = tf.is_nan(loss)
-#    loss          = tf.cond(loss_check, lambda:dummy_loss, lambda:loss)
-#    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')
-#    lr_node_mesh  = tf.placeholder(tf.float32,shape=(), name='learning_rate_mesh') 
-#    optimizer     = tf.train.AdamOptimizer(lr_node_mesh,beta1=0.9,beta2=0.999)
-#    grads         = optimizer.compute_gradients(loss,var_list=model_vars)
-#    global_step   = tf.train.get_or_create_global_step()
-#    clip_constant = 100
-#    g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
-#    train_op_mesh = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
-#assign_ops = tf.get_collection('assign')
-#
-#
-#cost_ops = tf.get_collection('cost')
-#cnn_cost = tf.constant([])
-#for ii in range(len(cost_ops)):
-#    cnn_cost = tf.concat((cnn_cost,tf.reshape(cost_ops[ii][0]**2,(-1,)),tf.reshape(cost_ops[ii][1]**2,(-1,))),axis=0)
-#cnn_cost = tf.reduce_mean(cnn_cost)
-#weights_vars = tf.get_collection('weights')
 with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 #    model_vars    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'model')+tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
@@ -286,7 +260,7 @@ loader = tf.train.Saver(var_list=cnn_vars)
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
-#loader.restore(session, saved_model_path)
+loader.restore(session, saved_model_path)
 step = 0
 aa_mov = MOV_AVG(300) 
 bb_mov = MOV_AVG(300) 
@@ -308,26 +282,25 @@ while step < 100000000:
     vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
 #    vertices             = batch['vertices'][:,:,:,0]/(grid_size-1)*2-1
     gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
-    samples_xyz_np             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+    samples_xyz_np       = np.clip((vertices+gaussian_noise),-1.0,1.0)
 #    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+#    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
     batch_idx            = np.tile(np.reshape(np.arange(0,BATCH_SIZE,dtype=np.int32),(BATCH_SIZE,1,1)),(1,num_samples,1))
     samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(BATCH_SIZE*(num_samples),4))
-    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
+#    samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(BATCH_SIZE,num_samples,1))
 #    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')    
     feed_dict = {images             :batch['images']/255.,
-                 lr_node            :0.0001,
+                 lr_node            :0.00001,
                  samples_xyz        :samples_xyz_np,
-                 samples_sdf        :samples_sdf_np}     
+#                 samples_sdf        :samples_sdf_np,
+                 }     
     _, loss_,norm_, accuracy_ ,iou_ = session.run([train_op_cnn, loss, norm ,accuracy, iou],feed_dict=feed_dict) 
-
 
     aa_mov_avg = aa_mov.push(accuracy_)
     cc_mov_avg = cc_mov.push(loss_)
     dd_mov_avg = dd_mov.push(iou_)
-
     print('epoch: '+str(SN_train.epoch)+' step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
 
     if step % CHECKPOINT_EVERY == 0 and step!=0:
@@ -352,31 +325,50 @@ while step < 100000000:
 
 
 
-if step % 50==49:
-    session.run(mode_node.assign(False)) 
-    example=0
-    samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
-    batch                = SN.get_batch(type_=type_)
-    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-    feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
-                 samples_xyz      :samples_xyz_np,
-                 samples_sdf      :samples_sdf_np}
-    evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
-#    example            = np.random.randint(BATCH_SIZE)
-    field              = np.reshape(evals_function_d[0,:,:],(-1,))
-    field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
-    if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
-        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
-        cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
-#        MESHPLOT.mesh_plot([cubed],idx=0,type_='cubed')
-        
-        verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], levelset)
-        cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces}
-        MESHPLOT.double_mesh_plot([cubed_plot,cubed],idx=0,type_='cubed')
+
+#%% EVAL
+session.run(mode_node.assign(False)) 
+example=0
+samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
+batch                = SN_train.get_batch(type_=type_)
+samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
+             samples_xyz      :samples_xyz_np,
+             samples_sdf      :samples_sdf_np}
+evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+field              = np.reshape(evals_function_d[0,:,:],(-1,))
+field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
+if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
+    verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
+    cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
+    verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], levelset)
+    cubed = {'vertices':verts/(grid_size-1)*2-1,'faces':faces}
+    MESHPLOT.double_mesh_plot([cubed_plot,cubed],idx=0,type_='cubed')
 
 
 
+
+
+step_test      = 0
+aa_mov_test    = MOV_AVG(3000000) 
+bb_mov_test    = MOV_AVG(3000000) 
+cc_mov_test    = MOV_AVG(3000000) 
+dd_mov_test    = MOV_AVG(3000000) 
+samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+samples_ijk_np = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
+while SN_test.epoch<25:
+    batch                = SN_test.get_batch(type_=type_)
+    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+    feed_dict = {images             :batch['images']/255.,
+                 samples_xyz        :samples_xyz_np,
+                 samples_sdf        :samples_sdf_np}     
+    loss_t, accuracy_t ,iou_t = session.run([loss ,accuracy, iou],feed_dict=feed_dict) 
+    aa_mov_avg_test = aa_mov_test.push(accuracy_t)
+    cc_mov_avg_test = cc_mov_test.push(loss_t)
+    dd_mov_avg_test = dd_mov_test.push(iou_t)
+    step_test+=1
+    print('epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
 
 
 

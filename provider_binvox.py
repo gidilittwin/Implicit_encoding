@@ -26,7 +26,7 @@ class ShapeNet(object):
 #        self.train_paths = self.getModelPaths(type_,list_=list_)
         self.train_size  = len(self.train_paths)
         self.train_files,self.train_image_files = self.getModelFiles()
-
+        self.epoch = 0
         self.rand = rand
         self.reset()
         self.batch_size = batch_size
@@ -39,14 +39,13 @@ class ShapeNet(object):
         self.levelset    = levelset
         self.rec_mode    = rec_mode
         self.num_samples = num_samples/len(self.levelset)
-        self.epoch = 0
 
     def getModelPaths(self,type_,list_):
         paths = []
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:10]
+            paths_cat = paths_cat[0:100]
             paths = paths+paths_cat
         return  paths  
 
@@ -72,8 +71,8 @@ class ShapeNet(object):
             vox_file = prefix+name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
             vox_files.append(vox_file)
-#            image_files.append([images[0]])
-            image_files.append(images)
+            image_files.append([images[0]])
+#            image_files.append(images)
         return  vox_files,  image_files
 
  
@@ -126,7 +125,6 @@ class ShapeNet(object):
                         np.save(files[j][0:-12]+'normals'+str(ll)+'.npy',normals)
                 else:
                     Verts = []
-                    sdf_ = np.load(files[j][0:-12]+'sdf.npy')
                     for ll in range(len(self.levelset)):
                         verts = np.load(files[j][0:-12]+'verts'+str(ll)+'.npy')
                         num_points = verts.shape[0]

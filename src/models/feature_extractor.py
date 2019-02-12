@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 skeleton = np.array([[0, 1, 2, 3, 4],[0, 5, 6, 7, 8],[0, 9, 10, 11, 12],[0, 13, 14, 15, 16],[0, 17, 18, 19, 20]])
 from model_ops import cell1D, cell2D_res, CONV2D,BatchNorm
+from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 
 def mydropout(mode_node, x, prob):
   # TODO: test if this is a tensor scalar of value 1.0
@@ -83,8 +84,60 @@ def resnet_44(example,args_):
 
 
 
+#def convnet(example,args_):
+#    mode = args_[0]
+#    base_size = args_[1]
+#    in_node = example
+#    ch_in = in_node.get_shape().as_list()[-1]
+#    with tf.variable_scope("Input") as SCOPE:
+#        conv0_w, conv0_b = CONV2D([5,5,ch_in,base_size])
+#        current = tf.nn.conv2d(in_node,conv0_w,strides=[1, 2, 2, 1],padding='SAME')
+#        current = tf.nn.bias_add(current, conv0_b)
+#        
+#    with tf.variable_scope("L1") as SCOPE:
+#        current = BatchNorm(current,mode,SCOPE)
+#        current = tf.nn.relu(current)        
+#        conv0_w, conv0_b = CONV2D([5,5,base_size,base_size*2])
+#        current = tf.nn.conv2d(current,conv0_w,strides=[1, 2, 2, 1],padding='SAME')
+#        current = tf.nn.bias_add(current, conv0_b)
+#
+#    with tf.variable_scope("L2") as SCOPE:
+#        current = BatchNorm(current,mode,SCOPE)
+#        current = tf.nn.relu(current)        
+#        conv0_w, conv0_b = CONV2D([5,5,base_size*2,base_size*4])
+#        current = tf.nn.conv2d(current,conv0_w,strides=[1, 2, 2, 1],padding='SAME')
+#        current = tf.nn.bias_add(current, conv0_b)
+#
+#    with tf.variable_scope("L3") as SCOPE:
+#        current = BatchNorm(current,mode,SCOPE)
+#        current = tf.nn.relu(current)        
+#        conv0_w, conv0_b = CONV2D([5,5,base_size*4,base_size*8])
+#        current = tf.nn.conv2d(current,conv0_w,strides=[1, 2, 2, 1],padding='SAME')
+#        current = tf.nn.bias_add(current, conv0_b)
+#
+#    with tf.variable_scope("L4") as SCOPE:
+#        current = BatchNorm(current,mode,SCOPE)
+#        current = tf.nn.relu(current)        
+#        conv0_w, conv0_b = CONV2D([5,5,base_size*8,base_size*16])
+#        current = tf.nn.conv2d(current,conv0_w,strides=[1, 2, 2, 1],padding='SAME')
+#        current = tf.nn.bias_add(current, conv0_b)    
+#        
+#        
+#        
+#    return current
 
 
+
+def BatchNorm_hard(inputT, is_training=True, scope=None, deploy=False):
+    # Note: is_training is tf.placeholder(tf.bool) type
+    if deploy==False:
+        return tf.cond(is_training,  
+                    lambda: batch_norm(inputT, is_training=True,  
+                                       center=False, scale=False, decay=0.9, updates_collections=None, scope=scope),  
+                    lambda: batch_norm(inputT, is_training=False,  
+                                       center=False, scale=False, decay=0.9, updates_collections=None, scope=scope, reuse = True))  
+    else:
+        return batch_norm(inputT, is_training=False,center=False, scale=False, decay=0.9, updates_collections=None, scope=scope, reuse = False)  
 
 
 
@@ -98,10 +151,11 @@ def regressor(current,args_):
         featue_size = tf.shape(current)
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
+#        features = tf.reshape(current,(-1,featue_size_[1]*featue_size_[2]*featue_size_[3]))
         
         features = cell1D(features,512, mode, SCOPE='decode1', with_act=True, with_bn=False)
         features = cell1D(features,512, mode, SCOPE='decode2', with_act=False, with_bn=False)
-        
+#        features  = BatchNorm_hard(features,mode,'norm')
 #        features = tf.nn.l2_normalize(features,-1)
         
         for ii in range(len(theta)):
@@ -112,6 +166,10 @@ def regressor(current,args_):
             ww = tf.reshape(cell1D(features,layer_in*layer_out, mode, SCOPE='w'+str(ii),stddev=stdev, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
             bb = tf.reshape(cell1D(features,layer_out,          mode, SCOPE='b'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             gg = 1.+ tf.reshape(cell1D(features,layer_out,          mode, SCOPE='g'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+#            if ii>0:
+#                ww = tf.stop_gradient(ww)
+#                bb = tf.stop_gradient(bb)
+#                gg = tf.stop_gradient(gg)
             weights.append({'w':ww,'b':bb,'g':gg})
 #            weights.append({'w':ww,'b':bb})
     return weights
