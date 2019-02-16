@@ -21,6 +21,7 @@ class ShapeNet(object):
     def __init__(self , path_,files,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
         self.path_ = path_
         
+        
 
         self.train_paths = self.getBenchmark(files)            
 #        self.train_paths = self.getModelPaths(type_,list_=list_)
@@ -45,7 +46,7 @@ class ShapeNet(object):
         for i in range(len(list_)):
             prefix = self.path_ + list_[i]+'/'+ type_ +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-            paths_cat = paths_cat[0:100]
+#            paths_cat = paths_cat[0:100]
             paths = paths+paths_cat
         return  paths  
 
@@ -71,8 +72,8 @@ class ShapeNet(object):
             vox_file = prefix+name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
             vox_files.append(vox_file)
-            image_files.append([images[0]])
-#            image_files.append(images)
+#            image_files.append([images[0]])
+            image_files.append(images)
         return  vox_files,  image_files
 
  
@@ -99,7 +100,7 @@ class ShapeNet(object):
         image_files = [self.train_image_files[j] for j in indexes]
         code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
         voxels = []
-        sdf    = []
+#        sdf    = []
         images = []
         alpha = []
         vertices = []
@@ -109,17 +110,18 @@ class ShapeNet(object):
                 voxels_ = m1.data
                 voxels_ = voxels_ + np.flip(voxels_,2)
                 voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
+                voxels_ = -1.0*voxels_.astype(np.float32)+0.5
                 voxels.append(voxels_)
-                inner_volume       = voxels_
-                outer_volume       = np.logical_not(voxels_)
-                sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-                sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
+#                inner_volume       = voxels_
+#                outer_volume       = np.logical_not(voxels_)
+#                sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
+#                sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
+#                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
                 
                 if self.rec_mode:
 #                    np.save(files[j][0:-12]+'sdf.npy',sdf_)
                     for ll in range(len(self.levelset)):
-                        verts, faces, normals, values = measure.marching_cubes_lewiner(sdf_, self.levelset[ll])
+                        verts, faces, normals, values = measure.marching_cubes_lewiner(voxels_, self.levelset[ll])
                         np.save(files[j][0:-12]+'verts'+str(ll)+'.npy',verts)
                         np.save(files[j][0:-12]+'faces'+str(ll)+'.npy',faces)
                         np.save(files[j][0:-12]+'normals'+str(ll)+'.npy',normals)
@@ -133,33 +135,53 @@ class ShapeNet(object):
                         verts_sampled = verts[perms,:]
                         Verts.append(verts_sampled[:,(2,0,1)])
                     vertices.append(np.stack(Verts,axis=-1))
-                sdf.append(sdf_) 
-                
-            image_file_rand = np.random.randint(0,len(image_files[j]))   
+#                sdf.append(sdf_) 
+            if self.rand==False: 
+                image_file_rand = np.random.randint(0,len(image_files[j]))   
+            else:
+                image_file_rand = (self.epoch-1) % len(image_files[j])
+
             with open(image_files[j][image_file_rand], 'rb') as f:
                 image = misc.imread(f).astype(np.float32)
                 images.append(image[:,:,0:3])
                 alpha.append(image[:,:,3:4])
 
-#        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
-        sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
+        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
+#        sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
         if self.rec_mode==False:
             vertices = np.stack(vertices,axis=0)
-        
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-#        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
-        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'sdf':voxels,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 
 
 
+    def process_batch(self,batch):
+    #    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
+    #    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
+    #    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+    #    samples_xyz_np       = np.tile(samples_xyz_np,(BATCH_SIZE,1,1))
+    #    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
+    
+    
+    
+    
+#        vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(self.grid_size-1)*2-1
+        vertices             = batch['vertices'][:,:,:,0]/(self.grid_size-1)*2-1
+        gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
+        samples_xyz_np       = np.clip((vertices+gaussian_noise),-1.0,1.0)
+    #    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
+        samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(self.grid_size-1))).astype(np.int32)
+    #    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+        batch_idx            = np.tile(np.reshape(np.arange(0,self.batch_size,dtype=np.int32),(self.batch_size,1,1)),(1,self.num_samples,1))
+        samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(self.batch_size*(self.num_samples),4))
+        samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(self.batch_size,self.num_samples,1))
 
-
-
+        return {'samples_xyz_np':samples_xyz_np,'samples_sdf_np':samples_sdf_np}
 
 
 
