@@ -18,13 +18,11 @@ from skimage import measure
 
     
 class ShapeNet(object):
-    def __init__(self , path_,files,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],type_='train',rec_mode=False):
+    def __init__(self , path_,files,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],rec_mode=False):
         self.path_ = path_
-        
-        
 
-        self.train_paths = self.getBenchmark(files)            
-#        self.train_paths = self.getModelPaths(type_,list_=list_)
+        self.train_paths = self.getBenchmark(files,list_)            
+#        self.train_paths = self.getModelPaths(list_=list_)
         self.train_size  = len(self.train_paths)
         self.train_files,self.train_image_files = self.getModelFiles()
         self.epoch = 0
@@ -41,26 +39,27 @@ class ShapeNet(object):
         self.rec_mode    = rec_mode
         self.num_samples = num_samples/len(self.levelset)
 
-    def getModelPaths(self,type_,list_):
+    def getModelPaths(self,list_):
         paths = []
         for i in range(len(list_)):
-            prefix = self.path_ + list_[i]+'/'+ type_ +'/'
+            prefix = self.path_ + list_[i] +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-#            paths_cat = paths_cat[0:100]
+#            paths_cat = paths_cat[0:2]
             paths = paths+paths_cat
         return  paths  
 
-    def getBenchmark(self,files):
+    def getBenchmark(self,files,list_):
         paths = []
         paths.append('')
         with open(files, 'r') as file:
             all_lines = file.readlines() 
             for line in all_lines:
                 cat = line[19:27]
-                name = line[28:-8]
-                path = self.path_+ cat+'/'+name +'/'
-                if paths[-1]!=path:
-                    paths.append(path)
+                if cat in list_:
+                    name = line[28:-8]
+                    path = self.path_+ cat+'/'+name +'/'
+                    if paths[-1]!=path:
+                        paths.append(path)
         return  paths[1:]  
     
     def getModelFiles(self):

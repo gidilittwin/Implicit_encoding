@@ -49,7 +49,7 @@ SN_train       = ShapeNet(config['path'],
                  rand=rand,
                  batch_size=config['batch_size'],
                  grid_size=config['grid_size'],
-                 levelset=[-0.00],
+                 levelset=[0.00],
                  num_samples=config['num_samples'],
                  list_=config['categories'],
                  rec_mode=rec_mode)
@@ -62,7 +62,7 @@ SN_test        = ShapeNet(config['path'],
                  rand=False,
                  batch_size=config['batch_size'],
                  grid_size=config['grid_size'],
-                 levelset=[-0.00],
+                 levelset=[0.00],
                  num_samples=config['num_samples'],
                  list_=config['categories'],
                  rec_mode=False)
@@ -223,6 +223,7 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
         dd_mov_avg_test = dd_mov_test.push(iou_t)
         step_test+=1
         print('epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
+    SN_test.epoch = 0
     return aa_mov_avg_test, dd_mov_avg_test
 
 
@@ -277,7 +278,7 @@ while step < 100000000:
         np.save(config['checkpoint_path']+'loss_values.npy',np.concatenate(loss_plot))
         np.save(config['checkpoint_path']+'accuracy_values.npy',np.concatenate(acc_plot))  
         np.save(config['checkpoint_path']+'iou_values.npy',np.concatenate(iou_plot))  
-    if step % config['test_every'] == 0:
+    if step % config['test_every'] == config['test_every'] -1:
         acc_test, iou_test = evaluate(SN_test, mode_node, config, accuracy, iou)
         acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
         iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))
@@ -290,24 +291,24 @@ while step < 100000000:
 
 
 #%% EVAL
-#session.run(mode_node.assign(False)) 
-#example=0
-#samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
-#samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config['grid_size']-1))).astype(np.int32)
-#batch                = SN_train.get_batch(type_='')
-#samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-#feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
-#             samples_xyz      :samples_xyz_np,
-#             samples_sdf      :samples_sdf_np}
-#evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
-#field              = np.reshape(evals_function_d[0,:,:],(-1,))
-#field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
-#if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
-#    verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
-#    cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
-#    verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], config['levelset'])
-#    cubed = {'vertices':verts/(config['grid_size']-1)*2-1,'faces':faces}
-#    MESHPLOT.double_mesh_plot([cubed_plot,cubed],idx=0,type_='cubed')
+session.run(mode_node.assign(False)) 
+example=0
+samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config['grid_size']-1))).astype(np.int32)
+batch                = SN_test.get_batch(type_='')
+samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
+             samples_xyz      :samples_xyz_np,
+             samples_sdf      :samples_sdf_np}
+evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+field              = np.reshape(evals_function_d[0,:,:],(-1,))
+field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
+if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
+    verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
+    cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
+    verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], config['levelset'])
+    cubed = {'vertices':verts/(config['grid_size']-1)*2-1,'faces':faces}
+    MESHPLOT.double_mesh_plot([cubed_plot,cubed],idx=0,type_='cubed')
 
 
 
