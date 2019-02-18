@@ -59,13 +59,13 @@ for ii in range(0,SN_train.train_size):
 
 SN_test        = ShapeNet(config['path'],
                  files=config['test_file'],
-                 rand=False,
+                 rand=rand,
                  batch_size=BATCH_SIZE,
                  grid_size=config['grid_size'],
                  levelset=[0.00],
                  num_samples=config['num_samples'],
                  list_=config['categories'],
-                 rec_mode=False)
+                 rec_mode=True)
 for ii in range(0,SN_test.train_size):
     batch = SN_test.get_batch(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))

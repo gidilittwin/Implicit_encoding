@@ -71,8 +71,8 @@ class ShapeNet(object):
             vox_file = prefix+name
             images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
             vox_files.append(vox_file)
-#            image_files.append([images[0]])
-            image_files.append(images)
+            image_files.append([images[0]])
+#            image_files.append(images)
         return  vox_files,  image_files
 
  
@@ -99,7 +99,7 @@ class ShapeNet(object):
         image_files = [self.train_image_files[j] for j in indexes]
         code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
         voxels = []
-#        sdf    = []
+        sdf    = []
         images = []
         alpha = []
         vertices = []
@@ -109,13 +109,13 @@ class ShapeNet(object):
                 voxels_ = m1.data
                 voxels_ = voxels_ + np.flip(voxels_,2)
                 voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
-                voxels_ = -1.0*voxels_.astype(np.float32)+0.5
+#                voxels_ = -1.0*voxels_.astype(np.float32)+0.5
                 voxels.append(voxels_)
-#                inner_volume       = voxels_
-#                outer_volume       = np.logical_not(voxels_)
-#                sdf_o, closest_point_o = ndi.distance_transform_edt(outer_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-#                sdf_i, closest_point_i = ndi.distance_transform_edt(inner_volume, return_indices=True) #- ndi.distance_transform_edt(inner_volume)
-#                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
+                inner_volume       = voxels_
+                outer_volume       = np.logical_not(voxels_)
+                sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+                sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
                 
                 if self.rec_mode:
 #                    np.save(files[j][0:-12]+'sdf.npy',sdf_)
@@ -134,7 +134,7 @@ class ShapeNet(object):
                         verts_sampled = verts[perms,:]
                         Verts.append(verts_sampled[:,(2,0,1)])
                     vertices.append(np.stack(Verts,axis=-1))
-#                sdf.append(sdf_) 
+                sdf.append(sdf_) 
             if self.rand==False: 
                 image_file_rand = np.random.randint(0,len(image_files[j]))   
             else:
@@ -146,7 +146,7 @@ class ShapeNet(object):
                 alpha.append(image[:,:,3:4])
 
         voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
-#        sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
+        sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
         if self.rec_mode==False:
@@ -154,7 +154,7 @@ class ShapeNet(object):
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'sdf':voxels,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 
 

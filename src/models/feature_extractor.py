@@ -89,16 +89,16 @@ def resnet_config(example,args_):
     config    = args_[1]
     in_node   = example
     ch_in     = in_node.get_shape().as_list()[-1]
-    base_size = config['encoder']['base_size']
+    base_size = config.model_params['encoder']['base_size']
     with tf.variable_scope("Input"):
-        params  = config['encoder']['input']
+        params  = config.model_params['encoder']['input']
         conv0_w, conv0_b = CONV2D([params['k'],params['k'],ch_in,base_size])
         c0      = tf.nn.conv2d(in_node,conv0_w,strides=[1, params['stride'], params['stride'], 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
 
     with tf.variable_scope("Residuals"):
-        BN = config['encoder']['BN']
-        for ii, layer in enumerate(config['encoder']['residuals']):
+        BN = config.model_params['encoder']['BN']
+        for ii, layer in enumerate(config.model_params['encoder']['residuals']):
             current = cell2D_res(current, layer['k'], base_size*layer['s_in'],  base_size*layer['s_out'], mode, layer['stride'], 'r'+str(ii+1),use_bn=BN)#68
     return current
 
@@ -122,14 +122,14 @@ def regressor(current,args_):
     mode    = args_[0]
     config  = args_[1]
     weights = []
-    theta   = config['theta']
+    theta   = config.model_params['theta']
     with tf.variable_scope("fully"):
         featue_size_ = current.get_shape().as_list()
         featue_size = tf.shape(current)
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
         
-        for ii, layer in enumerate(config['decoder']):
+        for ii, layer in enumerate(config.model_params['decoder']):
             features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
 #        features  = BatchNorm_hard(features,mode,'norm')
 #        features = tf.nn.l2_normalize(features,-1)
