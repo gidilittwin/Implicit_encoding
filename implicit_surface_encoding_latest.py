@@ -5,7 +5,6 @@ import numpy as np
 from src.utilities import mesh_handler as MESHPLOT
 from src.models import scalar_functions as SF
 from src.models import feature_extractor as CNN
-#import matplotlib.pyplot as plt
 from skimage import measure
 from provider_binvox import ShapeNet as ShapeNet 
 from src.utilities import raytrace as RAY
@@ -13,11 +12,13 @@ from src.utilities import raytrace as RAY
 #from src.utilities import iou_loss as IOU
 import os
 import argparse
+import socket
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_5.json')
+    parser.add_argument('--experiment_name', type=str, default= 'exp_no_bn')
+    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_1.json')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=8)
@@ -27,16 +28,26 @@ def parse_args():
     parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--plot_every', type=int,  default=1000)
     parser.add_argument('--test_every', type=int,  default=10000)
-    parser.add_argument('--learning_rate', type=float,  default=0.00001)
+    parser.add_argument('--learning_rate', type=float,  default=0.00005)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
     parser.add_argument('--finetune'  , type=bool,  default=False)
-    parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-    parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
-    parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
-    parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp-benchmark2/")
-    parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
+    if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+        parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
+        parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
+        parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
+        parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
+    else:
+        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
+        parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
+        parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
+        parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
+        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/exp31(benchmark=57.4)/-196069")
     return parser.parse_args()
 config = parse_args()
+print('#############################################################################################')
+print('###############################  '+config.experiment_name+'   ################################################')
+print('#############################################################################################')
 
 
 
@@ -66,7 +77,7 @@ with open(MODEL_PARAMS, 'r') as f:
 config.model_params = model_params    
     
     
-directory = config.checkpoint_path
+directory = config.checkpoint_path + config.experiment_name 
 if not os.path.exists(directory):
     os.makedirs(directory)
 
@@ -194,8 +205,15 @@ loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_
 loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
 iou_logit          = logits[:,:,1:2]
 iou_target         = tf.expand_dims(labels_float,-1)
-#loss_y             = tf.reduce_mean(delta_y) 
-loss               = tf.reduce_mean(loss_class)
+
+
+#vae                = tf.get_collection('VAE_loss')
+#log_stddev         = vae[0][1]
+#mean               = vae[0][0]
+#vae_loss           = 0.01 *tf.reduce_mean( tf.square(mean) + tf.square(tf.exp(log_stddev))  -1. - log_stddev, axis=-1)
+#loss               = tf.reduce_mean(loss_class + vae_loss)
+
+loss               = tf.reduce_mean(loss_class )
 #loss               = IOU.lovasz_hinge(iou_logit, iou_target, per_image=False)
 X                  = tf.cast(labels,tf.bool)
 Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
@@ -245,7 +263,8 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
         aa_mov_avg_test = aa_mov_test.push(accuracy_t)
         dd_mov_avg_test = dd_mov_test.push(iou_t)
         step_test+=1
-        print('epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
+        if step_test % 100==0:
+            print('TEST::  epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
     SN_test.epoch = 0
     session.run(mode_node.assign(True)) 
     return aa_mov_avg_test, dd_mov_avg_test
@@ -257,16 +276,19 @@ session = tf.Session()
 session.run(tf.initialize_all_variables())
 if config.finetune:
     loader.restore(session, config.saved_model_path)
-step   = 0
-aa_mov = MOV_AVG(300) 
-bb_mov = MOV_AVG(300) 
-cc_mov = MOV_AVG(300) 
-dd_mov = MOV_AVG(300) 
-loss_plot = []
-acc_plot  = []
-iou_plot  = []
+step           = 0
+aa_mov         = MOV_AVG(300) 
+bb_mov         = MOV_AVG(300) 
+cc_mov         = MOV_AVG(300) 
+dd_mov         = MOV_AVG(300) 
+loss_plot      = []
+acc_plot       = []
+iou_plot       = []
 acc_plot_test  = []
 iou_plot_test  = []
+max_test_acc   = 0.
+max_test_iou   = 0.
+
 
 session.run(mode_node.assign(True)) 
 while step < 100000000:
@@ -282,24 +304,27 @@ while step < 100000000:
     aa_mov_avg = aa_mov.push(accuracy_)
     cc_mov_avg = cc_mov.push(loss_)
     dd_mov_avg = dd_mov.push(iou_)
-    print('epoch: '+str(SN_train.epoch)+' step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
-
+    if step % 100==0:
+        print('Training: epoch: '+str(SN_train.epoch)+' step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
+        print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
     if step % config.checkpoint_every == 0 and step!=0:
-        saver.save(session, config.checkpoint_path, global_step=step)
+        saver.save(session, directory+'/'+str(step), global_step=step)
         last_saved_step = step
     if step % config.plot_every == 0:
         acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
         loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg)),axis=-1))
         iou_plot.append(np.expand_dims(np.array(dd_mov_avg),axis=-1))
-        np.save(config.checkpoint_path+'loss_values.npy',np.concatenate(loss_plot))
-        np.save(config.checkpoint_path+'accuracy_values.npy',np.concatenate(acc_plot))  
-        np.save(config.checkpoint_path+'iou_values.npy',np.concatenate(iou_plot))  
+        np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
+        np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
+        np.save(directory+'/iou_values.npy',np.concatenate(iou_plot))  
     if step % config.test_every == config.test_every -1:
         acc_test, iou_test = evaluate(SN_test, mode_node, config, accuracy, iou)
         acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
         iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))
-        np.save(config.checkpoint_path+'accuracy_values_test.npy',np.concatenate(acc_plot_test))  
-        np.save(config.checkpoint_path+'iou_values_test.npy',np.concatenate(iou_plot_test))         
+        np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
+        np.save(directory+'/iou_values_test.npy',np.concatenate(iou_plot_test)) 
+        max_test_acc = np.max([np.max(np.concatenate(acc_plot_test)),max_test_acc])
+        max_test_iou = np.max([np.max(np.concatenate(iou_plot_test)),max_test_iou])
     step+=1
 
 
@@ -332,7 +357,7 @@ if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
 
 
 
-
+ 
 
 
 

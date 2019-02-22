@@ -1,8 +1,9 @@
 {
-    "theta"           : [{"w":32,"in":3}, {"w":32,"in":32}, {"w":32,"in":32}, {"w":1 ,"in":32}],
-    "decoder"         : [{"size":1024,"act":false, "batch_norm":false}],
+    "theta"           : [{"w":128,"in":3}, {"w":128,"in":128}, {"w":128,"in":128}, {"w":1 ,"in":128}],
+    "decoder"         : [{"size":512,"act":true, "batch_norm":false},
+                         {"size":512,"act":false,"batch_norm":false}],
     
-    "encoder"         : {"base_size":32, "BN":true, "input":{"k":5,"stride":1},
+    "encoder"         : {"base_size":32, "BN":false, "input":{"k":5,"stride":1},
                             "residuals":[{"k":3, "s_in":1, "s_out":1, "stride":2},
                                          {"k":3, "s_in":1, "s_out":1, "stride":1},
                                          {"k":3, "s_in":1, "s_out":1, "stride":1},

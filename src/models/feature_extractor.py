@@ -36,49 +36,49 @@ def multiplexer(data_node, mode_node):
 
    
 
-def resnet_44(example,args_):
-    mode = args_[0]
-    base_size = args_[1]
-    in_node = example
-    ch_in = in_node.get_shape().as_list()[-1]
-    with tf.variable_scope("Input"):
-        conv0_w, conv0_b = CONV2D([5,5,ch_in,base_size])
-        c0 = tf.nn.conv2d(in_node,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
-        c0 = tf.nn.bias_add(c0, conv0_b)
-#        c0 = tf.nn.max_pool(c0, ksize=[1,3,3,1], strides=(1,2,2,1), padding='SAME')
-#        c1 = BatchNorm(c1,mode,SCOPE)
-#        c1 = tf.nn.relu(c1)        
-    with tf.variable_scope("Residuals"):
-        BN = True
-        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1',use_bn=BN)#68
-        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r2',use_bn=BN)
-        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r3',use_bn=BN)
-        
-        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4',use_bn=BN)#34
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r5',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r6',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r7',use_bn=BN)
-
-        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8',use_bn=BN)#17
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r9',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r10',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r11',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r12',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r13',use_bn=BN)
-
-        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14',use_bn=BN)#8
-        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r15',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r16',use_bn=BN)
-        
-        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17',use_bn=BN)#4
-        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r18',use_bn=BN)
-        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r19',use_bn=BN)
-
-#        current = cell2D_res(current, 3, base_size*16, base_size*32, mode, 2, 'r20',use_bn=True)#5
-#        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21',use_bn=True)
-#        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21',use_bn=True)
-        
-        return current
+#def resnet_44(example,args_):
+#    mode = args_[0]
+#    base_size = args_[1]
+#    in_node = example
+#    ch_in = in_node.get_shape().as_list()[-1]
+#    with tf.variable_scope("Input"):
+#        conv0_w, conv0_b = CONV2D([5,5,ch_in,base_size])
+#        c0 = tf.nn.conv2d(in_node,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
+#        c0 = tf.nn.bias_add(c0, conv0_b)
+##        c0 = tf.nn.max_pool(c0, ksize=[1,3,3,1], strides=(1,2,2,1), padding='SAME')
+##        c1 = BatchNorm(c1,mode,SCOPE)
+##        c1 = tf.nn.relu(c1)        
+#    with tf.variable_scope("Residuals"):
+#        BN = True
+#        current = cell2D_res(c0,      3, base_size, base_size, mode, 2, 'r1',use_bn=BN)#68
+#        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r2',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size, base_size, mode, 1, 'r3',use_bn=BN)
+#        
+#        current = cell2D_res(current, 3, base_size,   base_size*2, mode, 2, 'r4',use_bn=BN)#34
+#        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r5',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r6',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*2, base_size*2, mode, 1, 'r7',use_bn=BN)
+#
+#        current = cell2D_res(current, 3, base_size*2, base_size*4, mode, 2, 'r8',use_bn=BN)#17
+#        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r9',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r10',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r11',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r12',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*4, base_size*4, mode, 1, 'r13',use_bn=BN)
+#
+#        current = cell2D_res(current, 3, base_size*4, base_size*8, mode, 2, 'r14',use_bn=BN)#8
+#        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r15',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*8, base_size*8, mode, 1, 'r16',use_bn=BN)
+#        
+#        current = cell2D_res(current, 3, base_size*8, base_size*16, mode, 2, 'r17',use_bn=BN)#4
+#        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r18',use_bn=BN)
+#        current = cell2D_res(current, 3, base_size*16, base_size*16, mode, 1, 'r19',use_bn=BN)
+#
+##        current = cell2D_res(current, 3, base_size*16, base_size*32, mode, 2, 'r20',use_bn=True)#5
+##        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21',use_bn=True)
+##        current = cell2D_res(current, 3, base_size*32, base_size*32, mode, 1, 'r21',use_bn=True)
+#        
+#        return current
 
 
 
@@ -118,6 +118,16 @@ def BatchNorm_hard(inputT, is_training=True, scope=None, deploy=False):
 
 
 
+def sample_normal(shape, is_training=True, scope=None, deploy=False):
+    # Note: is_training is tf.placeholder(tf.bool) type
+    if deploy==False:
+        return tf.cond(is_training,  
+                    lambda: tf.random_normal(shape,mean=0.0,stddev=1.0,dtype=tf.float32,name='std_norm'),
+                    lambda: tf.zeros(shape,dtype=tf.float32,name='std_norm'))
+
+
+
+
 def regressor(current,args_):
     mode    = args_[0]
     config  = args_[1]
@@ -129,10 +139,15 @@ def regressor(current,args_):
         current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
         features    = tf.squeeze(current,axis=(1,2))
         
+#        mean       = cell1D(features,featue_size_[-1], mode, SCOPE='mean', with_act=False, with_bn=False)
+#        log_stddev = cell1D(features,featue_size_[-1], mode, SCOPE='log_stddev', with_act=False, with_bn=False)
+#        std_norm   = sample_normal(tf.shape(mean),mode)
+#        features   = mean + tf.exp(log_stddev) * std_norm
+#        tf.add_to_collection('VAE_loss',[mean,log_stddev])
+        
         for ii, layer in enumerate(config.model_params['decoder']):
             features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
-#        features  = BatchNorm_hard(features,mode,'norm')
-#        features = tf.nn.l2_normalize(features,-1)
+
         
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']
