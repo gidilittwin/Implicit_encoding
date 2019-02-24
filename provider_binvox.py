@@ -20,11 +20,11 @@ from skimage import measure
 class ShapeNet(object):
     def __init__(self , path_,files,rand,batch_size=16,grid_size=32,levelset=0.0,num_samples=1000,list_=['02691156'],rec_mode=False):
         self.path_ = path_
-
+        self.binvox = '/model.binvox'
         self.train_paths = self.getBenchmark(files,list_)            
 #        self.train_paths = self.getModelPaths(list_=list_)
         self.train_size  = len(self.train_paths)
-        self.train_files,self.train_image_files = self.getModelFiles()
+        self.train_files,self.train_image_files, self.cam_params = self.getModelFiles()
         self.epoch = 0
         self.rand = rand
         self.reset()
@@ -62,20 +62,59 @@ class ShapeNet(object):
                         paths.append(path)
         return  paths[1:]  
     
-    def getModelFiles(self):
-        vox_files = []
-        image_files = []
-        name = '/model.binvox'
-        for i in range(len(self.train_paths)):
-            prefix = self.train_paths[i]
-            vox_file = prefix+name
-            images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
-            vox_files.append(vox_file)
-            image_files.append([images[0]])
-#            image_files.append(images)
-        return  vox_files,  image_files
+#    def getModelFiles(self):
+#        vox_files = []
+#        image_files = []
+#        name = '/model.binvox'
+#        for i in range(len(self.train_paths)):
+#            prefix = self.train_paths[i]
+#            vox_file = prefix+name
+#            images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
+#            vox_files.append(vox_file)
+#            image_files.append([images[0]])
+##            image_files.append(images)
+#        return  vox_files,  image_files
 
- 
+    def getModelFiles(self):
+        paths = self.train_paths
+        vox_files   = []
+        image_files = []
+        cam_params  = []
+        binvox_name = self.binvox
+        for i in range(len(paths)):
+            prefix = paths[i]
+            vox_file = prefix+binvox_name
+            images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
+#            all_files = all_files+  [x + name for x in files] 
+            meta = np.loadtxt(prefix+'/rendering/rendering_metadata.txt')
+            cam_params.append(meta)
+            vox_files.append(vox_file)
+            image_files.append(images)
+#            image_files.append([images[0]])
+        return  vox_files,  image_files, cam_params
+    
+    
+    def unit(self,v):
+        norm = np.linalg.norm(v)
+        if norm == 0:
+            return v
+        return v / norm    
+    
+    def camera_info(self,param):
+        theta = np.deg2rad(param[0])
+        phi = np.deg2rad(param[1])
+        camY = param[3]*np.sin(phi)
+        temp = param[3]*np.cos(phi)
+        camX = temp * np.cos(theta)    
+        camZ = temp * np.sin(theta)        
+        cam_pos = np.array([camX, camY, camZ])        
+        axisZ = cam_pos.copy()
+        axisY = np.array([0,1,0])
+        axisX = np.cross(axisY, axisZ)
+        axisY = np.cross(axisZ, axisX)
+        cam_mat = np.array([self.unit(axisX), self.unit(axisY), self.unit(axisZ)])
+        return cam_mat, cam_pos
+
     
     def reset(self):
         if self.rand==False:
@@ -101,6 +140,8 @@ class ShapeNet(object):
         voxels = []
         sdf    = []
         images = []
+        camera_mat  = []
+        camera_pose = []        
         alpha = []
         vertices = []
         for j in range(size):
@@ -144,17 +185,24 @@ class ShapeNet(object):
                 image = misc.imread(f).astype(np.float32)
                 images.append(image[:,:,0:3])
                 alpha.append(image[:,:,3:4])
+            params = self.cam_params[j][image_file_rand,:]
+            cam_mat,cam_pose = self.camera_info(params)
+            camera_mat.append(cam_mat)
+            camera_pose.append(cam_pose)
+                
 
         voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
+        camera_mat    = np.stack(camera_mat,axis=0)  
+        camera_pose   = np.stack(camera_pose,axis=0)          
         if self.rec_mode==False:
             vertices = np.stack(vertices,axis=0)
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
 
 
 

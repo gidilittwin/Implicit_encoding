@@ -17,8 +17,8 @@ import socket
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'exp_no_bn')
-    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_1.json')
+    parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
+    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_2_no_bn_wide.json')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=8)
@@ -354,10 +354,66 @@ if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
 
 
 
+#%% RAY-TRACE
+    
+cam_pos      = tf.placeholder(tf.float32,shape=(1,1,3),name='camera_pos')  
+cam_mat      = tf.placeholder(tf.float32,shape=(1,3,3),name='camera_mat')  
+position     = (samples_xyz+1.)/2. * 223 * 0.57
+pt_trans     = tf.matmul(position-cam_pos, tf.transpose(cam_mat,(0,2,1)))   
+X,Y,Z        = tf.split(pt_trans,[1,1,1],axis=-1)
+F            = 248
+h            = (-Y)/(-Z)*F + 224/2.0
+w            = X/(-Z)*F + 224/2.0
+h            = tf.clip_by_value(h,clip_value_min=0,clip_value_max=223)
+w            = tf.clip_by_value(w,clip_value_min=0,clip_value_max=223)
+h_idx               = tf.cast(tf.round(h),tf.int64)
+w_idx               = tf.cast(tf.round(w),tf.int64)
+point_cloud_lin_idx = h_idx + 223*w_idx
+vox_idx, idx, count = tf.unique_with_counts(tf.squeeze(point_cloud_lin_idx),out_idx=tf.int32)
+values              = -1*tf.unsorted_segment_sum(-1*tf.squeeze(evals_function['y'],0),idx,tf.reduce_max(idx)+1)
+max_values          = tf.gather(values,idx)
+point_cloud_idx     = tf.squeeze(tf.concat((h_idx,w_idx),axis=-1),0)
+max_values_idx      = tf.gather(point_cloud_idx,idx)
+voxels              = tf.scatter_nd(max_values_idx, max_values, (224,224,1))
+    
+   
+session = tf.Session()
+session.run(tf.initialize_all_variables())
+if config.finetune:
+    loader.restore(session, config.saved_model_path)
+samples_xyz_np       = np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3))
+samples_xyz_tile_np  = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1))
+samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
 
-
-
+session.run(mode_node.assign(False)) 
+while step < 100000000:
+    batch                = SN_test.get_batch(type_='')
+    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)   
+    
+    
+    feed_dict = {images           :batch['images']/255.,
+                 samples_xyz      :samples_xyz_tile_np,
+                 samples_sdf      :samples_sdf_np,
+                 cam_pos          :np.expand_dims(batch['camera_pose'],0),
+                 cam_mat          :batch['camera_mat'],
+                 }
+    evals_function_d,accuracy_ ,voxels_  = session.run([evals_function['y'],accuracy,voxels],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+    
  
+import matplotlib.pyplot as plt
+
+pic = batch['images'][0,:,:,:]
+fig = plt.figure()
+plt.imshow(pic/255.)
+
+
+pic = np.squeeze(batch['alpha'][0,:,:,:])
+fig = plt.figure()
+plt.imshow(pic)
+
+projection = np.tanh(voxels_[:,:,0])
+fig = plt.figure()
+plt.imshow(projection)
 
 
 
