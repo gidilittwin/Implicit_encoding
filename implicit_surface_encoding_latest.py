@@ -14,18 +14,21 @@ import os
 import argparse
 import socket
 
+# 1) Add random sampling in range -1:1
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
-    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_2_no_bn_wide.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_1_no_bn.json')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--shuffle_rgb', type=int,  default=1)
     parser.add_argument('--num_samples', type=int,  default=10000)
     parser.add_argument('--global_points', type=int,  default=10000)    
     parser.add_argument('--checkpoint_every', type=int,  default=10000)
     parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
+#    parser.add_argument('--categories', type=int,  default=["02691156"], help='number of point samples')
     parser.add_argument('--plot_every', type=int,  default=1000)
     parser.add_argument('--test_every', type=int,  default=10000)
     parser.add_argument('--learning_rate', type=float,  default=0.00005)
@@ -33,12 +36,14 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+        parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
+        parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
@@ -86,7 +91,7 @@ if not os.path.exists(directory):
 
 
 #%%
-SN_train       = ShapeNet(config.path,
+SN_train       = ShapeNet(config.path,config.mesh_path,
                  files=config.train_file,
                  rand=True,
                  batch_size=config.batch_size,
@@ -94,9 +99,10 @@ SN_train       = ShapeNet(config.path,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False)
+                 rec_mode=False,
+                 shuffle_rgb=config.shuffle_rgb)
 
-SN_test        = ShapeNet(config.path,
+SN_test        = ShapeNet(config.path,config.mesh_path,
                  files=config.test_file,
                  rand=False,
                  batch_size=config.batch_size,
@@ -104,25 +110,28 @@ SN_test        = ShapeNet(config.path,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False)
-
+                 rec_mode=False,
+                 shuffle_rgb=config.shuffle_rgb)
 
     
 
-#batch = SN_train.get_batch(type_=type_)
+#batch = SN_train.get_batch(type_='')
 #size_ = SN_train.train_size
 #psudo_sdf = batch['sdf'][0,:,:,:]
 #verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(grid_size-1)*2-1}
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
 #MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
 
-
-#vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(grid_size-1)*2-1
-#gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
-#vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+#
+##vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(config.grid_size-1)*2-1
+#vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
+##gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
+##vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
 #cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
-     
+
+
+#batch = SN_train.get_batch(type_='')    
 #pic = batch['images'][0,:,:,:]
 #fig = plt.figure()
 #plt.imshow(pic/255.)
