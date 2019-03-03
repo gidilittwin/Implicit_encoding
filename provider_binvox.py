@@ -251,26 +251,24 @@ class ShapeNet(object):
 
 
 
-    def process_batch(self,batch):
-    #    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,num_samples/10,3))
-    #    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(grid_size-1))).astype(np.int32)
-    #    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-    #    samples_xyz_np       = np.tile(samples_xyz_np,(BATCH_SIZE,1,1))
-    #    samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
-    
-    
-    
-    
+    def process_batch(self,batch,config):
+        samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,config.global_points,3)).astype(dtype=np.float32)
+#        samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+#        samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
+        samples_xyz_np       = np.tile(samples_xyz_np,(self.batch_size,1,1))
+#        samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(BATCH_SIZE,global_points,3))
+
 #        vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(self.grid_size-1)*2-1
         vertices             = batch['vertices'][:,:,:,0]/(self.grid_size-1)*2-1
         gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
-        samples_xyz_np       = np.clip((vertices+gaussian_noise),-1.0,1.0)
-    #    samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
+        vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+        
+        samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)
         samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(self.grid_size-1))).astype(np.int32)
     #    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)
-        batch_idx            = np.tile(np.reshape(np.arange(0,self.batch_size,dtype=np.int32),(self.batch_size,1,1)),(1,self.num_samples,1))
-        samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(self.batch_size*(self.num_samples),4))
-        samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(self.batch_size,self.num_samples,1))
+        batch_idx            = np.tile(np.reshape(np.arange(0,self.batch_size,dtype=np.int32),(self.batch_size,1,1)),(1,self.num_samples+config.global_points,1))
+        samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(self.batch_size*(self.num_samples+config.global_points),4))
+        samples_sdf_np       = np.reshape(batch['sdf'][samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(self.batch_size,self.num_samples+config.global_points,1))
 
         return {'samples_xyz_np':samples_xyz_np,'samples_sdf_np':samples_sdf_np}
 

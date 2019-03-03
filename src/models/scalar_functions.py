@@ -108,78 +108,20 @@ def cell_2d_assign(in_node,scope,mode,weights,act=True,normalize=False,bn=False)
 def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
         if normalize==True:
-            
-            #regular
-#            c1 = tf.matmul(in_node,weights['w']) + weights['b']
-            
-            #Reparametrization
-#            VV = tf.matmul(weights['w'],weights['w'],transpose_a=True)
-#            VV_t = tf.reshape(tf.trace(VV),(-1,1,1))
-            
-#            weights['w'] = weights['w']/tf.norm(weights['w'],axis=2,keep_dims=True)
+            weights['w'] = weights['w']/tf.norm(weights['w'],axis=2,keep_dims=True)
             c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']            
-
-            #normalization
-#            weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
-#            c1 = tf.matmul(in_node,weights['w']) + weights['b']
-
-
-            #Spectral
-#            eps = 0.1
-#            shapes = weights['w'].get_shape().as_list()
-#            if shapes[1]>=shapes[2] and shapes[2]!=1:
-#                WW = []
-#                EE = []
-#                for ii in range(8):
-#                    V     = tf.transpose(weights['w'][ii,:,:],(1,0))
-#                    Vc    = V - tf.reduce_mean(V,axis=0,keep_dims=True)
-#                    cov   = tf.matmul(Vc,tf.transpose(Vc))
-#                    e,v   = tf.linalg.eigh(cov+eps*tf.eye(shapes[1]))
-#                    e_diag= tf.diag(1./tf.sqrt(e))
-#                    W     = tf.matmul(tf.matmul(tf.matmul(v,e_diag,transpose_a=False),v,transpose_b=True),Vc)
-#                    WW.append(tf.transpose(W))
-#                    EE.append(e)
-#                WW = tf.stack(WW,axis=0) 
-#                EE = tf.reduce_mean(tf.stack(EE,axis=0) ,axis=0,keep_dims=True)
-#                tf.add_to_collection('test',WW)
-#                c1 = tf.matmul(in_node,WW)*weights['g'] + weights['b']   
-#            else:
-#                weights['w'] = weights['w']/tf.norm(weights['w'],axis=1,keep_dims=True)
-#                c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']  
-
-#            shape = c1.get_shape()
-#            tmp = tf.reduce_mean(x,(1,2))
-#            cov = tf.matmul(tmp,tf.transpose(tmp))/tf.cast(shape[0],tf.float32)
-#            e,v  = tf.linalg.eigh(cov)
-#            ema = tf.train.ExponentialMovingAverage(decay=0.998)
-#            ma_var = [tf.sqrt(e[-1])]
-#            ema_op = ema.apply(ma_var)
-#            tf.add_to_collection('ma_ops',(ema_op))
-#            div = tf.cond(mode_node, lambda: tf.sqrt(e[-1]), lambda: ema.average(ma_var[0]))
-#            x = x/div*num
-
-
-
-
-
         else:
-            c1 = tf.matmul(in_node,weights['w']) + weights['b']
+            c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']
         if bn==True:
             c1 = BatchNorm(c1,mode,scope)
-        if act==True:
-            c1 = tf.nn.relu(c1)
-#            c1 = lrelu(c1)
-#            c1 = tf.nn.selu(c1)
-#            c1 = tf.tanh(c1)
-#            c1 = tf.nn.elu(c1)
-
+        if act!=None:
+            c1 = act(c1)
 #            shape = weights['w'].get_shape().as_list()[-1]
 #            c_a = c1[:,:,0:shape/2]
 #            c_b = c1[:,:,shape/2:]
 #            c_max = tf.maximum(c_a,c_b)
 #            c_min = tf.minimum(c_a,c_b)
 #            c1 = tf.concat((c_max,c_min),axis=-1)
-            
     return c1
 
 
@@ -227,58 +169,45 @@ def softargmax_3d(pred, grid_size_gt, name=None):
     return coordinates
        
 
-  
-def deep_sdf1(xyz, mode_node, theta):
-    image        = xyz
-    image_shape = image.get_shape().as_list()
-    if len(image_shape)==4:
-        image = tf.reshape(image,(image_shape[0],-1,3))
-    for ii in range(len(theta)):
-        if ii<len(theta)-1:
-            act=True
-            bn = False
-        else:
-            act=False
-            bn = False
-        in_size = image.get_shape().as_list()[-1]
-        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-#        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-        image = cell_2d_assign(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=False,bn=bn) 
-    sdf = image
-    if len(image_shape)==4:
-        sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
-#    grads = tf.gradients(sdf,xyz)[0]
-#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
-#    sdf = sdf/grads_norm
-    return sdf
 
 
-def deep_sdf2(xyz, mode_node, theta):
-    image        = xyz
-#    x,y,z = tf.split(xyz,[1,1,1],axis=2)
-#    x = tf.abs(x)
-#    image = tf.concat((x,y,z),axis=2)
+
+def deep_sdf2(xyz, mode_node, theta, config):
+    if config.symetric:
+        x,y,z = tf.split(xyz,[1,1,1],axis=2)
+        x = tf.abs(x)
+        image = tf.concat((x,y,z),axis=2)
+    else:
+        image        = xyz
     
+
+    dnn_params = config.model_params['dnn_params']    
+    if dnn_params['activations']=='relu':
+        act_=tf.nn.relu
+    elif dnn_params['activations']=='elu':
+        act_=tf.nn.elu
+    elif dnn_params['activations']=='tanh':
+        act_=tf.tanh        
+    elif dnn_params['activations']=='lrelu':
+        act_=lrelu 
+        
     image_shape = image.get_shape().as_list()
     if len(image_shape)==4:
         image = tf.reshape(image,(image_shape[0],-1,3))
     for ii in range(len(theta)):
         if ii<len(theta)-1:
-            act=True
+            act=act_
             bn = False
         else:
-            act=False
+            act=None
             bn = False
         in_size = image.get_shape().as_list()[-1]
         print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-#        image = cell_2d(image,   'l'+str(ii),mode_node,in_size,theta[ii]['w'],act=act,normalize=False,bn=bn) 
-        image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=True,bn=bn) 
+        image = cell_2d_cnn(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=dnn_params['normalize'],bn=bn) 
     sdf = image
     if len(image_shape)==4:
         sdf = tf.reshape(sdf,(1,image_shape[1],image_shape[2]))    
-#    grads = tf.gradients(sdf,xyz)[0]
-#    grads_norm = tf.sqrt(tf.reduce_sum(tf.square(grads),axis=2,keep_dims=True))
-#    sdf = sdf/grads_norm
+
     return sdf
 
 

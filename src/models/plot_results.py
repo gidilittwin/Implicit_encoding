@@ -13,33 +13,33 @@ acc_test  = []
 acc_train = []
 num_plots = 3
 
-#for ii in range(num_plots):
-#    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/iou_values_test.npy'
-#    iou_test.append(np.load(file_name))
-#
-#    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/accuracy_values_test.npy'
-#    acc_test.append(np.load(file_name))
-#    
-#    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/accuracy_values.npy'
-#    acc_train.append(np.load(file_name))
-#    
-#    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/iou_values.npy'
-#    iou_train.append(np.load(file_name))
-
-
-
 for ii in range(num_plots):
-    file_name = path+'exp_full_data'+str(ii+1)+'w/iou_values_test.npy'
+    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/iou_values_test.npy'
     iou_test.append(np.load(file_name))
 
-    file_name = path+'exp_full_data'+str(ii+1)+'w/accuracy_values_test.npy'
+    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/accuracy_values_test.npy'
     acc_test.append(np.load(file_name))
     
-    file_name = path+'exp_full_data'+str(ii+1)+'w/accuracy_values.npy'
+    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/accuracy_values.npy'
     acc_train.append(np.load(file_name))
     
-    file_name = path+'exp_full_data'+str(ii+1)+'w/iou_values.npy'
+    file_name = path+'exp_full_data_noflip'+str(ii+1)+'w/iou_values.npy'
     iou_train.append(np.load(file_name))
+
+
+
+#for ii in range(num_plots):
+#    file_name = path+'exp_full_data'+str(ii+1)+'w/iou_values_test.npy'
+#    iou_test.append(np.load(file_name))
+#
+#    file_name = path+'exp_full_data'+str(ii+1)+'w/accuracy_values_test.npy'
+#    acc_test.append(np.load(file_name))
+#    
+#    file_name = path+'exp_full_data'+str(ii+1)+'w/accuracy_values.npy'
+#    acc_train.append(np.load(file_name))
+#    
+#    file_name = path+'exp_full_data'+str(ii+1)+'w/iou_values.npy'
+#    iou_train.append(np.load(file_name))
     
   
 #for ii in range(num_plots):

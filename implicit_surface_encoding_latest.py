@@ -15,17 +15,20 @@ import argparse
 import socket
 
 # 1) Add random sampling in range -1:1
+# 2) remove hd grid for better test results
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
-    parser.add_argument('--model_params_path', type=str, default= './archs/architecture_1_no_bn.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/wide_4_lrelu.json')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
+    parser.add_argument('--symetric', type=int,  default=0)
+    parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
-    parser.add_argument('--global_points', type=int,  default=10000)    
+    parser.add_argument('--global_points', type=int,  default=1000)    
     parser.add_argument('--checkpoint_every', type=int,  default=10000)
     parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
 #    parser.add_argument('--categories', type=int,  default=["02691156"], help='number of point samples')
@@ -40,14 +43,14 @@ def parse_args():
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
+        parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/exp31(benchmark=57.4)/-196069")
+        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/")
     return parser.parse_args()
 config = parse_args()
 print('#############################################################################################')
@@ -159,7 +162,7 @@ with tf.variable_scope('mode_node',reuse=tf.AUTO_REUSE):
    
 def function_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
-        evaluated_function = SF.deep_sdf2(coordinates,args_[0],args_[1])
+        evaluated_function = SF.deep_sdf2(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
 
 
@@ -194,7 +197,7 @@ evals_target['x']     = samples_xyz
 evals_target['y']     = samples_sdf
 evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 embeddings            = CNN_function_wrapper(images,[mode_node,config])
-evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings],shape = [config.batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,embeddings,config],shape = [config.batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
 
 
 labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(config.batch_size,-1)),config.levelset),tf.int64)
@@ -208,8 +211,7 @@ err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
 norm               = tf.reduce_max(tf.abs(evals_function['dydx_norm']))
 norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
-radius             = 0.1
-sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/radius),axis=-1)
+sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
 loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits,name='cross-entropy'),axis=-1)
 loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
 iou_logit          = logits[:,:,1:2]
@@ -252,7 +254,7 @@ loader = tf.train.Saver(var_list=cnn_vars)
 #%% Train
 def evaluate(SN_test, mode_node, config, accuracy, iou):
     session.run(mode_node.assign(False)) 
-    grid_size_lr   = config.grid_size*2
+    grid_size_lr   = config.grid_size
     x_lr           = np.linspace(-1, 1, grid_size_lr)
     y_lr           = np.linspace(-1, 1, grid_size_lr)
     z_lr           = np.linspace(-1, 1, grid_size_lr)
@@ -283,13 +285,6 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
-if config.finetune:
-    loader.restore(session, config.saved_model_path)
-step           = 0
-aa_mov         = MOV_AVG(300) 
-bb_mov         = MOV_AVG(300) 
-cc_mov         = MOV_AVG(300) 
-dd_mov         = MOV_AVG(300) 
 loss_plot      = []
 acc_plot       = []
 iou_plot       = []
@@ -298,11 +293,33 @@ iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
 
+if config.finetune:
+    loader.restore(session, directory+'/latest')
+    loss_plot     = np.load(directory+'/loss_values.npy')
+    acc_plot      = np.load(directory+'/accuracy_values.npy')  
+    iou_plot      = np.load(directory+'/iou_values.npy')      
+    acc_plot_test = np.load(directory+'/accuracy_values_test.npy') 
+    iou_plot_test = np.load(directory+'/iou_values_test.npy') 
+    loss_plot     = np.split(loss_plot,loss_plot.shape[0])
+    acc_plot      = np.split(acc_plot,acc_plot.shape[0])
+    iou_plot      = np.split(iou_plot,iou_plot.shape[0])
+    acc_plot_test = np.split(acc_plot_test,acc_plot_test.shape[0])
+    iou_plot_test = np.split(iou_plot_test,iou_plot_test.shape[0])
+    
+    
+    
+step           = 0
+aa_mov         = MOV_AVG(300) 
+bb_mov         = MOV_AVG(300) 
+cc_mov         = MOV_AVG(300) 
+dd_mov         = MOV_AVG(300) 
+
+
 
 session.run(mode_node.assign(True)) 
 while step < 100000000:
     batch                = SN_train.get_batch(type_='')
-    batch_feed           = SN_train.process_batch(batch)
+    batch_feed           = SN_train.process_batch(batch,config)
     feed_dict = {images             :batch['images']/255.,
                  lr_node            :config.learning_rate,
                  samples_xyz        :batch_feed['samples_xyz_np'],
@@ -318,6 +335,7 @@ while step < 100000000:
         print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
     if step % config.checkpoint_every == 0 and step!=0:
         saver.save(session, directory+'/'+str(step), global_step=step)
+        saver.save(session, directory+'/latest', global_step=0)
         last_saved_step = step
     if step % config.plot_every == 0:
         acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
@@ -365,64 +383,64 @@ if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
 
 #%% RAY-TRACE
     
-cam_pos      = tf.placeholder(tf.float32,shape=(1,1,3),name='camera_pos')  
-cam_mat      = tf.placeholder(tf.float32,shape=(1,3,3),name='camera_mat')  
-position     = (samples_xyz+1.)/2. * 223 * 0.57
-pt_trans     = tf.matmul(position-cam_pos, tf.transpose(cam_mat,(0,2,1)))   
-X,Y,Z        = tf.split(pt_trans,[1,1,1],axis=-1)
-F            = 248
-h            = (-Y)/(-Z)*F + 224/2.0
-w            = X/(-Z)*F + 224/2.0
-h            = tf.clip_by_value(h,clip_value_min=0,clip_value_max=223)
-w            = tf.clip_by_value(w,clip_value_min=0,clip_value_max=223)
-h_idx               = tf.cast(tf.round(h),tf.int64)
-w_idx               = tf.cast(tf.round(w),tf.int64)
-point_cloud_lin_idx = h_idx + 223*w_idx
-vox_idx, idx, count = tf.unique_with_counts(tf.squeeze(point_cloud_lin_idx),out_idx=tf.int32)
-values              = -1*tf.unsorted_segment_sum(-1*tf.squeeze(evals_function['y'],0),idx,tf.reduce_max(idx)+1)
-max_values          = tf.gather(values,idx)
-point_cloud_idx     = tf.squeeze(tf.concat((h_idx,w_idx),axis=-1),0)
-max_values_idx      = tf.gather(point_cloud_idx,idx)
-voxels              = tf.scatter_nd(max_values_idx, max_values, (224,224,1))
-    
-   
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-if config.finetune:
-    loader.restore(session, config.saved_model_path)
-samples_xyz_np       = np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3))
-samples_xyz_tile_np  = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1))
-samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
-
-session.run(mode_node.assign(False)) 
-while step < 100000000:
-    batch                = SN_test.get_batch(type_='')
-    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)   
-    
-    
-    feed_dict = {images           :batch['images']/255.,
-                 samples_xyz      :samples_xyz_tile_np,
-                 samples_sdf      :samples_sdf_np,
-                 cam_pos          :np.expand_dims(batch['camera_pose'],0),
-                 cam_mat          :batch['camera_mat'],
-                 }
-    evals_function_d,accuracy_ ,voxels_  = session.run([evals_function['y'],accuracy,voxels],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
-    
- 
-import matplotlib.pyplot as plt
-
-pic = batch['images'][0,:,:,:]
-fig = plt.figure()
-plt.imshow(pic/255.)
-
-
-pic = np.squeeze(batch['alpha'][0,:,:,:])
-fig = plt.figure()
-plt.imshow(pic)
-
-projection = np.tanh(voxels_[:,:,0])
-fig = plt.figure()
-plt.imshow(projection)
+#cam_pos      = tf.placeholder(tf.float32,shape=(1,1,3),name='camera_pos')  
+#cam_mat      = tf.placeholder(tf.float32,shape=(1,3,3),name='camera_mat')  
+#position     = (samples_xyz+1.)/2. * 223 * 0.57
+#pt_trans     = tf.matmul(position-cam_pos, tf.transpose(cam_mat,(0,2,1)))   
+#X,Y,Z        = tf.split(pt_trans,[1,1,1],axis=-1)
+#F            = 248
+#h            = (-Y)/(-Z)*F + 224/2.0
+#w            = X/(-Z)*F + 224/2.0
+#h            = tf.clip_by_value(h,clip_value_min=0,clip_value_max=223)
+#w            = tf.clip_by_value(w,clip_value_min=0,clip_value_max=223)
+#h_idx               = tf.cast(tf.round(h),tf.int64)
+#w_idx               = tf.cast(tf.round(w),tf.int64)
+#point_cloud_lin_idx = h_idx + 223*w_idx
+#vox_idx, idx, count = tf.unique_with_counts(tf.squeeze(point_cloud_lin_idx),out_idx=tf.int32)
+#values              = -1*tf.unsorted_segment_sum(-1*tf.squeeze(evals_function['y'],0),idx,tf.reduce_max(idx)+1)
+#max_values          = tf.gather(values,idx)
+#point_cloud_idx     = tf.squeeze(tf.concat((h_idx,w_idx),axis=-1),0)
+#max_values_idx      = tf.gather(point_cloud_idx,idx)
+#voxels              = tf.scatter_nd(max_values_idx, max_values, (224,224,1))
+#    
+#   
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+#if config.finetune:
+#    loader.restore(session, config.saved_model_path)
+#samples_xyz_np       = np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3))
+#samples_xyz_tile_np  = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1))
+#samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+#
+#session.run(mode_node.assign(False)) 
+#while step < 100000000:
+#    batch                = SN_test.get_batch(type_='')
+#    samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)   
+#    
+#    
+#    feed_dict = {images           :batch['images']/255.,
+#                 samples_xyz      :samples_xyz_tile_np,
+#                 samples_sdf      :samples_sdf_np,
+#                 cam_pos          :np.expand_dims(batch['camera_pose'],0),
+#                 cam_mat          :batch['camera_mat'],
+#                 }
+#    evals_function_d,accuracy_ ,voxels_  = session.run([evals_function['y'],accuracy,voxels],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+#    
+# 
+#import matplotlib.pyplot as plt
+#
+#pic = batch['images'][0,:,:,:]
+#fig = plt.figure()
+#plt.imshow(pic/255.)
+#
+#
+#pic = np.squeeze(batch['alpha'][0,:,:,:])
+#fig = plt.figure()
+#plt.imshow(pic)
+#
+#projection = np.tanh(voxels_[:,:,0])
+#fig = plt.figure()
+#plt.imshow(projection)
 
 
 
