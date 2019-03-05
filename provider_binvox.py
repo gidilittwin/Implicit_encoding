@@ -24,7 +24,8 @@ class ShapeNet(object):
         self.binvox_32  = '/model.binvox'
         self.binvox_128 = '/models/model_normalized.solid.binvox'
         self.grid_size = grid_size
-        self.train_paths = self.getBenchmark(files,list_)            
+        self.train_paths = self.getBenchmark(files,list_)  
+#        self.train_paths = self.train_paths[0:8]  
 #        self.train_paths = self.getModelPaths(list_=list_)
         self.train_size  = len(self.train_paths)
         self.train_files,self.train_image_files, self.cam_params = self.getModelFiles()
@@ -53,7 +54,7 @@ class ShapeNet(object):
         for i in range(len(list_)):
             prefix = self.path_ + list_[i] +'/'
             paths_cat = glob.glob(os.path.join(prefix, '*'))
-#            paths_cat = paths_cat[0:10]
+            paths_cat = paths_cat[0:1]
             paths = paths+paths_cat
         return  paths  
 
