@@ -149,7 +149,7 @@ class ShapeNet(object):
         files = [self.train_files[j] for j in indexes]
         image_files = [self.train_image_files[j] for j in indexes]
         code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
-        voxels = []
+        #voxels = []
         sdf    = []
         images = []
         camera_mat  = []
@@ -159,34 +159,30 @@ class ShapeNet(object):
         for j in range(size):
             with open(files[j], 'rb') as f:
                 m1 = binvox_rw.read_as_3d_array(f)
+            voxels_b = m1.data
+            voxels_b = np.pad(voxels_b, pad_width=2,mode='constant', constant_values=False)
+            voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
 
-                voxels_ = m1.data
-#                voxels_ = voxels_ + np.flip(voxels_,2)
-                voxels_ = np.pad(voxels_, pad_width=2,mode='constant', constant_values=False)
-#                    voxels_ = -1.0*voxels_.astype(np.float32)+0.5
-#                    sdf_    = voxels_
-                
-                voxels.append(voxels_)
-                inner_volume       = voxels_
-                outer_volume       = np.logical_not(voxels_)
-                sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
-                sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
-                sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
-                
-
-                Verts = []
-                for ll in range(len(self.levelset)):
-                    verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
-                    num_points = verts.shape[0]
-                    arr_ = np.arange(0,num_points)
-                    perms = np.random.choice(arr_,self.num_samples)
-                    verts_sampled = verts[perms,:]
-                    Verts.append(verts_sampled[:,(2,0,1)])
-                vertices.append(np.stack(Verts,axis=-1))
-                
-              
-                
+            sdf_    = voxels_
             sdf.append(sdf_) 
+#            voxels.append(voxels_)
+#            inner_volume       = voxels_
+#            outer_volume       = np.logical_not(voxels_)
+#            sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#            sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#            sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
+            
+            Verts = []
+            for ll in range(len(self.levelset)):
+#                verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
+                verts, faces, normals, values = measure.marching_cubes_lewiner(voxels_b,0.5)
+                num_points = verts.shape[0]
+                arr_ = np.arange(0,num_points)
+                perms = np.random.choice(arr_,self.num_samples)
+                verts_sampled = verts[perms,:]
+                Verts.append(verts_sampled[:,(2,0,1)])
+            vertices.append(np.stack(Verts,axis=-1))
+
                 
             if self.rand==False: 
                 image_file_rand = np.random.randint(0,len(image_files[j]))   
@@ -261,7 +257,7 @@ class ShapeNet(object):
 
 #        vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(self.grid_size-1)*2-1
         vertices             = batch['vertices'][:,:,:,0]/(self.grid_size-1)*2-1
-        gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
+        gaussian_noise       = np.random.normal(loc=0.0,scale=config.noise_scale,size=vertices.shape).astype(np.float32)
         vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
         
         samples_xyz_np       = np.concatenate((samples_xyz_np,vertices),axis=1)

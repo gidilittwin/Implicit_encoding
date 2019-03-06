@@ -23,11 +23,12 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/wide_4_lrelu.json')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=132)
-    parser.add_argument('--batch_size', type=int,  default=1)
+    parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
+    parser.add_argument('--noise_scale', type=float,  default=0.05)
     parser.add_argument('--global_points', type=int,  default=1000)    
     parser.add_argument('--checkpoint_every', type=int,  default=10000)
 #    parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
@@ -80,6 +81,7 @@ class MOV_AVG(object):
 
 
 MODEL_PARAMS = config.model_params_path
+
 with open(MODEL_PARAMS, 'r') as f:
     model_params = json.load(f)
 config.model_params = model_params    
@@ -118,18 +120,16 @@ SN_test        = ShapeNet(config.path,config.mesh_path,
 
     
 
-batch = SN_train.get_batch(type_='')
-size_ = SN_train.train_size
-psudo_sdf = batch['sdf'][0,:,:,:]
-verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-
+#batch = SN_train.get_batch(type_='')
+#size_ = SN_train.train_size
+#psudo_sdf = batch['sdf'][0,:,:,:]
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
 #
-##vertices             = np.concatenate((batch['vertices'][:,:,:,0],batch['vertices'][:,:,:,1]),axis=1)/(config.grid_size-1)*2-1
 #vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
-##gaussian_noise       = np.random.normal(loc=0.0,scale=0.1,size=vertices.shape).astype(np.float32)
-##vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
+#gaussian_noise       = np.random.normal(loc=0.0,scale=config.noise_scale,size=vertices.shape).astype(np.float32)
+#vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
 #cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
 
