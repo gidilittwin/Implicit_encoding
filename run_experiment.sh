@@ -1,64 +1,32 @@
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp1 --radius 0.1 --model_params_path ./archs/wide_1_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp2 --radius 0.1 --model_params_path ./archs/wide_1_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp3 --radius 0.1 --model_params_path ./archs/wide_1_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp4 --radius 0.1 --model_params_path ./archs/wide_1_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp5 --radius 0.1 --model_params_path ./archs/wide_1_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp6 --radius 0.1 --model_params_path ./archs/wide_1_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp7 --radius 0.1 --model_params_path ./archs/wide_1_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp8 --radius 0.1 --model_params_path ./archs/wide_1_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp9 --radius 0.1 --model_params_path ./archs/wide_2_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp10 --radius 0.1 --model_params_path ./archs/wide_2_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp11 --radius 0.1 --model_params_path ./archs/wide_2_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp12 --radius 0.1 --model_params_path ./archs/wide_2_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp13 --radius 0.1 --model_params_path ./archs/wide_2_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp14 --radius 0.1 --model_params_path ./archs/wide_2_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp15 --radius 0.1 --model_params_path ./archs/wide_2_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp16 --radius 0.1 --model_params_path ./archs/wide_2_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp17 --radius 0.1 --model_params_path ./archs/wide_3_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp18 --radius 0.1 --model_params_path ./archs/wide_3_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp19 --radius 0.1 --model_params_path ./archs/wide_3_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp20 --radius 0.1 --model_params_path ./archs/wide_3_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp21 --radius 0.1 --model_params_path ./archs/wide_3_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp22 --radius 0.1 --model_params_path ./archs/wide_3_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp23 --radius 0.1 --model_params_path ./archs/wide_3_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp24 --radius 0.1 --model_params_path ./archs/wide_3_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp25 --radius 0.1 --model_params_path ./archs/wide_4_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp26 --radius 0.1 --model_params_path ./archs/wide_4_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp27 --radius 0.1 --model_params_path ./archs/wide_4_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp28 --radius 0.1 --model_params_path ./archs/wide_4_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp29 --radius 0.1 --model_params_path ./archs/wide_4_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp30 --radius 0.1 --model_params_path ./archs/wide_4_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp31 --radius 0.1 --model_params_path ./archs/wide_4_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp32 --radius 0.1 --model_params_path ./archs/wide_4_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp33 --radius 0.05 --model_params_path ./archs/wide_1_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp34 --radius 0.05 --model_params_path ./archs/wide_1_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp35 --radius 0.05 --model_params_path ./archs/wide_1_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp36 --radius 0.05 --model_params_path ./archs/wide_1_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp37 --radius 0.05 --model_params_path ./archs/wide_1_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp38 --radius 0.05 --model_params_path ./archs/wide_1_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp39 --radius 0.05 --model_params_path ./archs/wide_1_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp40 --radius 0.05 --model_params_path ./archs/wide_1_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp41 --radius 0.05 --model_params_path ./archs/wide_2_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp42 --radius 0.05 --model_params_path ./archs/wide_2_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp43 --radius 0.05 --model_params_path ./archs/wide_2_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp44 --radius 0.05 --model_params_path ./archs/wide_2_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp45 --radius 0.05 --model_params_path ./archs/wide_2_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp46 --radius 0.05 --model_params_path ./archs/wide_2_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp47 --radius 0.05 --model_params_path ./archs/wide_2_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp48 --radius 0.05 --model_params_path ./archs/wide_2_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp49 --radius 0.05 --model_params_path ./archs/wide_3_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp50 --radius 0.05 --model_params_path ./archs/wide_3_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp51 --radius 0.05 --model_params_path ./archs/wide_3_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp52 --radius 0.05 --model_params_path ./archs/wide_3_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp53 --radius 0.05 --model_params_path ./archs/wide_3_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp54 --radius 0.05 --model_params_path ./archs/wide_3_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp55 --radius 0.05 --model_params_path ./archs/wide_3_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp56 --radius 0.05 --model_params_path ./archs/wide_3_tanh_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp57 --radius 0.05 --model_params_path ./archs/wide_4_elu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp58 --radius 0.05 --model_params_path ./archs/wide_4_relu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp59 --radius 0.05 --model_params_path ./archs/wide_4_lrelu.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp60 --radius 0.05 --model_params_path ./archs/wide_4_tanh.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp61 --radius 0.05 --model_params_path ./archs/wide_4_elu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp62 --radius 0.05 --model_params_path ./archs/wide_4_relu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp63 --radius 0.05 --model_params_path ./archs/wide_4_lrelu_wnorm.json
-python implicit_surface_encoding_latest.py --experiment_name dnn_arch_exp64 --radius 0.05 --model_params_path ./archs/wide_4_tanh_wnorm.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp1 --radius 0.1 --noise_scale 0.05 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp2 --radius 0.1 --noise_scale 0.05 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp3 --radius 0.1 --noise_scale 0.05 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp4 --radius 0.1 --noise_scale 0.05 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp5 --radius 0.2 --noise_scale 0.05 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp6 --radius 0.2 --noise_scale 0.05 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp7 --radius 0.2 --noise_scale 0.05 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp8 --radius 0.2 --noise_scale 0.05 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp9 --radius 0.3 --noise_scale 0.05 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp10 --radius 0.3 --noise_scale 0.05 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp11 --radius 0.3 --noise_scale 0.05 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp12 --radius 0.3 --noise_scale 0.05 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp13 --radius 0.4 --noise_scale 0.05 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp14 --radius 0.4 --noise_scale 0.05 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp15 --radius 0.4 --noise_scale 0.05 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp16 --radius 0.4 --noise_scale 0.05 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp17 --radius 0.1 --noise_scale 0.02 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp18 --radius 0.1 --noise_scale 0.02 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp19 --radius 0.1 --noise_scale 0.02 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp20 --radius 0.1 --noise_scale 0.02 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp21 --radius 0.2 --noise_scale 0.02 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp22 --radius 0.2 --noise_scale 0.02 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp23 --radius 0.2 --noise_scale 0.02 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp24 --radius 0.2 --noise_scale 0.02 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp25 --radius 0.3 --noise_scale 0.02 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp26 --radius 0.3 --noise_scale 0.02 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp27 --radius 0.3 --noise_scale 0.02 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp28 --radius 0.3 --noise_scale 0.02 --model_params_path ./archs/wide_4_tanh.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp29 --radius 0.4 --noise_scale 0.02 --model_params_path ./archs/wide_4_elu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp30 --radius 0.4 --noise_scale 0.02 --model_params_path ./archs/wide_4_relu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp31 --radius 0.4 --noise_scale 0.02 --model_params_path ./archs/wide_4_lrelu.json
+python implicit_surface_encoding_latest.py --experiment_name hyperparams_exp32 --radius 0.4 --noise_scale 0.02 --model_params_path ./archs/wide_4_tanh.json

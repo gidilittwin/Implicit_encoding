@@ -20,9 +20,9 @@ import socket
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
-    parser.add_argument('--model_params_path', type=str, default= './archs/wide_4_lrelu.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/wide_4_elu.json')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--grid_size', type=int,  default=132)
+    parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
