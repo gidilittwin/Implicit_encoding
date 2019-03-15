@@ -97,7 +97,7 @@ def resnet_config(example,args_):
         current = tf.nn.bias_add(c0, conv0_b)
 
     with tf.variable_scope("Residuals"):
-        BN = config.model_params['encoder']['BN']
+        BN = config.batch_norm
         for ii, layer in enumerate(config.model_params['encoder']['residuals']):
             current = cell2D_res(current, layer['k'], base_size*layer['s_in'],  base_size*layer['s_out'], mode, layer['stride'], 'r'+str(ii+1),use_bn=BN)#68
     return current
@@ -135,9 +135,10 @@ def regressor(current,args_):
     theta   = config.model_params['theta']
     with tf.variable_scope("fully"):
         featue_size_ = current.get_shape().as_list()
-        featue_size = tf.shape(current)
-        current     = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding='VALID')
-        features    = tf.squeeze(current,axis=(1,2))
+        current      = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding=config.padding)
+        featue_size  = tf.shape(current)
+        featue_size_ = current.get_shape().as_list()
+        features     = tf.reshape(current,(-1,featue_size_[1]*featue_size_[2]*featue_size_[3]))
         
 #        mean       = cell1D(features,featue_size_[-1], mode, SCOPE='mean', with_act=False, with_bn=False)
 #        log_stddev = cell1D(features,featue_size_[-1], mode, SCOPE='log_stddev', with_act=False, with_bn=False)

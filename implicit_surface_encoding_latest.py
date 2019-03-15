@@ -14,25 +14,37 @@ import os
 import argparse
 import socket
 
-# 1) Add random sampling in range -1:1
-# 2) remove hd grid for better test results
+# 1) try HD grid for evaluations (we don't need to stick to 32..)
+# 2) Add batch norm to different blocks
+# 3) set different levelsets for evaluations
+# 4) Hourgalss?
+# 5) different gaussin noise values
+# 6) bring weighting back?
+# 7) Flip augmentations, 
+# 8) add silhouette to rgb for 32^3
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
-    parser.add_argument('--model_params_path', type=str, default= './archs/wide_4_elu.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5w.json')
+    parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--grid_size', type=int,  default=36)
+#    parser.add_argument('--grid_size', type=int,  default=36)
+#    parser.add_argument('--img_size', type=int,  default=[137,137])
+    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--img_size', type=int,  default=[224,224])    
     parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
-    parser.add_argument('--noise_scale', type=float,  default=0.05)
+    parser.add_argument('--noise_scale', type=float,  default=0.1)
     parser.add_argument('--global_points', type=int,  default=1000)    
     parser.add_argument('--checkpoint_every', type=int,  default=10000)
-#    parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
-    parser.add_argument('--categories', type=int,  default=["02691156"], help='number of point samples')
+    parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
+#    parser.add_argument('--categories', type=int,  default=["02691156"], help='number of point samples')
     parser.add_argument('--plot_every', type=int,  default=1000)
     parser.add_argument('--test_every', type=int,  default=10000)
     parser.add_argument('--learning_rate', type=float,  default=0.00005)
@@ -41,6 +53,7 @@ def parse_args():
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
+        parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
@@ -48,6 +61,7 @@ def parse_args():
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
+        parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
@@ -96,61 +110,50 @@ if not os.path.exists(directory):
 
 
 #%%
-SN_train       = ShapeNet(config.path,config.mesh_path,
-                 files=config.train_file,
+#SN_train       = ShapeNet(config.path,config.mesh_path,
+#                 files=config.train_file,
+#                 rand=True,
+#                 batch_size=config.batch_size,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=False,
+#                 shuffle_rgb=config.shuffle_rgb)
+#
+#SN_test        = ShapeNet(config.path,config.mesh_path,
+#                 files=config.test_file,
+#                 rand=False,
+#                 batch_size=config.batch_size,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=False,
+#                 shuffle_rgb=config.shuffle_rgb)
+
+
+SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+                 files=[],
                  rand=True,
                  batch_size=config.batch_size,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False,
-                 shuffle_rgb=config.shuffle_rgb)
+                 rec_mode=False)
 
-SN_test        = ShapeNet(config.path,config.mesh_path,
-                 files=config.test_file,
+
+SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
+                 files=[],
                  rand=False,
                  batch_size=config.batch_size,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False,
-                 shuffle_rgb=config.shuffle_rgb)
-
-    
-
-#batch = SN_train.get_batch(type_='')
-#size_ = SN_train.train_size
-#psudo_sdf = batch['sdf'][0,:,:,:]
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
-#gaussian_noise       = np.random.normal(loc=0.0,scale=config.noise_scale,size=vertices.shape).astype(np.float32)
-#vertices             = np.clip((vertices+gaussian_noise),-1.0,1.0)
-#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
-
-#batch = SN_train.get_batch(type_='')    
-#pic = batch['images'][0,:,:,:]
-#fig = plt.figure()
-#plt.imshow(pic/255.)
-
-
-
-x           = np.linspace(-1, 1, config.grid_size)
-y           = np.linspace(-1, 1, config.grid_size)
-z           = np.linspace(-1, 1, config.grid_size)
-xx,yy,zz    = np.meshgrid(x, y, z)
-
-grid_size_lr   = config.grid_size*2
-x_lr           = np.linspace(-1, 1, grid_size_lr)
-y_lr           = np.linspace(-1, 1, grid_size_lr)
-z_lr           = np.linspace(-1, 1, grid_size_lr)
-xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)
-
+                 rec_mode=False)    
+ 
 
 
 
@@ -188,7 +191,7 @@ Ray_render_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'd
 
 
 #%% Sampling in XYZ domain  
-images                = tf.placeholder(tf.float32,shape=(None,137,137,3), name='images')  
+images                = tf.placeholder(tf.float32,shape=(None,config.img_size[0],config.img_size[1],4), name='images')  
 samples_sdf           = tf.placeholder(tf.float32,shape=(None,None,1), name='samples_sdf')  
 samples_xyz           = tf.placeholder(tf.float32,shape=(None,None,3),   name='samples_xyz')  
 evals_target          = {}
@@ -228,6 +231,7 @@ loss               = tf.reduce_mean(loss_class )
 X                  = tf.cast(labels,tf.bool)
 Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
 iou                = tf.reduce_mean(tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1))
+
 
 
 
@@ -292,7 +296,7 @@ iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
 if config.finetune:
-    loader.restore(session, directory+'/latest')
+    loader.restore(session, directory+'/latest-0')
     loss_plot     = np.load(directory+'/loss_values.npy')
     acc_plot      = np.load(directory+'/accuracy_values.npy')  
     iou_plot      = np.load(directory+'/iou_values.npy')      
@@ -353,6 +357,15 @@ while step < 100000000:
 
 
 #%% EVAL
+    
+    
+x           = np.linspace(-1, 1, config.grid_size)
+y           = np.linspace(-1, 1, config.grid_size)
+z           = np.linspace(-1, 1, config.grid_size)
+xx,yy,zz    = np.meshgrid(x, y, z)
+
+
+
 session.run(mode_node.assign(False)) 
 example=0
 samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))

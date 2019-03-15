@@ -89,9 +89,6 @@ for ii in range(0,SN_train.train_size):
     print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
 
 
-   
-
-
 SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
                  files=[],
                  rand=False,
@@ -106,79 +103,15 @@ for ii in range(0,SN_val.train_size):
     print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
     
 
-#psudo_sdf = batch['voxels']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
-#cubed0 = {'vertices':verts0/(256-1)*2-1,'faces':faces0,'vertices_up':verts0/(256-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#
-#psudo_sdf = batch['voxels_32']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.999)
-#cubed0 = {'vertices':verts0/(32-1)*2-1,'faces':faces0,'vertices_up':verts0/(32-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh') 
-
-
-    
-aa.aa = 1
-
-SN_train       = ShapeNet(config.path,config.mesh_path,
-                 files=config.train_file,
+SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
+                 files=[],
                  rand=False,
-                 batch_size=BATCH_SIZE,
+                 batch_size=1,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-
-SN_test        = ShapeNet(config.path,config.mesh_path,
-                 files=config.test_file,
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode)
+                 list_=[],
+                 rec_mode=True)
 for ii in range(0,SN_test.train_size):
-    batch = SN_test.preprocess(type_='')
+    batch = SN_test.preprocess_iccv(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
-
-    
-
-
-#SN_eval       = ShapeNet(config.path,config.mesh_path,
-#                 files=config.train_file,
-#                 rand=True,
-#                 batch_size=8,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=False)
-#
-#batch = SN_eval.get_batch(type_='')
-#size_ = SN_eval.train_size
-#psudo_sdf = batch['sdf'][0,:,:,:]
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#
-#vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
-#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
-#
-#
-#batch = SN_train.get_batch(type_='')    
-#pic = batch['images'][0,:,:,:]
-#fig = plt.figure()
-#plt.imshow(pic/255.)
-
-
-
-
-

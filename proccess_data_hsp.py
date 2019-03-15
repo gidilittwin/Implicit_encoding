@@ -1,16 +1,12 @@
 
-import json
 import tensorflow as tf
 import numpy as np
-from src.utilities import mesh_handler as MESHPLOT
-from src.models import scalar_functions as SF
-from src.models import feature_extractor as CNN
 import matplotlib.pyplot as plt
-from skimage import measure
 from provider_binvox import ShapeNet as ShapeNet 
-from src.utilities import raytrace as RAY
 import matplotlib.pyplot as plt
-from src.utilities import iou_loss as IOU
+from src.utilities import mesh_handler as MESHPLOT
+import scipy.ndimage as ndi
+from skimage import measure
 
 
 class MOV_AVG(object):
@@ -53,7 +49,7 @@ def parse_args():
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
-        parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetICCV/")
+        parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
@@ -61,7 +57,7 @@ def parse_args():
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
-        parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetICCV/")
+        parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
@@ -74,55 +70,10 @@ config = parse_args()
 
 
 #%%
-
+rec_mode     = True
+BATCH_SIZE   = 1
 SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
                  files=[],
-                 rand=False,
-                 batch_size=1,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=[],
-                 rec_mode=True)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess_iccv(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-
-
-   
-
-
-SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=1,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=[],
-                 rec_mode=True)
-for ii in range(0,SN_val.train_size):
-    batch = SN_val.preprocess_iccv(type_='')
-    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
-    
-
-#psudo_sdf = batch['voxels']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
-#cubed0 = {'vertices':verts0/(256-1)*2-1,'faces':faces0,'vertices_up':verts0/(256-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#
-#psudo_sdf = batch['voxels_32']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.999)
-#cubed0 = {'vertices':verts0/(32-1)*2-1,'faces':faces0,'vertices_up':verts0/(32-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh') 
-
-
-    
-aa.aa = 1
-
-SN_train       = ShapeNet(config.path,config.mesh_path,
-                 files=config.train_file,
                  rand=False,
                  batch_size=BATCH_SIZE,
                  grid_size=config.grid_size,
@@ -131,11 +82,27 @@ SN_train       = ShapeNet(config.path,config.mesh_path,
                  list_=config.categories,
                  rec_mode=rec_mode)
 for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess(type_='')
+    batch = SN_train.preprocess_iccv(type_='')
     print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
 
-SN_test        = ShapeNet(config.path,config.mesh_path,
-                 files=config.test_file,
+
+
+SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
+                 files=[],
+                 rand=False,
+                 batch_size=BATCH_SIZE,
+                 grid_size=config.grid_size,
+                 levelset=[0.00],
+                 num_samples=config.num_samples,
+                 list_=config.categories,
+                 rec_mode=rec_mode)
+for ii in range(0,SN_val.train_size):
+    batch = SN_val.preprocess_iccv(type_='')
+    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
+    
+
+SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
+                 files=[],
                  rand=False,
                  batch_size=BATCH_SIZE,
                  grid_size=config.grid_size,
@@ -144,41 +111,54 @@ SN_test        = ShapeNet(config.path,config.mesh_path,
                  list_=config.categories,
                  rec_mode=rec_mode)
 for ii in range(0,SN_test.train_size):
-    batch = SN_test.preprocess(type_='')
+    batch = SN_test.preprocess_iccv(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
-
     
-
-
-#SN_eval       = ShapeNet(config.path,config.mesh_path,
-#                 files=config.train_file,
-#                 rand=True,
-#                 batch_size=8,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=False)
-#
-#batch = SN_eval.get_batch(type_='')
-#size_ = SN_eval.train_size
-#psudo_sdf = batch['sdf'][0,:,:,:]
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#
-#vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
-#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
-#
-#
-#batch = SN_train.get_batch(type_='')    
-#pic = batch['images'][0,:,:,:]
-#fig = plt.figure()
-#plt.imshow(pic/255.)
-
-
-
-
-
+    
+    
+    
+#%% Test Iterator
+ 
+#if False:    
+#    batch     = SN_train.get_batch(type_='')
+#    size_     = SN_train.train_size
+#    psudo_sdf = batch['sdf'][0,:,:,:]
+#    verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+#    cubed0    = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#    MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#    
+#    vertices = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
+#    cubed    = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
+#    
+#    #batch = SN_train.get_batch(type_='')    
+#    #pic = batch['images'][0,:,:,:]
+#    #fig = plt.figure()
+#    #plt.imshow(pic/255.)
+#    
+#    vox = (batch['sdf']+0.5).astype(np.bool)
+#    inner_volume       = vox
+#    outer_volume       = np.logical_not(vox)
+#    sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#    sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#    sdf_                 = (sdf_o - sdf_i)
+#    
+#    vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
+#    samples_xyz_np       = vertices
+#    samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+#    batch_idx            = np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples,1))
+#    samples_ijk_np       = np.reshape(np.concatenate((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples),4))
+#    samples_sdf_np       = np.reshape(sdf_[samples_ijk_np[:,0],samples_ijk_np[:,2],samples_ijk_np[:,1],samples_ijk_np[:,3]],(config.batch_size,config.num_samples,1))
+#    
+#    
+#    
+#    vox = batch['voxels'][0,:,:,:]
+#    vox_slice = vox[:,:,128]
+#    fig = plt.figure()
+#    plt.imshow(vox_slice)
+        
+        
+        
+    
+    
+    

@@ -10,7 +10,7 @@ import src.utilities.binvox_rw as binvox_rw
 import scipy.ndimage as ndi
 from scipy import misc
 from skimage import measure
-
+import scipy.io
 
 
 
@@ -21,10 +21,14 @@ class ShapeNet(object):
     def __init__(self , path_, mesh_path_, files, rand, batch_size=16, grid_size=32, levelset=0.0, num_samples=1000, list_=['02691156'],rec_mode=False,shuffle_rgb=True):
         self.path_      = path_
         self.mesh_path_ = mesh_path_
+        self.grid_size = grid_size
         self.binvox_32  = '/model.binvox'
         self.binvox_128 = '/models/model_normalized.solid.binvox'
-        self.grid_size = grid_size
-        self.train_paths = self.getBenchmark(files,list_)  
+        self.binvox_256 = '/model.mat'
+        if grid_size != 256:
+            self.train_paths = self.getBenchmark(files,list_)  
+        else:
+            self.train_paths = self.getBenchmarkICCV(files,list_)  
 #        self.train_paths = self.train_paths[0:8]  
 #        self.train_paths = self.getModelPaths(list_=list_)
         self.train_size  = len(self.train_paths)
@@ -46,6 +50,8 @@ class ShapeNet(object):
             self.string_len = len(self.binvox_32)-1
         elif self.grid_size==132:
             self.string_len = len(self.binvox_128)-8
+        elif self.grid_size==256:
+            self.string_len = 9
         
         
 
@@ -72,19 +78,23 @@ class ShapeNet(object):
                     if paths[-1]!=path:
                         paths.append(path)
         return  paths[1:]  
+
+#    def getBenchmarkICCV(self,files,list_):
+#        paths = os.listdir(self.path_ +'_imgs/') 
+#        return  paths
     
-#    def getModelFiles(self):
-#        vox_files = []
-#        image_files = []
-#        name = '/model.binvox'
-#        for i in range(len(self.train_paths)):
-#            prefix = self.train_paths[i]
-#            vox_file = prefix+name
-#            images = glob.glob(os.path.join(prefix, 'rendering/*.png'))
-#            vox_files.append(vox_file)
-#            image_files.append([images[0]])
-##            image_files.append(images)
-#        return  vox_files,  image_files
+    def getBenchmarkICCV(self,files,list_):
+        paths = []
+        for cat in list_:
+            file_ = self.path_+'_'+cat+'.txt'
+            with open(file_, 'r') as f:
+                data = f.readlines()
+                data_ = [cat+'/'+s[0:-5] for s in data]
+            paths = paths+data_
+        return  paths 
+
+
+
 
     def getModelFiles(self):
         paths = self.train_paths
@@ -95,10 +105,18 @@ class ShapeNet(object):
             prefix = paths[i]
             if self.grid_size==36:
                 vox_file  = self.path_+prefix+self.binvox_32
+                images = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
+                meta = np.loadtxt(self.path_+ prefix+'/rendering/rendering_metadata.txt')                
             elif self.grid_size==132:
                 vox_file = self.mesh_path_+prefix+self.binvox_128
-            images = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
-            meta = np.loadtxt(self.path_+ prefix+'/rendering/rendering_metadata.txt')
+                images   = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
+                meta     = np.loadtxt(self.path_+ prefix+'/rendering/rendering_metadata.txt')                
+            elif self.grid_size==256:
+                vox_file = self.path_[0:-5]+'modelBlockedVoxels256/'+prefix+'.mat'    
+                images   = glob.glob(os.path.join(self.path_[0:-5]+'blenderRenderPreprocess/'+prefix ,'*.png'))
+                images = [s for s in images if 'render_' in s]
+                meta     = ''
+
             cam_params.append(meta)
             vox_files.append(vox_file)
             image_files.append(images)
@@ -148,8 +166,9 @@ class ShapeNet(object):
         self.train_step = self.train_step+size
         files = [self.train_files[j] for j in indexes]
         image_files = [self.train_image_files[j] for j in indexes]
+        train_paths = [self.train_paths[j] for j in indexes]
         code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
-        #voxels = []
+        voxels = []
         sdf    = []
         images = []
         camera_mat  = []
@@ -157,15 +176,21 @@ class ShapeNet(object):
         alpha = []
         vertices = []
         for j in range(size):
-            with open(files[j], 'rb') as f:
-                m1 = binvox_rw.read_as_3d_array(f)
-            voxels_b = m1.data
-            voxels_b = np.pad(voxels_b, pad_width=2,mode='constant', constant_values=False)
+            if self.grid_size!=256:
+                with open(files[j], 'rb') as f:
+                    m1 = binvox_rw.read_as_3d_array(f)
+                    voxels_b = m1.data
+                    voxels_b = np.pad(voxels_b, pad_width=2,mode='constant', constant_values=False)
+            else:
+#                m1 = scipy.io.loadmat(files[j])
+                m1 = np.load(self.path_[0:-5]+'blenderRenderPreprocess/'+train_paths[j]+'/voxels0.npz')
+                voxels_b = m1['voxels']   
+                voxels_b = np.transpose(voxels_b,(0,2,1))
             voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
 
             sdf_    = voxels_
             sdf.append(sdf_) 
-#            voxels.append(voxels_)
+            voxels.append(voxels_b)
 #            inner_volume       = voxels_
 #            outer_volume       = np.logical_not(voxels_)
 #            sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
@@ -174,8 +199,11 @@ class ShapeNet(object):
             
             Verts = []
             for ll in range(len(self.levelset)):
-#                verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
-                verts, faces, normals, values = measure.marching_cubes_lewiner(voxels_b,0.5)
+                if self.grid_size!=256:
+                    verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
+                else:
+                    verts   = np.load(self.path_[0:-5]+'blenderRenderPreprocess/'+train_paths[j]+'/verts0.npy')
+                    verts = verts[:,(0,2,1)]
                 num_points = verts.shape[0]
                 arr_ = np.arange(0,num_points)
                 perms = np.random.choice(arr_,self.num_samples)
@@ -192,27 +220,30 @@ class ShapeNet(object):
             with open(image_files[j][image_file_rand], 'rb') as f:
                 image = misc.imread(f).astype(np.float32)
                 rgb   = image[:,:,0:3]
+                alph  = image[:,:,3:4]
                 if self.shuffle_rgb:
                      rgb = rgb[:,:,np.random.permutation(3)]
-                images.append(rgb)
+                images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
-            params = self.cam_params[j][image_file_rand,:]
-            cam_mat,cam_pose = self.camera_info(params)
-            camera_mat.append(cam_mat)
-            camera_pose.append(cam_pose)
+            if self.grid_size!=256:
+                params = self.cam_params[j][image_file_rand,:]
+                cam_mat,cam_pose = self.camera_info(params)
+                camera_mat.append(cam_mat)
+                camera_pose.append(cam_pose)
                 
 
-#        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
+        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         images = np.stack(images,axis=0)
         alpha  = np.stack(alpha,axis=0)  
-        camera_mat    = np.stack(camera_mat,axis=0)  
-        camera_pose   = np.stack(camera_pose,axis=0)          
+        if self.grid_size!=256:
+            camera_mat    = np.stack(camera_mat,axis=0)  
+            camera_pose   = np.stack(camera_pose,axis=0)          
         vertices = np.stack(vertices,axis=0)
         rows = np.arange(0,self.batch_size)
         code[rows,indexes] = 1
 
-        return {'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
+        return {'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
 
 
 
@@ -243,10 +274,39 @@ class ShapeNet(object):
             np.save(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy',verts)
             np.save(files[j][0:-self.string_len]+'faces'+str(ll)+'.npy',faces)
             np.save(files[j][0:-self.string_len]+'normals'+str(ll)+'.npy',normals)
-
         return {'voxels':voxels_,'vertices':verts}
 
 
+
+    def preprocess_iccv(self,type_):
+        size = self.batch_size
+        if self.train_step+size>self.train_size:
+            self.reset()
+        indexes = np.arange(self.train_step,self.train_step+size)    
+        indexes = indexes%self.train_size
+        indexes = self.train_idx[indexes]
+        ii,jj,kk = np.meshgrid(np.arange(0,16),np.arange(0,16),np.arange(0,16))
+        ii = np.reshape(ii,(-1))*16
+        jj = np.reshape(jj,(-1))*16
+        kk = np.reshape(kk,(-1))*16
+        idx = np.arange(0,4096)
+        self.train_step = self.train_step+size
+        files = [self.train_files[j] for j in indexes]
+        paths = [self.train_paths[j] for j in indexes]
+        for j in range(size):
+            m1     = scipy.io.loadmat(files[j])
+            grid   = np.reshape((m1['bi']-1).astype(np.int64),-1)
+            blocks = m1['b'].astype(np.bool)
+            voxels = np.zeros((256,256,256),dtype=np.bool)
+            voxels_ = blocks[grid,:,:,:]
+            for bb in idx:
+                voxels[jj[bb]:jj[bb]+16,ii[bb]:ii[bb]+16,kk[bb]:kk[bb]+16] = voxels_[idx[bb],:,:,:]
+            voxels = np.transpose(voxels,(0,2,1))
+            verts, faces, normals, values = measure.marching_cubes_lewiner(voxels,0.5)
+            np.save(self.path_[0:-5]+'blenderRenderPreprocess/'+paths[j]+'/verts0'+'.npy',verts)
+            np.savez_compressed( self.path_[0:-5]+'blenderRenderPreprocess/'+paths[j]+'/voxels0.npz', voxels=voxels)
+        return {'voxels':voxels,'vertices':verts}
+    
 
     def process_batch(self,batch,config):
         samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,config.global_points,3)).astype(dtype=np.float32)
