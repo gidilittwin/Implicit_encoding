@@ -302,48 +302,6 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
 
 
 
-
-def test(SN_test, mode_node, config, accuracy, iou, features):
-    session.run(mode_node.assign(False)) 
-    if config.grid_size==36:
-        grid_size_lr   = 32*config.eval_grid_scale
-        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-    else:
-        grid_size_lr   = config.grid_size*config.eval_grid_scale
-        x_lr           = np.linspace(-1, 1, grid_size_lr)
-        y_lr           = np.linspace(-1, 1, grid_size_lr)
-        z_lr           = np.linspace(-1, 1, grid_size_lr)    
-    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
-    step_test      = 0
-    aa_mov_test    = MOV_AVG(3000000) 
-    dd_mov_test    = MOV_AVG(3000000) 
-    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
-    samples_ijk_np = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
-    embeddings = []
-    classes    = []
-    ious       = []
-    while SN_test.epoch<2:
-        batch                = SN_test.get_batch(type_='')
-        samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-        feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
-                     samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
-                     samples_sdf        :samples_sdf_np}     
-        accuracy_t ,iou_t, features_t = session.run([accuracy, iou, features],feed_dict=feed_dict) 
-        aa_mov_avg_test = aa_mov_test.push(accuracy_t)
-        dd_mov_avg_test = dd_mov_test.push(iou_t)
-        step_test+=1
-        embeddings.append(features_t)
-        classes.append(batch['classes'])
-        ious.append(batch['classes'])
-        if step_test % 100==0:
-            print('TEST::  epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
-    SN_test.epoch = 0
-    session.run(mode_node.assign(True)) 
-    return aa_mov_avg_test, dd_mov_avg_test, embeddings, classes
-
-
     
 session = tf.Session()
 session.run(tf.initialize_all_variables())
@@ -415,44 +373,70 @@ while step < 100000000:
 
 
 
-#%% EVAL
+#%% TEST
     
+
+
+def test(SN_test, mode_node, config, accuracy, iou, features):
+    session.run(mode_node.assign(False)) 
+    if config.grid_size==36:
+        grid_size_lr   = 32*config.eval_grid_scale
+        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+    else:
+        grid_size_lr   = config.grid_size*config.eval_grid_scale
+        x_lr           = np.linspace(-1, 1, grid_size_lr)
+        y_lr           = np.linspace(-1, 1, grid_size_lr)
+        z_lr           = np.linspace(-1, 1, grid_size_lr)    
+    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
+    step_test      = 0
+    aa_mov_test    = MOV_AVG(3000000) 
+    dd_mov_test    = MOV_AVG(3000000) 
+    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+    samples_ijk_np = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+    embeddings = []
+    classes    = []
+    ious       = []
+    while SN_test.epoch<2:
+        batch                = SN_test.get_batch(type_='')
+        samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+        feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
+                     samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
+                     samples_sdf        :samples_sdf_np}     
+        accuracy_t ,iou_t, features_t = session.run([accuracy, iou, features],feed_dict=feed_dict) 
+        aa_mov_avg_test = aa_mov_test.push(accuracy_t)
+        dd_mov_avg_test = dd_mov_test.push(iou_t)
+        step_test+=1
+        embeddings.append(features_t)
+        classes.append(batch['classes'])
+        ious.append(batch['classes'])
+        if step_test % 100==0:
+            print('TEST::  epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
+    SN_test.epoch = 0
+    session.run(mode_node.assign(True)) 
+    return aa_mov_avg_test, dd_mov_avg_test, embeddings, classes
+
+
     
 acc_test, iou_test, features_test, classes_test = test(SN_test, mode_node, config, accuracy, iou, features)
 Features = np.reshape(np.concatenate(features_test,axis=0) ,(-1,2048))
 Classes  = np.concatenate(classes_test,axis=0) 
-
-from src.tsne import tsne as TS
-#from src.tsne.tsne import estimate_sne, tsne_grad, symmetric_sne_grad, q_tsne, q_joint
-#from src.tsne import p_joint
-
-
-# Set global parameters
-NUM_POINTS     = 8768            # Number of samples from MNIST
-CLASSES_TO_USE = [0,1,3,4,5,6,7,8,9,10,11,12]  # MNIST classes to use
-PERPLEXITY     = 20
-SEED           = 1                    # Random seed
-MOMENTUM       = 0.9
-LEARNING_RATE  = 10.
-NUM_ITERS      = 500             # Num iterations to train for
-TSNE           = True                # If False, Symmetric SNE
-NUM_PLOTS      = 5               # Num. times to plot in training
-# numpy RandomState for reproducibility
-rng = np.random.RandomState(SEED)
-
-# Obtain matrix of joint probabilities p_ij
-P = TS.p_joint(Features, PERPLEXITY)
-
-# Fit SNE or t-SNE
-Y = TS.estimate_sne(Features, Classes, P, rng,
-                 num_iters=NUM_ITERS,
-                 q_fn=TS.q_tsne if TSNE else TS.q_joint,
-                 grad_fn=TS.tsne_grad if TSNE else TS.symmetric_sne_grad,
-                 learning_rate=LEARNING_RATE,
-                 momentum=MOMENTUM,
-                 plot=NUM_PLOTS)
+perm = np.random.permutation(Features.shape[0])
+X = Features[perm[:500],:]
+Y = Classes[perm[:500]]
 
 
+from sklearn.manifold import TSNE
+tsne = TSNE(n_components=2, random_state=0)
+X_2d = tsne.fit_transform(X)
+from matplotlib import pyplot as plt
+plt.figure(figsize=(6, 5))
+colors = 'r', 'g', 'b', 'c', 'm', 'y', 'k', 'w', 'orange', 'purple'
+for i, c, label in zip(Y, colors, config.categories):
+    plt.scatter(X_2d[Y == i, 0], X_2d[Y == i, 1], c=c, label=label)
+plt.legend()
+plt.show()
 
 
 #%% VISUALIZE
