@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
     parser.add_argument('--model_params_path', type=str, default= './archs/architecture_2_no_bn_wide.json')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--batch_size', type=int,  default=1)
     parser.add_argument('--num_samples', type=int,  default=10000)
     parser.add_argument('--global_points', type=int,  default=10000)    
@@ -75,79 +75,33 @@ config = parse_args()
 
 #%%
 
-SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=1,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=[],
-                 rec_mode=True)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess_iccv(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-
-
-   
-
-
-SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=1,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=[],
-                 rec_mode=True)
-for ii in range(0,SN_val.train_size):
-    batch = SN_val.preprocess_iccv(type_='')
-    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
-    
-
-#psudo_sdf = batch['voxels']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
-#cubed0 = {'vertices':verts0/(256-1)*2-1,'faces':faces0,'vertices_up':verts0/(256-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#
-#psudo_sdf = batch['voxels_32']
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.999)
-#cubed0 = {'vertices':verts0/(32-1)*2-1,'faces':faces0,'vertices_up':verts0/(32-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh') 
-
-
-    
-aa.aa = 1
-
-SN_train       = ShapeNet(config.path,config.mesh_path,
-                 files=config.train_file,
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+#SN_train       = ShapeNet(config.path,config.mesh_path,
+#                 files=config.train_file,
+#                 rand=False,
+#                 batch_size=1,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=True)
+#for ii in range(0,SN_train.train_size):
+#    batch = SN_train.preprocess(type_='')
+#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
 
 SN_test        = ShapeNet(config.path,config.mesh_path,
                  files=config.test_file,
                  rand=False,
-                 batch_size=BATCH_SIZE,
+                 batch_size=8,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=rec_mode)
-for ii in range(0,SN_test.train_size):
-    batch = SN_test.preprocess(type_='')
-    print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
+                 rec_mode=False)
+#for ii in range(0,SN_test.train_size):
+#    batch = SN_test.preprocess(type_='')
+#    print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
 
-    
+batch = SN_test.get_batch(type_='')
 
 
 #SN_eval       = ShapeNet(config.path,config.mesh_path,

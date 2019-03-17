@@ -31,24 +31,25 @@ import socket
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'exp_full_data')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5w.json')
+    parser.add_argument('--experiment_name', type=str, default= 'archsweep_exp60')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5w2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-#    parser.add_argument('--grid_size', type=int,  default=36)
-#    parser.add_argument('--img_size', type=int,  default=[137,137])
-    parser.add_argument('--grid_size', type=int,  default=256)
-    parser.add_argument('--img_size', type=int,  default=[224,224])  
+    parser.add_argument('--grid_size', type=int,  default=36)
+    parser.add_argument('--img_size', type=int,  default=[137,137])
+#    parser.add_argument('--grid_size', type=int,  default=256)
+#    parser.add_argument('--img_size', type=int,  default=[224,224])  
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
-    parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--batch_size', type=int,  default=32)
     parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
+    parser.add_argument('--rgba', type=int,  default=0)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
-    parser.add_argument('--noise_scale', type=float,  default=0.1)
     parser.add_argument('--global_points', type=int,  default=1000)    
+    parser.add_argument('--noise_scale', type=float,  default=0.1)
     parser.add_argument('--checkpoint_every', type=int,  default=10000)
     parser.add_argument('--categories', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
 #    parser.add_argument('--categories', type=int,  default=["02691156"], help='number of point samples')
@@ -56,7 +57,7 @@ def parse_args():
     parser.add_argument('--test_every', type=int,  default=10000)
     parser.add_argument('--learning_rate', type=float,  default=0.00005)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=False)
+    parser.add_argument('--finetune'  , type=bool,  default=True)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
@@ -113,53 +114,56 @@ if not os.path.exists(directory):
     os.makedirs(directory)
 
 
-
+if config.rgba:
+    color_channels = 4
+else:
+    color_channels = 3
 
 
 #%%
-#SN_train       = ShapeNet(config.path,config.mesh_path,
-#                 files=config.train_file,
-#                 rand=True,
-#                 batch_size=config.batch_size,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=False,
-#                 shuffle_rgb=config.shuffle_rgb)
-#
-#SN_test        = ShapeNet(config.path,config.mesh_path,
-#                 files=config.test_file,
-#                 rand=False,
-#                 batch_size=config.batch_size,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=False,
-#                 shuffle_rgb=config.shuffle_rgb)
-
-
-SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-                 files=[],
+SN_train       = ShapeNet(config.path,config.mesh_path,
+                 files=config.train_file,
                  rand=True,
                  batch_size=config.batch_size,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False)
+                 rec_mode=False,
+                 shuffle_rgb=config.shuffle_rgb)
 
-
-SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
-                 files=[],
+SN_test        = ShapeNet(config.path,config.mesh_path,
+                 files=config.test_file,
                  rand=False,
                  batch_size=config.batch_size,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=False)    
+                 rec_mode=False,
+                 shuffle_rgb=config.shuffle_rgb)
+
+
+#SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+#                 files=[],
+#                 rand=True,
+#                 batch_size=config.batch_size,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=False)
+#
+#
+#SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
+#                 files=[],
+#                 rand=False,
+#                 batch_size=config.batch_size,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=False)    
  
 
 
@@ -198,7 +202,7 @@ Ray_render_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'd
 
 
 #%% Sampling in XYZ domain  
-images                = tf.placeholder(tf.float32,shape=(None,config.img_size[0],config.img_size[1],4), name='images')  
+images                = tf.placeholder(tf.float32,shape=(None,config.img_size[0],config.img_size[1],color_channels), name='images')  
 samples_sdf           = tf.placeholder(tf.float32,shape=(None,None,1), name='samples_sdf')  
 samples_xyz           = tf.placeholder(tf.float32,shape=(None,None,3),   name='samples_xyz')  
 evals_target          = {}
@@ -238,7 +242,7 @@ loss               = tf.reduce_mean(loss_class )
 X                  = tf.cast(labels,tf.bool)
 Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
 iou                = tf.reduce_mean(tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1))
-
+features           = tf.get_collection('embeddings')
 
 
 
@@ -264,10 +268,16 @@ loader = tf.train.Saver(var_list=cnn_vars)
 #%% Train
 def evaluate(SN_test, mode_node, config, accuracy, iou):
     session.run(mode_node.assign(False)) 
-    grid_size_lr   = config.grid_size*config.eval_grid_scale
-    x_lr           = np.linspace(-1, 1, grid_size_lr)
-    y_lr           = np.linspace(-1, 1, grid_size_lr)
-    z_lr           = np.linspace(-1, 1, grid_size_lr)
+    if config.grid_size==36:
+        grid_size_lr   = 32*config.eval_grid_scale
+        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+    else:
+        grid_size_lr   = config.grid_size*config.eval_grid_scale
+        x_lr           = np.linspace(-1, 1, grid_size_lr)
+        y_lr           = np.linspace(-1, 1, grid_size_lr)
+        z_lr           = np.linspace(-1, 1, grid_size_lr)    
     xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
     step_test      = 0
     aa_mov_test    = MOV_AVG(3000000) 
@@ -277,7 +287,7 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
     while SN_test.epoch<25:
         batch                = SN_test.get_batch(type_='')
         samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-        feed_dict = {images             :batch['images']/255.,
+        feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
                      samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
                      samples_sdf        :samples_sdf_np}     
         accuracy_t ,iou_t = session.run([accuracy, iou],feed_dict=feed_dict) 
@@ -290,6 +300,48 @@ def evaluate(SN_test, mode_node, config, accuracy, iou):
     session.run(mode_node.assign(True)) 
     return aa_mov_avg_test, dd_mov_avg_test
 
+
+
+
+def test(SN_test, mode_node, config, accuracy, iou, features):
+    session.run(mode_node.assign(False)) 
+    if config.grid_size==36:
+        grid_size_lr   = 32*config.eval_grid_scale
+        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
+    else:
+        grid_size_lr   = config.grid_size*config.eval_grid_scale
+        x_lr           = np.linspace(-1, 1, grid_size_lr)
+        y_lr           = np.linspace(-1, 1, grid_size_lr)
+        z_lr           = np.linspace(-1, 1, grid_size_lr)    
+    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
+    step_test      = 0
+    aa_mov_test    = MOV_AVG(3000000) 
+    dd_mov_test    = MOV_AVG(3000000) 
+    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+    samples_ijk_np = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+    embeddings = []
+    classes    = []
+    ious       = []
+    while SN_test.epoch<2:
+        batch                = SN_test.get_batch(type_='')
+        samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+        feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
+                     samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
+                     samples_sdf        :samples_sdf_np}     
+        accuracy_t ,iou_t, features_t = session.run([accuracy, iou, features],feed_dict=feed_dict) 
+        aa_mov_avg_test = aa_mov_test.push(accuracy_t)
+        dd_mov_avg_test = dd_mov_test.push(iou_t)
+        step_test+=1
+        embeddings.append(features_t)
+        classes.append(batch['classes'])
+        ious.append(batch['classes'])
+        if step_test % 100==0:
+            print('TEST::  epoch: '+str(SN_test.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
+    SN_test.epoch = 0
+    session.run(mode_node.assign(True)) 
+    return aa_mov_avg_test, dd_mov_avg_test, embeddings, classes
 
 
     
@@ -326,7 +378,7 @@ session.run(mode_node.assign(True))
 while step < 100000000:
     batch                = SN_train.get_batch(type_='')
     batch_feed           = SN_train.process_batch(batch,config)
-    feed_dict = {images             :batch['images']/255.,
+    feed_dict = {images             :batch_feed['images']/255.,
                  lr_node            :config.learning_rate,
                  samples_xyz        :batch_feed['samples_xyz_np'],
                  samples_sdf        :batch_feed['samples_sdf_np'],
@@ -366,12 +418,53 @@ while step < 100000000:
 #%% EVAL
     
     
-x           = np.linspace(-1, 1, config.grid_size)
-y           = np.linspace(-1, 1, config.grid_size)
-z           = np.linspace(-1, 1, config.grid_size)
-xx,yy,zz    = np.meshgrid(x, y, z)
+acc_test, iou_test, features_test, classes_test = test(SN_test, mode_node, config, accuracy, iou, features)
+Features = np.reshape(np.concatenate(features_test,axis=0) ,(-1,2048))
+Classes  = np.concatenate(classes_test,axis=0) 
+
+from src.tsne import tsne as TS
+#from src.tsne.tsne import estimate_sne, tsne_grad, symmetric_sne_grad, q_tsne, q_joint
+#from src.tsne import p_joint
 
 
+# Set global parameters
+NUM_POINTS     = 8768            # Number of samples from MNIST
+CLASSES_TO_USE = [0,1,3,4,5,6,7,8,9,10,11,12]  # MNIST classes to use
+PERPLEXITY     = 20
+SEED           = 1                    # Random seed
+MOMENTUM       = 0.9
+LEARNING_RATE  = 10.
+NUM_ITERS      = 500             # Num iterations to train for
+TSNE           = True                # If False, Symmetric SNE
+NUM_PLOTS      = 5               # Num. times to plot in training
+# numpy RandomState for reproducibility
+rng = np.random.RandomState(SEED)
+
+# Obtain matrix of joint probabilities p_ij
+P = TS.p_joint(Features, PERPLEXITY)
+
+# Fit SNE or t-SNE
+Y = TS.estimate_sne(Features, Classes, P, rng,
+                 num_iters=NUM_ITERS,
+                 q_fn=TS.q_tsne if TSNE else TS.q_joint,
+                 grad_fn=TS.tsne_grad if TSNE else TS.symmetric_sne_grad,
+                 learning_rate=LEARNING_RATE,
+                 momentum=MOMENTUM,
+                 plot=NUM_PLOTS)
+
+
+
+
+#%% VISUALIZE
+
+
+
+
+grid_size_lr =  2*config.grid_size
+x           = np.linspace(-1, 1, grid_size_lr)
+y           = np.linspace(-1, 1, grid_size_lr)
+z           = np.linspace(-1, 1, grid_size_lr)
+xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 session.run(mode_node.assign(False)) 
 example=0
@@ -379,7 +472,7 @@ samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),
 samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
 batch                = SN_train.get_batch(type_='')
 samples_sdf_np       = np.expand_dims(batch['sdf'][example:example+1,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-feed_dict = {images           :batch['images'][example:example+1,:,:,:]/255.,
+feed_dict = {images           :batch['images'][:,:,:,0:3][example:example+1,:,:,:]/255.,
              samples_xyz      :samples_xyz_np,
              samples_sdf      :samples_sdf_np}
 evals_function_d,accuracy_   = session.run([evals_function['y'],accuracy],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
