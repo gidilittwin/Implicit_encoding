@@ -66,39 +66,39 @@ def parse_args():
 config = parse_args()
 
 
-
-
+#02933112/ac7935b217aeb58e19ca41cdb396f36.mat
+#04256520/31ae964a8a9a15e87934a0d24a61231.mat
 
 #%%
 rec_mode     = True
 BATCH_SIZE   = 1
-SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.preprocess_iccv(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+#SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+#                 files=[],
+#                 rand=False,
+#                 batch_size=BATCH_SIZE,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=rec_mode)
+#for ii in range(0,SN_train.train_size):
+#    batch = SN_train.preprocess_iccv(type_='')
+#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
 
 
 
-SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode)
-for ii in range(0,SN_val.train_size):
-    batch = SN_val.preprocess_iccv(type_='')
-    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
+#SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
+#                 files=[],
+#                 rand=False,
+#                 batch_size=BATCH_SIZE,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=rec_mode)
+#for ii in range(0,SN_val.train_size):
+#    batch = SN_val.preprocess_iccv(type_='')
+#    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
     
 
 SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,

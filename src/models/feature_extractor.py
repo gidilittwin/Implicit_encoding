@@ -95,10 +95,12 @@ def resnet_config(example,args_):
         conv0_w, conv0_b = CONV2D([params['k'],params['k'],ch_in,base_size])
         c0      = tf.nn.conv2d(in_node,conv0_w,strides=[1, params['stride'], params['stride'], 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
-
     with tf.variable_scope("Residuals"):
-        BN = config.batch_norm
         for ii, layer in enumerate(config.model_params['encoder']['residuals']):
+            if ii<config.bn_l0:
+                BN = 0
+            else:
+                BN = config.batch_norm                
             current = cell2D_res(current, layer['k'], base_size*layer['s_in'],  base_size*layer['s_out'], mode, layer['stride'], 'r'+str(ii+1),use_bn=BN)#68
     return current
 

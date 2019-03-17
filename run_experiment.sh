@@ -1,10 +1,30 @@
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp1 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp2 --batch_size 32 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp3 --batch_size 32 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp4 --batch_size 32 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp5 --batch_size 32 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp6 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp7 --batch_size 32 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp8 --batch_size 32 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp9 --batch_size 32 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
-python implicit_surface_encoding_latest.py --experiment_name hsp_exp10 --batch_size 32 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp1 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp2 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp3 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp4 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp5 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp6 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp7 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp8 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp9 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp10 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp11 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp12 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp13 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp14 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp15 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp16 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp17 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp18 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp19 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp20 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp21 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp22 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp23 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp24 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp25 --batch_size 32 --eval_grid_scale 2 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp26 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.10 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp27 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.08 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp28 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.05 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp29 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.02 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json
+python implicit_surface_encoding_latest.py --experiment_name hsp_exp30 --batch_size 32 --eval_grid_scale 1 --noise_scale 0.01 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json

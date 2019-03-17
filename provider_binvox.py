@@ -112,7 +112,8 @@ class ShapeNet(object):
                 images   = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
                 meta     = np.loadtxt(self.path_+ prefix+'/rendering/rendering_metadata.txt')                
             elif self.grid_size==256:
-                vox_file = self.path_[0:-5]+'modelBlockedVoxels256/'+prefix+'.mat'    
+                last_slash = self.path_.rfind('/')
+                vox_file = self.path_[0:last_slash]+'/modelBlockedVoxels256/'+prefix+'.mat'    
                 images   = glob.glob(os.path.join(self.path_[0:-5]+'blenderRenderPreprocess/'+prefix ,'*.png'))
                 images = [s for s in images if 'render_' in s]
                 meta     = ''
@@ -293,20 +294,27 @@ class ShapeNet(object):
         self.train_step = self.train_step+size
         files = [self.train_files[j] for j in indexes]
         paths = [self.train_paths[j] for j in indexes]
+        last_slash = self.path_.rfind('/')
         for j in range(size):
-            m1     = scipy.io.loadmat(files[j])
-            grid   = np.reshape((m1['bi']-1).astype(np.int64),-1)
-            blocks = m1['b'].astype(np.bool)
-            voxels = np.zeros((256,256,256),dtype=np.bool)
-            voxels_ = blocks[grid,:,:,:]
-            for bb in idx:
-                voxels[jj[bb]:jj[bb]+16,ii[bb]:ii[bb]+16,kk[bb]:kk[bb]+16] = voxels_[idx[bb],:,:,:]
-            voxels = np.transpose(voxels,(0,2,1))
-            verts, faces, normals, values = measure.marching_cubes_lewiner(voxels,0.5)
-            np.save(self.path_[0:-5]+'blenderRenderPreprocess/'+paths[j]+'/verts0'+'.npy',verts)
-            np.savez_compressed( self.path_[0:-5]+'blenderRenderPreprocess/'+paths[j]+'/voxels0.npz', voxels=voxels)
+            try:
+                m1     = scipy.io.loadmat(files[j])
+                grid   = np.reshape((m1['bi']-1).astype(np.int64),-1)
+                blocks = m1['b'].astype(np.bool)
+                voxels = np.zeros((256,256,256),dtype=np.bool)
+                voxels_ = blocks[grid,:,:,:]
+                for bb in idx:
+                    voxels[jj[bb]:jj[bb]+16,ii[bb]:ii[bb]+16,kk[bb]:kk[bb]+16] = voxels_[idx[bb],:,:,:]
+                voxels = np.transpose(voxels,(0,2,1))
+                verts, faces, normals, values = measure.marching_cubes_lewiner(voxels,0.5)
+            except:
+                print('voxel file:' + files[j] + ' is missing')  
+                voxels  = np.zeros((256,256,256),dtype=np.bool)
+                verts   = np.zeros(shape=(10,3),dtype=np.float32)
+                np.save(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+paths[j]+'/verts0'+'.npy',verts)
+                np.savez_compressed( self.path_[0:last_slash]+'/blenderRenderPreprocess/'+paths[j]+'/voxels0.npz', voxels=voxels)
+#        return {'voxels':[],'vertices':[]}
         return {'voxels':voxels,'vertices':verts}
-    
+
 
     def process_batch(self,batch,config):
         samples_xyz_np       = np.random.uniform(low=-1.,high=1.,size=(1,config.global_points,3)).astype(dtype=np.float32)

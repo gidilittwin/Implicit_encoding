@@ -14,14 +14,19 @@ import os
 import argparse
 import socket
 
-# 1) try HD grid for evaluations (we don't need to stick to 32..)
-# 2) Add batch norm to different blocks
+# 1) try HD grid for evaluations (we don't need to stick to 32..)     vvvvvvvvvvvvvvvv
+# 2) Add batch norm to different blocks                                 vvvvvvvvvvvvvvv
 # 3) set different levelsets for evaluations
 # 4) Hourgalss?
-# 5) different gaussin noise values
+# 5) different gaussin noise values         vvvvvvvvvvvvvvvvvvvvv
 # 6) bring weighting back?
 # 7) Flip augmentations, 
-# 8) add silhouette to rgb for 32^3
+# 8) add silhouette to rgb for 32^3         vvvvvvvvvvvvvvvvvv
+# 9) dropout??
+# 9) lrelu/elu for cnn
+# 10) more dnn layers
+# 11) Spectral norm
+
 
 
 def parse_args():
@@ -33,9 +38,11 @@ def parse_args():
 #    parser.add_argument('--grid_size', type=int,  default=36)
 #    parser.add_argument('--img_size', type=int,  default=[137,137])
     parser.add_argument('--grid_size', type=int,  default=256)
-    parser.add_argument('--img_size', type=int,  default=[224,224])    
+    parser.add_argument('--img_size', type=int,  default=[224,224])  
+    parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--batch_norm', type=int,  default=0)
+    parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
@@ -257,7 +264,7 @@ loader = tf.train.Saver(var_list=cnn_vars)
 #%% Train
 def evaluate(SN_test, mode_node, config, accuracy, iou):
     session.run(mode_node.assign(False)) 
-    grid_size_lr   = config.grid_size
+    grid_size_lr   = config.grid_size*config.eval_grid_scale
     x_lr           = np.linspace(-1, 1, grid_size_lr)
     y_lr           = np.linspace(-1, 1, grid_size_lr)
     z_lr           = np.linspace(-1, 1, grid_size_lr)

@@ -4,23 +4,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/batch_iccv6/'
+path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/batch_hsp4/'
 type_ = 'iou_values_test.npy'
+
+accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/accuracy_values.npy')
+accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/accuracy_values_test.npy')
+iou_values          =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/iou_values.npy')
+iou_values_test     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/iou_values_test.npy')
+loss_values         =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/loss_values.npy')
 
 iou_test  = []
 iou_train = []
 acc_test  = []
 acc_train = []
-num_plots = 105
+num_plots = 60
 strings   = []
 
 #name = 'dnn_arch_exp'
 #name = 'cnn_arch_exp'
 #name = 'decoder_exp'
-name = 'archsweep_exp'
+#name = 'archsweep_exp'
 #name = 'iccv_exp'
+name = 'resnet5_exp'
 
-plot_idx =19
+plot_idx =0
 
 
 
@@ -49,7 +56,7 @@ plt.title('test iou')
 plt.plot(iou_values_test,'--')
 for ii in range(num_plots_alive):
     if len(iou_test[ii])>plot_idx:
-        if iou_test[ii][plot_idx]>iou_values_test[plot_idx]:
+        if iou_test[ii][plot_idx]>0:
             plt.plot(iou_test[ii])
             plt.text(plot_idx,iou_test[ii][plot_idx],strings[ii])
 plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
@@ -74,12 +81,14 @@ plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
 ##plt.plot(accuracy_values)    
 #plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
 #
-#plt.figure(4)
-#plt.title('train iou')
-#for ii in range(num_plots_alive):
-#    plt.plot(iou_train[ii])
-##plt.plot(iou_values)
-#plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
+plt.figure(4)
+plt.title('train iou')
+plt.plot(iou_values,'--')
+
+for ii in range(num_plots_alive):
+    plt.plot(iou_train[ii])
+    if len(iou_train[ii])>plot_idx:
+        plt.text(plot_idx,iou_train[ii][plot_idx],strings[ii])
 
 
 
