@@ -92,8 +92,6 @@ def mesh_plot(obj,idx=0,type_='mesh'):
 #                    showscale=False,
 #                    surfacecolor=voxels_))
 
-
-
     layout = dict(
         width=1200,
         height=1200,
@@ -102,20 +100,37 @@ def mesh_plot(obj,idx=0,type_='mesh'):
         scene=dict(
             xaxis=dict(range=[-1, 1],
                 gridcolor='rgb(255, 255, 255)',
-#                zerolinecolor='rgb(255, 255, 255)',
-                showbackground=True,
-                backgroundcolor='rgb(230, 230,230)'),
+                showbackground=False,
+                backgroundcolor='rgb(255, 255,255)'),
             yaxis=dict(range=[-1, 1],
                 gridcolor='rgb(255, 255, 255)',
-#                zerolinecolor='rgb(255, 255, 255)',
-                showbackground=True,
-                backgroundcolor='rgb(230, 230,230)'),
+                showbackground=False,
+                backgroundcolor='rgb(255, 255,255)'),
             zaxis=dict(range=[-1, 1],
                 gridcolor='rgb(255, 255, 255)',
-#                zerolinecolor='rgb(255, 255, 255)',
-                showbackground=True,
-                backgroundcolor='rgb(28,76,96)')
+                showbackground=False,
+                backgroundcolor='rgb(255,255,255)')
             ),)
+
+#    layout = dict(
+#        width=1200,
+#        height=1200,
+#        autosize=False,
+#        title='Mesh',
+#        scene=dict(
+#            xaxis=dict(range=[-1, 1],
+#                gridcolor='rgb(255, 255, 255)',
+#                showbackground=True,
+#                backgroundcolor='rgb(230, 230,230)'),
+#            yaxis=dict(range=[-1, 1],
+#                gridcolor='rgb(255, 255, 255)',
+#                showbackground=True,
+#                backgroundcolor='rgb(230, 230,230)'),
+#            zaxis=dict(range=[-1, 1],
+#                gridcolor='rgb(255, 255, 255)',
+#                showbackground=True,
+#                backgroundcolor='rgb(28,76,96)')
+#            ),)
 
 
     fig = dict(data=traces, layout=layout)

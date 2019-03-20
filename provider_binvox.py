@@ -210,6 +210,7 @@ class ShapeNet(object):
 #            sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
 #            sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
 #            sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
+            
             Verts = []
             for ll in range(len(self.levelset)):
                 if self.grid_size!=256:
