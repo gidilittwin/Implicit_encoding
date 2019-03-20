@@ -278,4 +278,3 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
     return evals
         
 
-

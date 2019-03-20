@@ -11,13 +11,6 @@ def midpoints(x):
         sl += np.index_exp[:]
     return x
 
-#skeleton = np.array([[0, 1, 2, 3, 4],[0, 5, 6, 7, 8],[0, 9, 10, 11, 12],[0, 13, 14, 15, 16],[0, 17, 18, 19, 20]])
-#skeleton2 = np.array([[0, 1, 2, 3, 4,5],[0, 6,7,8,9,10],[0, 11,12,13,14,15],[0, 16,17,18,19,20],[0,21,22,23,24,25]])
-
-skeleton21 = [np.array([0, 1, 2, 3, 4]),np.array([0, 5, 6, 7, 8]),np.array([0, 9, 10, 11, 12]),np.array([0, 13, 14, 15, 16]),np.array([0, 17, 18, 19, 20])]
-skeleton22 = [np.array([0, 1, 2, 3, 4]),np.array([0, 5, 6, 7, 8]),np.array([0, 9, 10, 11, 12]),np.array([0, 13, 14, 15, 16]),np.array([0, 17, 18, 19, 20]),np.array([0, 21])]
-
-
 
 
 
@@ -48,6 +41,8 @@ def mesh_plot(obj,idx=0,type_='mesh'):
 #                                              ['0.5', 'rgba(51,255,255 ,0.6)'], 
 #                                              ['1'  , 'rgba(255  ,191,0,0.6)']],                                           
                                 intensity = vertices[:,2]*255,
+                                colorscale='Viridis',
+                                color='#FFB6C1',
                                 opacity=1.0,
                                 i=faces[:,0],
                                 j=faces[:,1],

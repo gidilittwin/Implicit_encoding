@@ -102,7 +102,12 @@ def resnet_config(example,args_):
             else:
                 BN = config.batch_norm                
             current = cell2D_res(current, layer['k'], base_size*layer['s_in'],  base_size*layer['s_out'], mode, layer['stride'], 'r'+str(ii+1),use_bn=BN)#68
-    return current
+    
+    featue_size_ = current.get_shape().as_list()
+    current      = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding=config.padding)
+    featue_size_ = current.get_shape().as_list()
+    features     = tf.reshape(current,(-1,featue_size_[1]*featue_size_[2]*featue_size_[3]))
+    return features
 
 
 
@@ -130,18 +135,14 @@ def sample_normal(shape, is_training=True, scope=None, deploy=False):
 
 
 
-def regressor(current,args_):
+def regressor(features,args_):
     mode    = args_[0]
     config  = args_[1]
     weights = []
     theta   = config.model_params['theta']
-    with tf.variable_scope("fully"):
-        featue_size_ = current.get_shape().as_list()
-        current      = tf.nn.avg_pool(current,[1,featue_size_[1],featue_size_[2],1],[1,1,1,1],padding=config.padding)
-        featue_size  = tf.shape(current)
-        featue_size_ = current.get_shape().as_list()
-        features     = tf.reshape(current,(-1,featue_size_[1]*featue_size_[2]*featue_size_[3]))
-        
+    featue_size  = tf.shape(features)
+    with tf.variable_scope("fully",reuse=tf.AUTO_REUSE):
+               
 #        mean       = cell1D(features,featue_size_[-1], mode, SCOPE='mean', with_act=False, with_bn=False)
 #        log_stddev = cell1D(features,featue_size_[-1], mode, SCOPE='log_stddev', with_act=False, with_bn=False)
 #        std_norm   = sample_normal(tf.shape(mean),mode)

@@ -32,7 +32,9 @@ class ShapeNet(object):
 #        self.train_paths = self.train_paths[0:8]  
 #        self.train_paths = self.getModelPaths(list_=list_)
         self.train_size  = len(self.train_paths)
-        self.train_files,self.train_image_files, self.cam_params ,self.train_classes= self.getModelFiles(list_)
+        self.train_files,self.train_image_files, self.cam_params ,self.train_classes = self.getModelFiles(list_)
+        self.obj_map = {}
+        self.obj_id = np.arange(0,len(self.train_files))
         self.epoch = 0
         self.rand = rand
         self.reset()
@@ -122,8 +124,11 @@ class ShapeNet(object):
             elif self.grid_size==256:
                 last_slash = self.path_.rfind('/')
                 vox_file = self.path_[0:last_slash]+'/modelBlockedVoxels256/'+prefix+'.mat'    
-                images   = glob.glob(os.path.join(self.path_[0:-5]+'blenderRenderPreprocess/'+prefix ,'*.png'))
+                images   = glob.glob(os.path.join(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+prefix ,'*.png'))
                 images = [s for s in images if 'render_' in s]
+                first_slash = prefix.find('/')
+                cat = prefix[0:first_slash]
+                class_ = classes_[cat]                
                 meta     = ''
             classes.append(class_)
             cam_params.append(meta)
@@ -173,19 +178,20 @@ class ShapeNet(object):
         indexes = indexes%self.train_size
         indexes = self.train_idx[indexes]
         self.train_step = self.train_step+size
-        files = [self.train_files[j] for j in indexes]
+        files         = [self.train_files[j] for j in indexes]
         train_classes = [self.train_classes[j] for j in indexes]
-        image_files = [self.train_image_files[j] for j in indexes]
-        train_paths = [self.train_paths[j] for j in indexes]
-        code   = np.zeros((self.batch_size,self.train_size),dtype=np.int64)
-        voxels = []
-        sdf    = []
-        images = []
-        classes= []
+        image_files   = [self.train_image_files[j] for j in indexes]
+        train_paths   = [self.train_paths[j] for j in indexes]
+        train_id      = [self.obj_id[j] for j in indexes]
+        image_id    = []
+        voxels      = []
+        sdf         = []
+        images      = []
         camera_mat  = []
         camera_pose = []        
-        alpha = []
-        vertices = []
+        alpha       = []
+        vertices    = []
+        last_slash  = self.path_.rfind('/')
         for j in range(size):
             if self.grid_size!=256:
                 with open(files[j], 'rb') as f:
@@ -194,11 +200,10 @@ class ShapeNet(object):
                     voxels_b = np.pad(voxels_b, pad_width=2,mode='constant', constant_values=False)
             else:
 #                m1 = scipy.io.loadmat(files[j])
-                m1 = np.load(self.path_[0:-5]+'blenderRenderPreprocess/'+train_paths[j]+'/voxels0.npz')
+                m1 = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/voxels0.npz')
                 voxels_b = m1['voxels']   
                 voxels_b = np.transpose(voxels_b,(0,2,1))
             voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
-            classes.append(train_classes[j])
             sdf_    = voxels_
             sdf.append(sdf_) 
             voxels.append(voxels_b)
@@ -213,7 +218,7 @@ class ShapeNet(object):
                 if self.grid_size!=256:
                     verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
                 else:
-                    verts   = np.load(self.path_[0:-5]+'blenderRenderPreprocess/'+train_paths[j]+'/verts0.npy')
+                    verts   = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/verts0.npy')
                     verts = verts[:,(0,2,1)]
                 num_points = verts.shape[0]
                 arr_ = np.arange(0,num_points)
@@ -227,7 +232,7 @@ class ShapeNet(object):
                 image_file_rand = np.random.randint(0,len(image_files[j]))   
             else:
                 image_file_rand = (self.epoch-1) % len(image_files[j])
-
+            image_id.append(image_file_rand)
             with open(image_files[j][image_file_rand], 'rb') as f:
                 image = misc.imread(f).astype(np.float32)
                 rgb   = image[:,:,0:3]
@@ -243,19 +248,19 @@ class ShapeNet(object):
                 camera_pose.append(cam_pose)
                 
 
-        voxels = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
-        sdf    = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
-        images = np.stack(images,axis=0)
-        alpha  = np.stack(alpha,axis=0)  
-        classes  = np.stack(classes,axis=0)  
+        voxels   = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
+        sdf      = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
+        image_id = np.stack(image_id,axis=0)
+        images   = np.stack(images,axis=0)
+        alpha    = np.stack(alpha,axis=0)  
+        classes  = np.stack(train_classes,axis=0)  
+        ids      = np.stack(train_id,axis=0)  
         if self.grid_size!=256:
             camera_mat    = np.stack(camera_mat,axis=0)  
             camera_pose   = np.stack(camera_pose,axis=0)          
         vertices = np.stack(vertices,axis=0)
-        rows = np.arange(0,self.batch_size)
-        code[rows,indexes] = 1
 
-        return {'classes':classes,'voxels':voxels,'sdf':sdf,'code':code,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
+        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
 
 
 

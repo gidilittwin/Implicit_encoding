@@ -149,7 +149,7 @@ def cell2D(in_node, k1, k2, M, N, mode_node, stride, SCOPE, padding='SAME', bn=T
         return conv1
         
 def cell1D(in_node,output_size, mode_node, SCOPE=None, stddev=0.02, bias_start=0.0, with_act=True, with_bn=True,act_type=lrelu):
-    with tf.variable_scope(SCOPE) as scope:
+    with tf.variable_scope(SCOPE,reuse=tf.AUTO_REUSE) as scope:
         shape = in_node.get_shape().as_list()
         matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
                                 tf.random_normal_initializer(stddev=stddev))
