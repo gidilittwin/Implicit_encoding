@@ -127,27 +127,40 @@ else:
 
 #%%
 if config.grid_size==36:
-    SN_train       = ShapeNet(config.path,config.mesh_path,
-                     files=config.train_file,
-                     rand=True,
-                     batch_size=config.batch_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False,
-                     shuffle_rgb=config.shuffle_rgb)
+#    SN_train       = ShapeNet(config.path,config.mesh_path,
+#                     files=config.train_file,
+#                     rand=True,
+#                     batch_size=config.batch_size,
+#                     grid_size=config.grid_size,
+#                     levelset=[0.00],
+#                     num_samples=config.num_samples,
+#                     list_=config.categories,
+#                     rec_mode=False,
+#                     shuffle_rgb=config.shuffle_rgb)
+#    
+#    SN_val        = ShapeNet(config.path,config.mesh_path,
+#                     files=config.test_file,
+#                     rand=False,
+#                     batch_size=config.batch_size,
+#                     grid_size=config.grid_size,
+#                     levelset=[0.00],
+#                     num_samples=config.num_samples,
+#                     list_=config.categories,
+#                     rec_mode=False,
+#                     shuffle_rgb=config.shuffle_rgb)
     
-    SN_val        = ShapeNet(config.path,config.mesh_path,
+    SN_multi        = ShapeNet(config.path,config.mesh_path,
                      files=config.test_file,
                      rand=False,
-                     batch_size=config.batch_size,
+                     batch_size=24,
                      grid_size=config.grid_size,
                      levelset=[0.00],
                      num_samples=config.num_samples,
                      list_=config.categories,
                      rec_mode=False,
-                     shuffle_rgb=config.shuffle_rgb)
+                     shuffle_rgb=False)        
+    
+    
 
 elif config.grid_size==256:
     SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
@@ -172,7 +185,17 @@ elif config.grid_size==256:
                      rec_mode=False)    
      
 
-#batch = SN_test.get_batch(type_='')    
+#batch = SN_multi.get_batch_multi(type_='')    
+#for ii in range(24):
+#    pic = batch['images'][ii,:,:,:]
+#    fig = plt.figure(ii)
+#    plt.imshow(pic/255.)
+grid_size_lr = 50
+x            = np.linspace(-1, 1, grid_size_lr)
+y            = np.linspace(-1, 1, grid_size_lr)
+z            = np.linspace(-1, 1, grid_size_lr)
+xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
+
 
 
 #%% Function wrappers   
@@ -225,13 +248,6 @@ evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
 g_weights             = CNN_function_wrapper(images,[mode_node,config])
 evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,g_weights,config],shape = [config.batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
 
-injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
-function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
-evals_function_inject = function_wrapper(evals_target['x'],args_=[mode_node,function_injected,config])
-
-
-
-
 
 labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(config.batch_size,-1)),0.0),tf.int64)
 labels_float       = tf.cast(labels,tf.float32)
@@ -248,23 +264,29 @@ norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
 loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
 loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
-#iou_logit          = logits[:,:,1:2]
-#iou_target         = tf.expand_dims(labels_float,-1)
-
-
 #vae                = tf.get_collection('VAE_loss')
 #log_stddev         = vae[0][1]
 #mean               = vae[0][0]
 #vae_loss           = 0.01 *tf.reduce_mean( tf.square(mean) + tf.square(tf.exp(log_stddev))  -1. - log_stddev, axis=-1)
 #loss               = tf.reduce_mean(loss_class + vae_loss)
-
 loss               = tf.reduce_mean(loss_class )
-#loss               = IOU.lovasz_hinge(iou_logit, iou_target, per_image=False)
 X                  = tf.cast(labels,tf.bool)
 Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
 iou_image          = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
 iou                = tf.reduce_mean(iou_image)
 features           = tf.get_collection('embeddings')
+
+
+
+injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
+function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
+evals_function_inject = function_wrapper(evals_target['x'],args_=[mode_node,function_injected,config])
+logits_inject         = tf.reshape(evals_function_inject,(config.batch_size,-1,1)) #- levelset
+logits_inject_iou     = tf.concat((logits_inject-level_set,-logits_inject+level_set),axis=-1)
+predictions_inject    = tf.nn.softmax(logits_inject_iou)
+X_inject              = tf.cast(labels,tf.bool)
+Y_inject              = tf.cast(tf.argmax(predictions_inject , 2),tf.bool)
+iou_image_inject      = tf.reduce_sum(tf.cast(tf.logical_and(X_inject,Y_inject),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_inject,Y_inject),tf.float32),axis=1)
 
 
 
@@ -396,30 +418,7 @@ while step < 100000000:
 
 
 
-#%% TEST
-SN_test        = ShapeNet(config.path,config.mesh_path,
-                 files=config.test_file,
-                 rand=False,
-                 batch_size=24,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=False,
-                 shuffle_rgb=False)    
-
-    
-def evaluate_voxel_prediction(prediction,gt,levelset=0.0):
-  prediction = prediction<  levelset
-  gt         = gt<0.0
-  """  The prediction and gt are 3 dim voxels. Each voxel has values 1 or 0"""
-  intersection = np.sum(np.logical_and(prediction,gt))
-  union = np.sum(np.logical_or(prediction,gt))
-  IoU = 1.0*intersection / union
-  return IoU
-    
-
-
+#%% TEST VANILLA
 def test(SN_test, mode_node, config, accuracy, iou_image, features, levelset):
     if config.grid_size==36:
         grid_size_lr   = 32*config.eval_grid_scale
@@ -441,13 +440,14 @@ def test(SN_test, mode_node, config, accuracy, iou_image, features, levelset):
     classes    = []
     ids        = []
     ious       = []
-    while SN_test.epoch<25:
+    while SN_test.epoch<2:
         batch                = SN_test.get_batch(type_='')
         samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
         feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
                      samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
                      samples_sdf        :samples_sdf_np,
-                     level_set          :levelset}     
+                     level_set          :levelset,
+                     injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
         accuracy_t ,iou_image_t, features_t = session.run([accuracy, iou_image, features],feed_dict=feed_dict) 
         aa_mov_avg_test = aa_mov_test.push(accuracy_t)
         dd_mov_avg_test = dd_mov_test.push(np.mean(iou_image_t))
@@ -461,13 +461,11 @@ def test(SN_test, mode_node, config, accuracy, iou_image, features, levelset):
     SN_test.epoch = 0
     return aa_mov_avg_test, dd_mov_avg_test, embeddings, classes, ids, ious
 
-
 session.run(mode_node.assign(False)) 
-levelset = 0.1
-acc_test, iou_test, features_test, classes_test, ids_test, ious_test = test(SN_test, mode_node, config, accuracy, iou_image, features, levelset)
+levelset = 0.0
+acc_test, iou_test, features_test, classes_test, ids_test, ious_test = test(SN_multi, mode_node, config, accuracy, iou_image, features[0], levelset)
 
-
-
+# saving and loading
 Features = np.reshape(np.concatenate(features_test,axis=0) ,(-1,2048))
 Classes  = np.concatenate(classes_test,axis=0) 
 ids      = np.concatenate(ids_test,axis=0) 
@@ -476,13 +474,23 @@ ids=ids[0:-24]
 ious=ious[0:-24]
 Classes=Classes[0:-24]
 Features=Features[0:-24,:]
-
 np.savez_compressed( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz', Features=Features)
 np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1', {'classes':Classes,'ids':ids,'ious':ious})
+Features = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz')
+Features = Features['Features']
+meta     = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1.npy')
+ids      = meta.item().get('ids')
 
 
 
-#%% VISUALIZE
+
+
+
+   
+    
+    
+
+#%% VISUALIZE & INTERPOLATE
 #cats=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"]
 session.run(mode_node.assign(False))
 import matplotlib as mpl 
@@ -497,17 +505,12 @@ SN_vis        = ShapeNet(config.path,config.mesh_path,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
-                 list_=config.categories,
+                 list_=["03001627","04379243"],
                  rec_mode=False,
                  shuffle_rgb=False)   
 
 
 batch                = SN_vis.get_batch(type_='')
-grid_size_lr = 64
-x            = np.linspace(-1, 1, grid_size_lr)
-y            = np.linspace(-1, 1, grid_size_lr)
-z            = np.linspace(-1, 1, grid_size_lr)
-xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
 samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
 samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
@@ -519,24 +522,20 @@ feed_dict = {images           :batch['images'][:,:,:,0:3]/255.,
 evals_function_d,accuracy_ ,iou_image_,features_  = session.run([evals_function['y'],accuracy,iou_image,features],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
 order = np.flip(np.argsort(iou_image_))
 
-
-#for example in order[0:9]:
-#    field              = np.reshape(evals_function_d[example,:,:],(-1,))
-#    field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
-#    if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
-#        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
-#        cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
-#        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')  
-##        verts, faces, normals, values = measure.marching_cubes_lewiner(batch['sdf'][example,:,:,:], 0.0)
-##        cubed = {'vertices':verts/(config.grid_size-1)*2-1,'faces':faces,'vertices_up':verts/(config.grid_size-1)*2-1}
-#    #    MESHPLOT.mesh_plot([cubed],idx=0,type_='mesh')    
-#        time.sleep(1.0)
+# Visualize
+for example in order[8:16]:
+    field              = np.reshape(evals_function_d[example,:,:],(-1,))
+    field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
+    if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
+        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
+        cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
+        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')  
+        time.sleep(1.0)
 
 
-
-
-features_plane =    features_[0][order[0]:order[0]+1,:].copy()     
-features_car   =    features_[0][order[1]:order[1]+1,:].copy()    
+# Interpolate:
+features_plane =    features_[0][order[10]:order[10]+1,:].copy()     
+features_car   =    features_[0][order[15]:order[15]+1,:].copy()    
 features_interp = []
 for alpha in np.linspace(0,1,5):
     features_interp.append(alpha*features_car + (1-alpha)*features_plane)
@@ -554,8 +553,59 @@ for example in range(0,5):
         MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')   
         time.sleep(1.0)
        
+
+
+
  
+#%% MULTIIMAGE
+def test_multi(SN_multi, mode_node, config, iou_image, iou_image_inject, features, levelset):
+    classes    = []
+    ids        = []
+    ious       = []
+    ious_multi = []
+    SN_multi.epoch = 0
+    SN_multi.reset()
+    while SN_multi.epoch<2:
+        batch_multi          = SN_multi.get_batch_multi(type_='')
+        samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
+        samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+        samples_sdf_np       = np.expand_dims(batch_multi['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+        feed_dict = {images           :batch_multi['images'][:,:,:,0:3]/255.,
+                     samples_xyz      :np.tile(samples_xyz_np,[config.batch_size,1,1]),
+                     samples_sdf      :samples_sdf_np,
+                     level_set        :config.levelset,
+                     injected_embeddings:np.zeros((24,2048),dtype=np.float32)}     
+        evals_function_d ,iou_image_,features_  = session.run([evals_function['y'],iou_image,features[0]],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+#        print('mean batch iou:'+str(np.mean(iou_image_)))
         
+        mean_features_ =    np.tile(np.mean(features_,axis=0,keepdims=True) ,(24,1)) 
+        feed_dict = {samples_xyz      :np.tile(samples_xyz_np,[24,1,1]),
+                     level_set        :config.levelset,
+                     samples_sdf      :samples_sdf_np,
+                     injected_embeddings:mean_features_}     
+        evals_function_injected_m,iou_image_inject_m = session.run([evals_function_inject,iou_image_inject],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+#        print('mean batch iou:'+str(np.mean(iou_image_inject_m)))
+        print('TEST::  epoch: '+str(SN_multi.epoch)+' step: '+str(SN_multi.train_step))
+        classes.append(batch_multi['classes'])
+        ids.append(batch_multi['ids'])
+        ious.append(iou_image_)
+        ious_multi.append(iou_image_inject_m)
+    return classes,ids,ious,ious_multi
+
+session.run(mode_node.assign(False)) 
+levelset = 0.0
+classes_m,ids_m,ious_m,ious_multi_m = test_multi(SN_multi, mode_node, config, iou_image, iou_image_inject, features, levelset)
+
+
+for example in range(0,4):
+    field              = np.reshape(evals_function_d[example,:,:],(-1,))
+    field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
+    if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
+        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.0)
+        cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
+        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')   
+        time.sleep(1.0)
+     
 
 
 #%% RAY-TRACE

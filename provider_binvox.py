@@ -172,8 +172,6 @@ class ShapeNet(object):
         size = self.batch_size
         if self.train_step+size>self.train_size:
             self.reset()
-        
-        
         indexes = np.arange(self.train_step,self.train_step+size)    
         indexes = indexes%self.train_size
         indexes = self.train_idx[indexes]
@@ -212,7 +210,6 @@ class ShapeNet(object):
 #            sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
 #            sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
 #            sdf_                 = (sdf_o - sdf_i)/(self.grid_size-1)*2  
-            
             Verts = []
             for ll in range(len(self.levelset)):
                 if self.grid_size!=256:
@@ -226,8 +223,6 @@ class ShapeNet(object):
                 verts_sampled = verts[perms,:]
                 Verts.append(verts_sampled[:,(2,0,1)])
             vertices.append(np.stack(Verts,axis=-1))
-
-                
             if self.rand==True: 
                 image_file_rand = np.random.randint(0,len(image_files[j]))   
             else:
@@ -246,8 +241,6 @@ class ShapeNet(object):
                 cam_mat,cam_pose = self.camera_info(params)
                 camera_mat.append(cam_mat)
                 camera_pose.append(cam_pose)
-                
-
         voxels   = np.transpose(np.stack(voxels,axis=0),(0,1,3,2))
         sdf      = np.transpose(np.stack(sdf,axis=0),(0,1,3,2))
         image_id = np.stack(image_id,axis=0)
@@ -259,8 +252,73 @@ class ShapeNet(object):
             camera_mat    = np.stack(camera_mat,axis=0)  
             camera_pose   = np.stack(camera_pose,axis=0)          
         vertices = np.stack(vertices,axis=0)
-
         return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
+
+    def get_batch_multi(self,type_):
+        size = 1
+        if self.train_step+size>self.train_size:
+            self.reset()
+        indexes = self.train_step  
+        indexes = indexes%self.train_size
+        indexes = self.train_idx[indexes]
+        self.train_step = self.train_step+size
+        files         = [self.train_files[indexes]]
+        train_classes = [self.train_classes[indexes]]
+        image_files   = [self.train_image_files[indexes]]
+        train_paths   = [self.train_paths[indexes]]
+        train_id      = [self.obj_id[indexes]]
+        image_id    = []
+        voxels      = []
+        sdf         = []
+        images      = []
+        alpha       = []
+        vertices    = []
+        last_slash  = self.path_.rfind('/')
+        j=0
+        if self.grid_size!=256:
+            with open(files[j], 'rb') as f:
+                m1 = binvox_rw.read_as_3d_array(f)
+                voxels_b = m1.data
+                voxels_b = np.pad(voxels_b, pad_width=2,mode='constant', constant_values=False)
+        else:
+            m1 = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/voxels0.npz')
+            voxels_b = m1['voxels']   
+            voxels_b = np.transpose(voxels_b,(0,2,1))
+        voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
+        sdf_    = voxels_
+        sdf.append(sdf_) 
+        voxels.append(voxels_b)
+        Verts = []
+        for ll in range(len(self.levelset)):
+            if self.grid_size!=256:
+                verts = np.load(files[j][0:-self.string_len]+'verts'+str(ll)+'.npy')
+            else:
+                verts   = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/verts0.npy')
+                verts = verts[:,(0,2,1)]
+            num_points = verts.shape[0]
+            arr_ = np.arange(0,num_points)
+            perms = np.random.choice(arr_,self.num_samples)
+            verts_sampled = verts[perms,:]
+            Verts.append(verts_sampled[:,(2,0,1)])
+        vertices.append(np.stack(Verts,axis=-1))
+        for im in range(24):
+            with open(image_files[0][im], 'rb') as f:
+                image = misc.imread(f).astype(np.float32)
+                rgb   = image[:,:,0:3]
+                alph  = image[:,:,3:4]
+                if self.shuffle_rgb and self.rand==False:
+                     rgb = rgb[:,:,np.random.permutation(3)]
+                images.append(np.concatenate((rgb,alph),axis=-1))
+                alpha.append(image[:,:,3:4])
+
+        voxels   = np.tile(np.transpose(np.stack(voxels,axis=0),(0,1,3,2)),(24,1,1,1))
+        sdf      = np.tile(np.transpose(np.stack(sdf,axis=0),(0,1,3,2)),(24,1,1,1))
+        images   = np.stack(images,axis=0)
+        alpha    = np.stack(alpha,axis=0)  
+        classes  = np.tile(np.stack(train_classes,axis=0) ,(24,1)) 
+        ids      = np.tile(np.stack(train_id,axis=0)  ,(24,1))         
+        vertices = np.tile(np.stack(vertices,axis=0) ,(24,1,1,1))         
+        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 
 

@@ -21,12 +21,12 @@ num_plots = 200
 strings   = []
 
 #name = 'dnn_arch_exp'
-name = 'cnn_arch_exp'
+#name = 'cnn_arch_exp'
 #name = 'decoder_exp'
-name = 'archsweep_exp'
+#name = 'archsweep_exp'
 #name = 'hsp_category_exp'
 #name = 'resnet5_exp'
-#name = 'study_dnn_arch'
+name = 'study_sampling_ratios'
 
 plot_idx =11
 
