@@ -476,8 +476,10 @@ ids=ids[0:-24]
 ious=ious[0:-24]
 Classes=Classes[0:-24]
 Features=Features[0:-24,:]
-np.savez_compressed( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz', Features=Features)
-np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1', {'classes':Classes,'ids':ids,'ious':ious})
+np.savez_compressed( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.0.npz', Features=Features)
+np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.0', {'classes':Classes,'ids':ids,'ious':ious})
+
+
 Features = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz')
 Features = Features['Features']
 meta     = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1.npy')

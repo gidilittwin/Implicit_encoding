@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper3/'
+path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper4/'
 type_ = 'iou_values_test.npy'
 
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/accuracy_values.npy')
@@ -26,10 +26,10 @@ strings   = []
 name = 'archsweep_exp'
 #name = 'hsp_exp'
 #name = 'resnet5_exp'
-#name = 'study_sampling_ratios'
+name = 'study_sampling_ratios'
 #name = 'study_dnn_arch'
 
-plot_idx =11
+plot_idx =0
 
 
 

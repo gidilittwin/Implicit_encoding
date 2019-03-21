@@ -30,7 +30,7 @@ for cc in range(0,13):
     Features_per_class_N.append(Features_per_class[-1][perm[:500],:])
     names.append(classes2name[config.categories[cc]]['name'])
 mean_iou = np.mean(iou_per_class)    
-    
+print(mean_iou)
 
 
 #%% TSNE    
