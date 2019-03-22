@@ -264,18 +264,18 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
         samples = samples*tf.pow(U,1/3.)
         
     response    = model_fn(samples,args)
-#    dy_dx   = []
-#    for ii in range(shape[0]):
-#        dydx   = tf.gradients(response[ii,:,:],samples,grad_ys=1)[0]
-##        d2ydx2 = tf.gradients(dydx,samples)[0]
-#        dy_dx.append(dydx)     
-##        d2y_dx2.append(d2ydx2)     
-#    dy_dx = tf.concat(dy_dx,axis=0) 
-##    d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
-#    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
-#    mask    = tf.cast(tf.greater(response,0.),tf.float32)
-#    evals = {'x':samples,'y':response,'dydx':dy_dx,'dydx_norm':dy_dx_n,'mask':mask}
-    evals = {'x':samples,'y':response}
+    dy_dx   = []
+    for ii in range(shape[0]):
+        dydx   = tf.gradients(response[ii,:,:],samples)[0]
+#        d2ydx2 = tf.gradients(dydx,samples)[0]
+        dy_dx.append(dydx)     
+#        d2y_dx2.append(d2ydx2)     
+    dy_dx = tf.concat(dy_dx,axis=0) 
+#    d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
+    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
+    mask    = tf.cast(tf.greater(response,0.),tf.float32)
+    evals = {'x':samples,'y':response,'dydx':dy_dx,'dydx_norm':dy_dx_n,'mask':mask}
+#    evals = {'x':samples,'y':response}
     return evals
         
 

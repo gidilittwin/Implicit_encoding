@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper4/'
+path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'
 type_ = 'iou_values_test.npy'
 
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/accuracy_values.npy')
@@ -26,7 +26,7 @@ strings   = []
 name = 'archsweep_exp'
 #name = 'hsp_exp'
 #name = 'resnet5_exp'
-name = 'study_sampling_ratios'
+#name = 'study_sampling_ratios'
 #name = 'study_dnn_arch'
 
 plot_idx =0
@@ -52,14 +52,15 @@ for ii in range(num_plots):
 
 num_plots_alive = len(iou_test)
 kill_list = []
-plt.figure(1)
+#for ii in range(num_plots_alive):
+
+plt.figure(ii)
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
 for ii in range(num_plots_alive):
-    plt.plot(iou_test[ii])
-#    if len(iou_test[ii])>plot_idx:
-#        if iou_test[ii][plot_idx]>0.65:
-    plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings[ii])
+    if np.max(iou_test[ii])>0.675:
+        plt.plot(iou_test[ii])
+        plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings[ii])
     if np.max(iou_test[ii])<0.60:
         kill_list.append(strings[ii])
 plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)

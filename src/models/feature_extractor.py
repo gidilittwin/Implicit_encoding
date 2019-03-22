@@ -153,8 +153,8 @@ def regressor(features,args_):
             features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
         tf.add_to_collection('embeddings',features)
         
-        if config.multi_image:
-            features =    tf.tile(tf.reduce_mean(features,axis=0,keep_dims=True) ,(featue_size[0],1)) 
+#        if config.multi_image:
+#            features =    tf.tile(tf.reduce_mean(features,axis=0,keep_dims=True) ,(featue_size[0],1)) 
         
         for ii in range(len(theta)):
             layer_out = theta[ii]['w']

@@ -1,42 +1,9 @@
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp1 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '02691156'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp2 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '02691156' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp3 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '02691156'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp4 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '02828884'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp5 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '02828884' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp6 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '02828884'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp7 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '02933112'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp8 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '02933112' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp9 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '02933112'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp10 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '02958343'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp11 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '02958343' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp12 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '02958343'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp13 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '03001627'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp14 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '03001627' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp15 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '03001627'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp16 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '03211117'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp17 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '03211117' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp18 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '03211117'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp19 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '03636649'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp20 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '03636649' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp21 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '03636649'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp22 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '03691459'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp23 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '03691459' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp24 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '03691459'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp25 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '04090263'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp26 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '04090263' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp27 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '04090263'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp28 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '04256520'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp29 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '04256520' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp30 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '04256520'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp31 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '04379243'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '04379243' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp33 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '04379243'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp34 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '04401088'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp35 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '04401088' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp36 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '04401088'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp37 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --categories '04530566'
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp38 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --categories '04530566' 
-python implicit_surface_encoding_latest.py --experiment_name hsp_category_exp39 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --categories '04530566'
-
-
-
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp1 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 1 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp2 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 2 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp3 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 3 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp4 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 4 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp5 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 5 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp6 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 8 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp7 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 10 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp8 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 12 --finetune 1
+python implicit_surface_encoding_latest.py --experiment_name multiview_ft_exp9 --multi_image 1 --learning_rate 0.00001 --model_params_path ./archs/resnet_5_dn6_tanh.json --batch_size 24 --finetune 1

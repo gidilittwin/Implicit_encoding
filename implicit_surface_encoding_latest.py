@@ -31,8 +31,8 @@ import socket
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'archsweep_exp60')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5w2.json')
+    parser.add_argument('--experiment_name', type=str, default= 'study_dnn_arch30')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_dn6_tanh.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--grid_size', type=int,  default=36)
@@ -149,17 +149,7 @@ if config.grid_size==36:
                      list_=config.categories,
                      rec_mode=False,
                      shuffle_rgb=False)
-    
-    SN_multi        = ShapeNet(config.path,config.mesh_path,
-                     files=config.test_file,
-                     rand=False,
-                     batch_size=config.grid_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False,
-                     shuffle_rgb=False)        
+        
     
     
 
@@ -261,8 +251,9 @@ correct_prediction = tf.equal(tf.argmax(predictions, 2), labels)
 accuracy           = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
 err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 delta_y            = tf.square(evals_function['y']-evals_target['y'])
-#norm               = evals_function['dydx_norm']
-#norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
+jacobian           = evals_function['dydx']
+norm               = evals_function['dydx_norm']
+norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
 sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
 loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
 loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
@@ -280,15 +271,15 @@ features           = tf.get_collection('embeddings')
 
 
 
-injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
-function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
-evals_function_inject = function_wrapper(evals_target['x'],args_=[mode_node,function_injected,config])
-logits_inject         = tf.reshape(evals_function_inject,(config.batch_size,-1,1)) #- levelset
-logits_inject_iou     = tf.concat((logits_inject-level_set,-logits_inject+level_set),axis=-1)
-predictions_inject    = tf.nn.softmax(logits_inject_iou)
-X_inject              = tf.cast(labels,tf.bool)
-Y_inject              = tf.cast(tf.argmax(predictions_inject , 2),tf.bool)
-iou_image_inject      = tf.reduce_sum(tf.cast(tf.logical_and(X_inject,Y_inject),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_inject,Y_inject),tf.float32),axis=1)
+#injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
+#function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
+#evals_function_inject = function_wrapper(evals_target['x'],args_=[mode_node,function_injected,config])
+#logits_inject         = tf.reshape(evals_function_inject,(config.batch_size,-1,1)) #- levelset
+#logits_inject_iou     = tf.concat((logits_inject-level_set,-logits_inject+level_set),axis=-1)
+#predictions_inject    = tf.nn.softmax(logits_inject_iou)
+#X_inject              = tf.cast(labels,tf.bool)
+#Y_inject              = tf.cast(tf.argmax(predictions_inject , 2),tf.bool)
+#iou_image_inject      = tf.reduce_sum(tf.cast(tf.logical_and(X_inject,Y_inject),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_inject,Y_inject),tf.float32),axis=1)
 
 
 
@@ -330,8 +321,8 @@ def evaluate(SN_val, mode_node, config, accuracy, iou):
     dd_mov_test    = MOV_AVG(3000000) 
     samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
     samples_ijk_np = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
-    while SN_val.epoch<25:
-        batch                = SN_val.get_batch(type_='')
+    while SN_val.epoch<2:
+        batch                = SN_val.get_batch_multi(type_='')
         samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
         feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
                      samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
@@ -361,6 +352,7 @@ max_test_acc   = 0.
 max_test_iou   = 0.
 if config.finetune:
     loader.restore(session, directory+'/latest-0')
+#    loader.restore(session, '/private/home/wolf/gidishape/checkpoints/study_dnn_arch30/latest-0')
     loss_plot     = np.load(directory+'/loss_values.npy')
     acc_plot      = np.load(directory+'/accuracy_values.npy')  
     iou_plot      = np.load(directory+'/iou_values.npy')      
@@ -442,14 +434,14 @@ def test(SN_test, mode_node, config, accuracy, iou_image, features, levelset):
     classes    = []
     ids        = []
     ious       = []
-    while SN_test.epoch<25:
-        batch                = SN_test.get_batch(type_='')
+    while SN_test.epoch<2:
+        batch                = SN_test.get_batch_multi(type_='')
         samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
         feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
                      samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
                      samples_sdf        :samples_sdf_np,
-                     level_set          :levelset,
-                     injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
+                     level_set          :levelset,}
+#                     injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
         accuracy_t ,iou_image_t, features_t = session.run([accuracy, iou_image, features],feed_dict=feed_dict) 
         aa_mov_avg_test = aa_mov_test.push(accuracy_t)
         dd_mov_avg_test = dd_mov_test.push(np.mean(iou_image_t))
@@ -464,7 +456,7 @@ def test(SN_test, mode_node, config, accuracy, iou_image, features, levelset):
     return aa_mov_avg_test, dd_mov_avg_test, embeddings, classes, ids, ious
 
 session.run(mode_node.assign(False)) 
-levelset = 0.0
+levelset = 0.2
 acc_test, iou_test, features_test, classes_test, ids_test, ious_test = test(SN_val, mode_node, config, accuracy, iou_image, features[0], levelset)
 
 # saving and loading
@@ -476,14 +468,14 @@ ids=ids[0:-24]
 ious=ious[0:-24]
 Classes=Classes[0:-24]
 Features=Features[0:-24,:]
-np.savez_compressed( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.0.npz', Features=Features)
-np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.0', {'classes':Classes,'ids':ids,'ious':ious})
+np.savez_compressed( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.2.npz', Features=Features)
+np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.2', {'classes':Classes,'ids':ids,'ious':ious})
 
 
-Features = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz')
-Features = Features['Features']
-meta     = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1.npy')
-ious_loaded      = meta.item().get('ious')
+#Features = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Features_ls=0.1.npz')
+#Features = Features['Features']
+#meta     = np.load( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_ls=0.1.npy')
+#ious_loaded      = meta.item().get('ious')
 
 
 
@@ -506,7 +498,7 @@ from scipy import misc
 SN_vis        = ShapeNet(config.path,config.mesh_path,
                  files=config.test_file,
                  rand=True,
-                 batch_size=8,
+                 batch_size=config.batch_size,
                  grid_size=config.grid_size,
                  levelset=[0.00],
                  num_samples=config.num_samples,
@@ -516,29 +508,24 @@ SN_vis        = ShapeNet(config.path,config.mesh_path,
 
 batch                = SN_vis.get_batch(type_='')
 #batch                = SN_train.get_batch(type_='')
-
-
-#with open('/media/gidi/SSD/Thesis/Data/internet/car1_1.png', 'rb') as f:
-#    image_int = misc.imread(f).astype(np.float32)
-#    rgb   = image_int[:,:,0:3]
-#    alph  = image_int[:,:,3:4]
-#batch['images'][0,:,:,:] = image_int                
-#batch['alpha'][0,:,:,:] = alph                
+with open('/media/gidi/SSD/Thesis/Data/internet/mac/butterfly_PNG1046.png', 'rb') as f:
+    image_int = misc.imread(f).astype(np.float32)
+    rgb   = image_int[:,:,0:3]
+    alph  = image_int[:,:,3:4]
+batch['images'][0,:,:,:] = image_int                
+batch['alpha'][0,:,:,:] = alph                
                 
-                
-
 samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
 samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
 samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
 feed_dict = {images           :batch['images'][:,:,:,0:3]/255.,
              samples_xyz      :np.tile(samples_xyz_np,[config.batch_size,1,1]),
              samples_sdf      :samples_sdf_np,
-             level_set        :config.levelset,
-             injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
-evals_function_d,accuracy_ ,iou_image_,features_,norm_  = session.run([evals_function['y'],accuracy,iou_image,features,norm],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
-order = np.flip(np.argsort(iou_image_))
+             level_set        :config.levelset,}
+#             injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
+evals_function_d,accuracy_ ,iou_image_,features_  = session.run([evals_function['y'],accuracy,iou_image,features],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
 
-# Visualize
+ #Visualize
 for example in range(1):
     field              = np.reshape(evals_function_d[example,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
@@ -548,23 +535,31 @@ for example in range(1):
         MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')  
         time.sleep(1.0)
 
+
+#samples_xyz_np       = np.expand_dims(verts,0)/(grid_size_lr-1)*2-1
+#samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
+#samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
+#feed_dict = {images           :batch['images'][:,:,:,0:3]/255.,
+#             samples_xyz      :np.tile(samples_xyz_np,[config.batch_size,1,1]),
+#             samples_sdf      :samples_sdf_np,
+#             level_set        :config.levelset,
+#             injected_embeddings:np.zeros((1,2048),dtype=np.float32)}     
+#evals_function_d,accuracy_ ,iou_image_,features_,jacobian_,norm_  = session.run([evals_function['y'],accuracy,iou_image,features,jacobian,norm],feed_dict=feed_dict) # <= returns jpeg data you can write to disk    
+#jacobian_ =jacobian_/norm_
+#for example in range(1):
+#    point_cloud = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1,'jacobian':jacobian_[0,:,:],'norm':norm_[0,:,:]}
+##    MESHPLOT.mesh_plot([point_cloud],idx=0,type_='mesh') 
+#    mesh_plot([point_cloud],idx=0,type_='mesh')  
+
+
+
+
+
 pic = batch['images'][0,:,:,:]
 fig = plt.figure(0)
 plt.imshow(pic/255.)
 
-for example in range(1):
-    field              = np.reshape(evals_function_d[example,:,:],(-1,))
-    field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
-    if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
-        verts, faces, normals, values = measure.marching_cubes_lewiner(field[:,:,:,0], 0.)
-        
-        points = samples_xyz_np[0,:,:]
-        normals = norm_[0,:,:]
-        cubed_plot = {'vertices':samples_xyz_np[0,:,:],'faces':faces,'vertices_up':samples_xyz_np[0,:,:]}
-        MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='cloud_up')  
-        time.sleep(1.0)
-
-
+norm__=np.log(1+norm_[0,:,0])
 
 
 

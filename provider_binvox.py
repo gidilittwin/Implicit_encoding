@@ -268,7 +268,6 @@ class ShapeNet(object):
         image_files   = [self.train_image_files[indexes]]
         train_paths   = [self.train_paths[indexes]]
         train_id      = [self.obj_id[indexes]]
-        image_id    = []
         voxels      = []
         sdf         = []
         images      = []
@@ -302,8 +301,9 @@ class ShapeNet(object):
             verts_sampled = verts[perms,:]
             Verts.append(verts_sampled[:,(2,0,1)])
         vertices.append(np.stack(Verts,axis=-1))
-        for im in range(24):
-            with open(image_files[0][im], 'rb') as f:
+        perm = np.random.permutation(24)        
+        for im in range(self.batch_size):
+            with open(image_files[0][perm[im]], 'rb') as f:
                 image = misc.imread(f).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]
@@ -312,13 +312,13 @@ class ShapeNet(object):
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
 
-        voxels   = np.tile(np.transpose(np.stack(voxels,axis=0),(0,1,3,2)),(24,1,1,1))
-        sdf      = np.tile(np.transpose(np.stack(sdf,axis=0),(0,1,3,2)),(24,1,1,1))
+        voxels   = np.tile(np.transpose(np.stack(voxels,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
+        sdf      = np.tile(np.transpose(np.stack(sdf,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
         images   = np.stack(images,axis=0)
         alpha    = np.stack(alpha,axis=0)  
-        classes  = np.tile(np.stack(train_classes,axis=0) ,(24,1)) 
-        ids      = np.tile(np.stack(train_id,axis=0)  ,(24,1))         
-        vertices = np.tile(np.stack(vertices,axis=0) ,(24,1,1,1))         
+        classes  = np.tile(np.stack(train_classes,axis=0) ,(self.batch_size,1)) 
+        ids      = np.tile(np.stack(train_id,axis=0)  ,(self.batch_size,1))         
+        vertices = np.tile(np.stack(vertices,axis=0) ,(self.batch_size,1,1,1))         
         return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
 
 

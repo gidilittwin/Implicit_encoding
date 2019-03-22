@@ -12,7 +12,17 @@ def midpoints(x):
     return x
 
 
-
+pl_deep = [[0.0, 'rgb(39, 26, 44)'],
+           [0.1, 'rgb(53, 41, 74)'],
+           [0.2, 'rgb(63, 57, 108)'],
+           [0.3, 'rgb(64, 77, 139)'],
+           [0.4, 'rgb(61, 99, 148)'],
+           [0.5, 'rgb(65, 121, 153)'],
+           [0.6, 'rgb(72, 142, 157)'],
+           [0.7, 'rgb(80, 164, 162)'],
+           [0.8, 'rgb(92, 185, 163)'],
+           [0.9, 'rgb(121, 206, 162)'],
+           [1.0, 'rgb(165, 222, 166)']]
 
 
 def mesh_plot(obj,idx=0,type_='mesh'):
@@ -59,38 +69,35 @@ def mesh_plot(obj,idx=0,type_='mesh'):
                                     marker=dict(size=4,colorscale='Viridis',color=colors[:,0]*255,opacity=0.6 ))   ) 
 
 
-
-
-
-
     elif type_=='cloud_up':
+#    norm    = obj[idx]['norm']
+#    norm = np.log(1+norm)
+#    norm=norm/np.max(norm)        
         # Markers
+        norm = obj[idx]['norm']
+        vectors = obj[idx]['jacobian']
+        
+        traces.append({'type':'cone',
+                      'x':vertices_up[:,0],
+                      'y':vertices_up[:,1],
+                      'z':vertices_up[:,2],
+                      'u':vectors[:,0],
+                      'v':vectors[:,1],
+                      'w':vectors[:,2],
+#                      sizemode='scaled',
+#                      sizeref=0.25, #this is the default value 
+#                      showscale=True,
+#                      colorscale=pl_deep, 
+#                      colorbar=dict(thickness=20, ticklen=4), 
+#                      anchor='tail'
+                  })     
+        
         traces.append(go.Scatter3d(x=vertices_up[:,0],
                                     y=vertices_up[:,1],
                                     z=vertices_up[:,2],
                                     mode='markers',
                                     marker=dict(size=2,line=dict(color='rgba(217, 217, 217, 0.8)',width=0.5),opacity=0.8 ))   ) 
         
-
-
-
-
-#
-#    # Projection
-#    colorscale=[['0'  , 'rgba(20,29,67,0.6)'], 
-#                ['0.5', 'rgba(51,255,255 ,0.6)'], 
-#                ['1'  , 'rgba(255  ,191,0,0.6)']]
-#    voxels_= hand_model_['reprojected']
-#    voxels_= voxels_[idx,:,:,0]*255
-#    vshape = voxels_.shape[1]
-#    Y,X = np.meshgrid(np.linspace(0, 1, vshape),np.linspace(0, 1, vshape))
-#    traces.append(go.Surface(z=0*np.ones(voxels_.shape),
-#                    x=X,
-#                    y=Y,
-#                    colorscale=colorscale,
-#                    showlegend=False,
-#                    showscale=False,
-#                    surfacecolor=voxels_))
 
     layout = dict(
         width=1200,
