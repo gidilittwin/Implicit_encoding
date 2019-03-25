@@ -59,15 +59,13 @@ def mesh_plot(obj,idx=0,type_='mesh'):
                                 k=faces[:,2]))
 
     elif type_=='cloud':
-        colors   = obj[idx]['field']
-
         # Markers
-        traces.append(go.Scatter3d(x=vertices[:,0],
-                                    y=vertices[:,1],
-                                    z=vertices[:,2],
+        traces.append(go.Scatter3d(x=vertices_up[:,0],
+                                    y=vertices_up[:,1],
+                                    z=vertices_up[:,2],
                                     mode='markers',
-                                    marker=dict(size=4,colorscale='Viridis',color=colors[:,0]*255,opacity=0.6 ))   ) 
-
+                                    marker=dict(size=2,line=dict(color='rgba(0, 50, 255, 0.8)',width=1.5),opacity=0.8 ))   ) 
+        
 
     elif type_=='cloud_up':
 #    norm    = obj[idx]['norm']
@@ -119,30 +117,32 @@ def mesh_plot(obj,idx=0,type_='mesh'):
                 backgroundcolor='rgb(255,255,255)')
             ),)
 
-#    layout = dict(
-#        width=1200,
-#        height=1200,
-#        autosize=False,
-#        title='Mesh',
-#        scene=dict(
-#            xaxis=dict(range=[-1, 1],
-#                gridcolor='rgb(255, 255, 255)',
-#                showbackground=True,
-#                backgroundcolor='rgb(230, 230,230)'),
-#            yaxis=dict(range=[-1, 1],
-#                gridcolor='rgb(255, 255, 255)',
-#                showbackground=True,
-#                backgroundcolor='rgb(230, 230,230)'),
-#            zaxis=dict(range=[-1, 1],
-#                gridcolor='rgb(255, 255, 255)',
-#                showbackground=True,
-#                backgroundcolor='rgb(28,76,96)')
-#            ),)
 
 
     fig = dict(data=traces, layout=layout)
 #    py.offline.plot(fig,auto_open=True, filename='/Users/gidilittwin/Desktop/plotly_'+type_+'_'+str(idx)+'.html')
     py.offline.plot(fig)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     

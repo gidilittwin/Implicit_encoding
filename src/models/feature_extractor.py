@@ -153,7 +153,12 @@ def regressor(features,args_):
             features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
         tf.add_to_collection('embeddings',features)
         
-#        if config.multi_image:
+        if config.multi_image:
+            features_avg = []
+            step_size = 12
+            for ll in range(0,24,step_size):
+                features_avg.append(tf.tile(tf.reduce_mean(features[ll:ll+step_size,:],axis=0,keep_dims=True) ,(step_size,1)) )
+            features = tf.concat(features_avg,axis=0)    
 #            features =    tf.tile(tf.reduce_mean(features,axis=0,keep_dims=True) ,(featue_size[0],1)) 
         
         for ii in range(len(theta)):
