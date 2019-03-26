@@ -13,6 +13,7 @@ from src.utilities import raytrace as RAY
 import os
 import argparse
 import socket
+import tfrecords_handler as TFH
 
 # 1) try HD grid for evaluations (we don't need to stick to 32..)     vvvvvvvvvvvvvvvv
 # 2) Add batch norm to different blocks                                 vvvvvvvvvvvvvvv
@@ -40,8 +41,9 @@ def parse_args():
 #    parser.add_argument('--grid_size', type=int,  default=256)
 #    parser.add_argument('--img_size', type=int,  default=[224,224])  
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
-    parser.add_argument('--batch_size', type=int,  default=24)
-    parser.add_argument('--multi_image', type=int,  default=1)
+    parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--test_size', type=int,  default=1)
+    parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--batch_norm', type=int,  default=1)
     parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
@@ -58,9 +60,10 @@ def parse_args():
     parser.add_argument('--test_every', type=int,  default=10000)
     parser.add_argument('--learning_rate', type=float,  default=0.00005)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=True)
+    parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
-        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+#        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
@@ -104,7 +107,8 @@ class MOV_AVG(object):
 
 
 MODEL_PARAMS = config.model_params_path
-
+MODE_TRAIN = 0
+MODE_TEST  = 1
 with open(MODEL_PARAMS, 'r') as f:
     model_params = json.load(f)
 config.model_params = model_params    
@@ -127,31 +131,22 @@ else:
 
 
 #%%
+    
 if config.grid_size==36:
-    SN_train       = ShapeNet(config.path,config.mesh_path,
-                     files=config.train_file,
-                     rand=True,
-                     batch_size=config.batch_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False,
-                     shuffle_rgb=config.shuffle_rgb)
-    
-    SN_val        = ShapeNet(config.path,config.mesh_path,
-                     files=config.test_file,
-                     rand=False,
-                     batch_size=config.batch_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False,
-                     shuffle_rgb=False)
-        
-    
-    
+    train_iterator = TFH.iterator(config.path+'train/',config.batch_size,epochs=10000,shuffle=True)
+    test_iterator  = TFH.iterator(config.path+'test/',config.test_size,epochs=10000,shuffle=False)
+    run_mode       = tf.Variable(0, name='run_node',dtype=tf.int32)
+    mode_node      = tf.equal(run_mode,MODE_TRAIN, name='mode_node')
+    idx_node       = tf.placeholder(tf.int32,shape=(), name='idx_node')  
+    level_set      = tf.placeholder(tf.float32,shape=(),   name='levelset')  
+    tf.add_to_collection('istrainvar',mode_node)
+    next_element = tf.case([(tf.equal(MODE_TRAIN, run_mode), (lambda: train_iterator.get_next()  )),
+                            (tf.equal(MODE_TEST,  run_mode), (lambda: test_iterator.get_next() ))],
+                                                     default=(lambda: test_iterator.get_next() ) )
+    next_batch      = TFH.process_batch_train(next_element,idx_node,config)
+    next_batch_test = TFH.process_batch_test(next_element,idx_node,config)
+
+   
 
 elif config.grid_size==256:
     SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
@@ -177,11 +172,6 @@ elif config.grid_size==256:
  
 
 
-#batch = SN_train.get_batch(type_='')    
-#for ii in range(24):
-#    pic = batch['images'][ii,:,:,:]
-#    fig = plt.figure(ii)
-#    plt.imshow(pic/255.)
 grid_size_lr = config.grid_size
 x            = np.linspace(-1, 1, grid_size_lr)
 y            = np.linspace(-1, 1, grid_size_lr)
@@ -191,9 +181,7 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
 #%% Function wrappers   
-with tf.variable_scope('mode_node',reuse=tf.AUTO_REUSE):
-    mode_node = tf.Variable(True, name='mode_node')
-    
+  
    
 def function_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
@@ -217,59 +205,49 @@ def mpx_function_wrapper(encoding,args_):
 
 
 
-with tf.variable_scope('display_tracer',reuse=tf.AUTO_REUSE):
-    Ray_render = RAY.Raycast(config.batch_size,resolution=(137,137),sky_color=(127.5, 127.5, 127.5))
-    Ray_render.add_lighting(position=[0.0, 0.0, 1.0],color=[255., 120., 20.],ambient_color = [255., 255., 255.])
-    Ray_render.add_camera(camera_position=[1.0, 1.0, 1.0], lookAt=(0,0,0),focal_length=2,name='camera_1')
-Ray_render_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'display_tracer')
-
 
 
 
 
 #%% Sampling in XYZ domain  
-images                = tf.placeholder(tf.float32,shape=(None,config.img_size[0],config.img_size[1],color_channels), name='images')  
-samples_sdf           = tf.placeholder(tf.float32,shape=(None,None,1), name='samples_sdf')  
-samples_xyz           = tf.placeholder(tf.float32,shape=(None,None,3),   name='samples_xyz')  
-level_set             = tf.placeholder(tf.float32,shape=(),   name='levelset')  
 
-evals_target          = {}
-evals_target['x']     = samples_xyz
-evals_target['y']     = samples_sdf
-evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
-g_weights             = CNN_function_wrapper(images,[mode_node,config])
-evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,g_weights,config],shape = [config.batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
-
-
-labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(config.batch_size,-1)),0.0),tf.int64)
-labels_float       = tf.cast(labels,tf.float32)
-logits             = tf.reshape(evals_function['y'],(config.batch_size,-1,1)) #- levelset
-logits_iou         = tf.concat((logits-level_set,-logits+level_set),axis=-1)
-logits_ce          = tf.concat((logits,-logits),axis=-1)
-predictions        = tf.nn.softmax(logits_iou)
-correct_prediction = tf.equal(tf.argmax(predictions, 2), labels)
-accuracy           = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
-err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-delta_y            = tf.square(evals_function['y']-evals_target['y'])
-jacobian           = evals_function['dydx']
-norm               = evals_function['dydx_norm']
-norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
-sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
-loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
-loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
-#vae                = tf.get_collection('VAE_loss')
-#log_stddev         = vae[0][1]
-#mean               = vae[0][0]
-#vae_loss           = 0.01 *tf.reduce_mean( tf.square(mean) + tf.square(tf.exp(log_stddev))  -1. - log_stddev, axis=-1)
-#loss               = tf.reduce_mean(loss_class + vae_loss)
-loss               = tf.reduce_mean(loss_class )
-X                  = tf.cast(labels,tf.bool)
-Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
-iou_image          = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
-iou                = tf.reduce_mean(iou_image)
-features           = tf.get_collection('embeddings')
+def build_graph(next_batch,config,batch_size):
+    images                = next_batch['images'] 
+    samples_sdf           = next_batch['samples_sdf']  
+    samples_xyz           = next_batch['samples_xyz']
+    evals_target          = {}
+    evals_target['x']     = samples_xyz
+    evals_target['y']     = samples_sdf
+    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
+    g_weights             = CNN_function_wrapper(images,[mode_node,config])
+    evals_function        = SF.sample_points_list(model_fn = function_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    labels             = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
+#    labels_float       = tf.cast(labels,tf.float32)
+    logits             = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
+    logits_iou         = tf.concat((logits-level_set,-logits+level_set),axis=-1)
+    logits_ce          = tf.concat((logits,-logits),axis=-1)
+    predictions        = tf.nn.softmax(logits_iou)
+    correct_prediction = tf.equal(tf.argmax(predictions, 2), labels)
+    accuracy           = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
+    err                = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#    delta_y            = tf.square(evals_function['y']-evals_target['y'])
+#    jacobian           = evals_function['dydx']
+    norm               = evals_function['dydx_norm']
+#    norm_loss          = tf.reduce_mean((evals_function['dydx_norm'] - 1.0)**2)
+    sample_w           = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
+    loss_class         = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
+    loss_class         = loss_class/tf.reduce_mean(sample_w,axis=-1)
+    loss               = tf.reduce_mean(loss_class )
+    X                  = tf.cast(labels,tf.bool)
+    Y                  = tf.cast(tf.argmax(predictions, 2),tf.bool)
+    iou_image          = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
+    iou                = tf.reduce_mean(iou_image)
+    features           = tf.get_collection('embeddings')
+    return loss,accuracy,err,norm,iou,features
 
 
+loss,accuracy,err,norm,iou,features             = build_graph(next_batch,config,batch_size=config.batch_size)
+loss_t,accuracy_t,err_t,norm_t,iou_t,features_t = build_graph(next_batch_test,config,batch_size=config.test_size)
 
 #injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
 #function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
@@ -303,39 +281,25 @@ loader = tf.train.Saver(var_list=all_vars)
 
 
 #%% Train
-def evaluate(SN_val, mode_node, config, accuracy, iou):
-    session.run(mode_node.assign(False)) 
-    if config.grid_size==36:
-        grid_size_lr   = 32*config.eval_grid_scale
-        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-    else:
-        grid_size_lr   = config.grid_size*config.eval_grid_scale
-        x_lr           = np.linspace(-1, 1, grid_size_lr)
-        y_lr           = np.linspace(-1, 1, grid_size_lr)
-        z_lr           = np.linspace(-1, 1, grid_size_lr)    
-    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
-    step_test      = 0
+def evaluate(test_iterator, mode_node, config, accuracy_t, iou_t):
+    session.run(run_mode.assign(1)) 
     aa_mov_test    = MOV_AVG(3000000) 
     dd_mov_test    = MOV_AVG(3000000) 
-    samples_xyz_np = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(1,1,1))
-    samples_ijk_np = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
-    while SN_val.epoch<2:
-        batch                = SN_val.get_batch_multi(type_='')
-        samples_sdf_np       = np.expand_dims(batch['sdf'][:,samples_ijk_np[0,:,1],samples_ijk_np[0,:,0],samples_ijk_np[0,:,2]],-1)    
-        feed_dict = {images             :batch['images'][:,:,:,0:3]/255.,
-                     samples_xyz        :np.tile(samples_xyz_np,[config.batch_size,1,1]),
-                     samples_sdf        :samples_sdf_np,
-                     level_set          :config.levelset}     
-        accuracy_t ,iou_t = session.run([accuracy, iou],feed_dict=feed_dict) 
-        aa_mov_avg_test = aa_mov_test.push(accuracy_t)
-        dd_mov_avg_test = dd_mov_test.push(iou_t)
-        step_test+=1
-        if step_test % 100==0:
-            print('TEST::  epoch: '+str(SN_val.epoch)+' step: '+str(step_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
-    SN_val.epoch = 0
-    session.run(mode_node.assign(True)) 
+    for epoch_test in range(24):
+        session.run(test_iterator.initializer)
+        while True:
+            try:
+                feed_dict = {lr_node            :config.learning_rate,
+                             idx_node           :epoch_test%24,
+                             level_set          :config.levelset}  
+                accuracy_t ,iou_t = session.run([accuracy_t, iou_t],feed_dict=feed_dict) 
+                aa_mov_avg_test = aa_mov_test.push(accuracy_t)
+                dd_mov_avg_test = dd_mov_test.push(iou_t)
+                print(str(dd_mov_avg_test))
+            except tf.errors.OutOfRangeError:
+                print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
+                break
+    session.run(run_mode.assign(0)) 
     return aa_mov_avg_test, dd_mov_avg_test
 
 
@@ -369,47 +333,43 @@ bb_mov         = MOV_AVG(300)
 cc_mov         = MOV_AVG(300) 
 dd_mov         = MOV_AVG(300) 
 
-
-
-session.run(mode_node.assign(True)) 
-while step < 100000000:
-    batch                = SN_train.get_batch(type_='')
-    batch_feed           = SN_train.process_batch(batch,config)
-    feed_dict = {images             :batch_feed['images']/255.,
-                 lr_node            :config.learning_rate,
-                 samples_xyz        :batch_feed['samples_xyz_np'],
-                 samples_sdf        :batch_feed['samples_sdf_np'],
-                 level_set          :config.levelset}     
-    _, loss_, accuracy_ ,iou_ = session.run([train_op_cnn, loss ,accuracy, iou],feed_dict=feed_dict) 
-
-    aa_mov_avg = aa_mov.push(accuracy_)
-    cc_mov_avg = cc_mov.push(loss_)
-    dd_mov_avg = dd_mov.push(iou_)
-    if step % 100==0:
-        print('Training: epoch: '+str(SN_train.epoch)+' step: '+str(step)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
-        print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
-    if step % config.checkpoint_every == 0 and step!=0:
-        saver.save(session, directory+'/'+str(step), global_step=step)
-        saver.save(session, directory+'/latest', global_step=0)
-        last_saved_step = step
-    if step % config.plot_every == 0:
-        acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
-        loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg)),axis=-1))
-        iou_plot.append(np.expand_dims(np.array(dd_mov_avg),axis=-1))
-        np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
-        np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
-        np.save(directory+'/iou_values.npy',np.concatenate(iou_plot))  
-    if step % config.test_every == config.test_every -1:
-        acc_test, iou_test = evaluate(SN_val, mode_node, config, accuracy, iou)
-        acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
-        iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))
-        np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
-        np.save(directory+'/iou_values_test.npy',np.concatenate(iou_plot_test)) 
-        max_test_acc = np.max([np.max(np.concatenate(acc_plot_test)),max_test_acc])
-        max_test_iou = np.max([np.max(np.concatenate(iou_plot_test)),max_test_iou])
-    step+=1
-
-
+session.run(run_mode.assign(0)) 
+for epoch in range(1000):
+    session.run(train_iterator.initializer)
+    while True:
+        try:
+            feed_dict = {lr_node            :config.learning_rate,
+                         idx_node           :epoch%24,
+                         level_set          :config.levelset}     
+#            _, loss_, accuracy_ ,iou_ = session.run([train_op_cnn, loss ,accuracy, iou],feed_dict=feed_dict) 
+            acc_test, iou_test = evaluate(test_iterator, mode_node, config, accuracy_t, iou_t)
+            
+            aa_mov_avg = aa_mov.push(accuracy_)
+            cc_mov_avg = cc_mov.push(loss_)
+            dd_mov_avg = dd_mov.push(iou_)   
+            print(str(aa_mov_avg))
+        except tf.errors.OutOfRangeError:
+            acc_test, iou_test = evaluate(test_iterator, mode_node, config, accuracy_t, iou_t)
+            
+            acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
+            loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg)),axis=-1))
+            iou_plot.append(np.expand_dims(np.array(dd_mov_avg),axis=-1))
+            np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
+            np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
+            np.save(directory+'/iou_values.npy',np.concatenate(iou_plot))  
+            acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
+            iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))
+            np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
+            np.save(directory+'/iou_values_test.npy',np.concatenate(iou_plot_test)) 
+            print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(aa_mov_avg)+' ,avg_loss: '+str(cc_mov_avg)+' ,IOU: '+str(dd_mov_avg))
+            print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
+            if iou_test>max_test_iou:
+                saver.save(session, directory+'/'+str(step), global_step=step)
+                saver.save(session, directory+'/latest', global_step=0)
+            max_test_acc = np.max([np.max(np.concatenate(acc_plot_test)),max_test_acc])
+            max_test_iou = np.max([np.max(np.concatenate(iou_plot_test)),max_test_iou])
+            break
+ 
 
 
 #%% TEST VANILLA
