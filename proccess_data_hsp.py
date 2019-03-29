@@ -7,22 +7,7 @@ import matplotlib.pyplot as plt
 from src.utilities import mesh_handler as MESHPLOT
 import scipy.ndimage as ndi
 from skimage import measure
-
-
-class MOV_AVG(object):
-    def __init__(self, size):
-        self.list = []
-        self.size = size
-    def push(self,sample):
-        if np.isnan(sample)!=True:
-            self.list.append(sample)
-            if len(self.list)>self.size:
-                self.list.pop(0)
-        return np.mean(np.array(self.list))
-    def reset(self):
-        self.list    = []
-    def get(self):
-        return np.mean(np.array(self.list))        
+import tfrecords_handler as TFH
 
 
 import argparse
@@ -48,6 +33,7 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
@@ -56,6 +42,7 @@ def parse_args():
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
@@ -70,36 +57,25 @@ config = parse_args()
 #04256520/31ae964a8a9a15e87934a0d24a61231.mat
 
 #%%
-rec_mode     = True
-BATCH_SIZE   = 1
-#SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-#                 files=[],
-#                 rand=False,
-#                 batch_size=BATCH_SIZE,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=rec_mode)
-#for ii in range(0,SN_train.train_size):
-#    batch = SN_train.preprocess_iccv(type_='')
-#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-
-
-
-#SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
-#                 files=[],
-#                 rand=False,
-#                 batch_size=BATCH_SIZE,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=rec_mode)
-#for ii in range(0,SN_val.train_size):
-#    batch = SN_val.preprocess_iccv(type_='')
-#    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
+rec_mode     = False
+BATCH_SIZE   = 20
+SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+                 files=[],
+                 rand=False,
+                 batch_size=BATCH_SIZE,
+                 grid_size=config.grid_size,
+                 levelset=[0.00],
+                 num_samples=config.num_samples,
+                 list_=config.categories,
+                 rec_mode=rec_mode)
+for ii in range(0,SN_train.train_size):
+    batch = SN_train.get_batch_multi(type_='')
+    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+    path =config.path_tf+'train/'
+    TFH.dataset_builder_fn(path,batch)   
     
+
+
 
 SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  files=[],
@@ -111,10 +87,31 @@ SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  list_=config.categories,
                  rec_mode=rec_mode)
 for ii in range(0,SN_test.train_size):
-    batch = SN_test.preprocess_iccv(type_='')
+    batch = SN_test.get_batch_multi(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
+    path =config.path_tf+'test/'
+    TFH.dataset_builder_fn(path,batch)   
+    
+SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
+                 files=[],
+                 rand=False,
+                 batch_size=BATCH_SIZE,
+                 grid_size=config.grid_size,
+                 levelset=[0.00],
+                 num_samples=config.num_samples,
+                 list_=config.categories,
+                 rec_mode=rec_mode)
+for ii in range(0,SN_val.train_size):
+    batch = SN_val.get_batch_multi(type_='')
+    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
+    path =config.path_tf+'val/'
+    TFH.dataset_builder_fn(path,batch)   
+        
     
     
+#pic = batch['images'][15,:,:,:]
+#fig = plt.figure()
+#plt.imshow(pic/255.)    
     
     
 #%% Test Iterator
@@ -131,10 +128,10 @@ for ii in range(0,SN_test.train_size):
 #    cubed    = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
 #    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud_up')  
 #    
-#    #batch = SN_train.get_batch(type_='')    
-#    #pic = batch['images'][0,:,:,:]
-#    #fig = plt.figure()
-#    #plt.imshow(pic/255.)
+#    batch = SN_train.get_batch(type_='')    
+#    pic = batch['images'][0,:,:,:]
+#    fig = plt.figure()
+#    plt.imshow(pic/255.)
 #    
 #    vox = (batch['sdf']+0.5).astype(np.bool)
 #    inner_volume       = vox

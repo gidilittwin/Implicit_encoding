@@ -72,7 +72,7 @@ def mesh_plot(obj,idx=0,type_='mesh'):
 #    norm = np.log(1+norm)
 #    norm=norm/np.max(norm)        
         # Markers
-        norm = obj[idx]['norm']
+#        norm = obj[idx]['norm']
         vectors = obj[idx]['jacobian']
         
         traces.append({'type':'cone',

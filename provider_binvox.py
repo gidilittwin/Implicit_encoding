@@ -301,7 +301,7 @@ class ShapeNet(object):
             verts_sampled = verts[perms,:]
             Verts.append(verts_sampled[:,(2,0,1)])
         vertices.append(np.stack(Verts,axis=-1))
-        perm = np.random.permutation(24)        
+        perm = np.random.permutation(len(image_files[0]))        
         for im in range(self.batch_size):
             with open(image_files[0][perm[im]], 'rb') as f:
                 image = misc.imread(f).astype(np.float32)

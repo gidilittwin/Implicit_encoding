@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import glob
-
+import random
 
 
 
@@ -36,11 +36,8 @@ def dataset_builder_fn(path,batch):
         
 
 
-def dataset_input_fn(filenames,batch_size,epochs,shuffle=True):
-#  dataset = tf.data.TFRecordDataset(filenames)
+def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples):
   dataset = tf.data.TFRecordDataset(filenames=filenames, compression_type='GZIP')
-  # Use `tf.parse_single_example()` to extract data from a `tf.Example`
-  # protocol buffer, and perform any additional per-record preprocessing.
   def parser(record):
     keys_to_features = {
         "voxels":   tf.FixedLenFeature((), tf.string, default_value=""),
@@ -50,20 +47,17 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle=True):
         "vertices": tf.FixedLenFeature((), tf.string, default_value=""),
     }
     parsed   = tf.parse_single_example(record, keys_to_features)
-    
-    parsed['images']   = tf.reshape(tf.decode_raw(parsed['images'],out_type=tf.uint8),(24,137,137,4))
-    parsed['voxels']   = tf.reshape(tf.decode_raw(parsed['voxels'],out_type=tf.uint8),(36,36,36))
+    parsed['images']   = tf.reshape(tf.decode_raw(parsed['images'],out_type=tf.uint8),(im_per_obj,img_size,img_size,4))
+    parsed['voxels']   = tf.reshape(tf.decode_raw(parsed['voxels'],out_type=tf.uint8),(grid_size,grid_size,grid_size))
     parsed['classes']  = tf.reshape(tf.decode_raw(parsed['classes'],out_type=tf.int64),(1,))
     parsed['ids']      = tf.reshape(tf.decode_raw(parsed['ids'],out_type=tf.int64),(1,))
-    parsed['vertices'] = tf.cast(tf.reshape(tf.decode_raw(parsed['vertices'],out_type=tf.int32),(10000,3)),tf.float32)/10.
+    parsed['vertices'] = tf.cast(tf.reshape(tf.decode_raw(parsed['vertices'],out_type=tf.int32),(num_samples,3)),tf.float32)/10.
     return parsed
-
-  dataset = dataset.map(parser)
   if shuffle:
-      dataset = dataset.shuffle(buffer_size=10000)
-  dataset = dataset.batch(batch_size)
-#  dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
-#  dataset = dataset.repeat(epochs)
+      dataset = dataset.shuffle(buffer_size=100)
+  dataset = dataset.map(parser)
+  dataset = dataset.prefetch(buffer_size = 1 * batch_size)
+  dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
   return dataset
 
 
@@ -77,9 +71,12 @@ def get_files(files_path):
         all_files = all_files+files
     return all_files
 
-def iterator(path,batch_size,epochs,shuffle=True):
+def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000):
     files    = get_files(path)
-    dataset  = dataset_input_fn(files,batch_size,epochs)
+    if shuffle:
+        random.seed(4)
+        random.shuffle(files)
+    dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples)
     iterator = dataset.make_initializable_iterator()
     return iterator
     
@@ -89,11 +86,10 @@ def iterator(path,batch_size,epochs,shuffle=True):
 def process_batch_train(next_element,idx_node,config):
     samples_xyz_np       = tf.random_uniform(minval=-1.,maxval=1.,shape=(config.batch_size,config.global_points,3))
     vertices             = next_element['vertices']/(config.grid_size-1)*2-1
-    gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.batch_size,10000,3))
+    gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.batch_size,config.num_samples,3))
     vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
     samples_xyz_np       = tf.concat((samples_xyz_np,vertices),axis=1)
     samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
-    
     batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples+config.global_points,1)))
     samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples+config.global_points),4))
     b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
@@ -102,6 +98,9 @@ def process_batch_train(next_element,idx_node,config):
     samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.batch_size,-1,1))
     images               = next_element['images']
     images               = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
+    if config.shuffle_rgb:
+        rgb_idx = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
+        images  = tf.gather(images,rgb_idx,axis=-1)
     if config.rgba==0:
         images           = images[:,:,:,0:3]
     return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images}

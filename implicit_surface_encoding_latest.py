@@ -15,7 +15,7 @@ import argparse
 import socket
 import tfrecords_handler as TFH
 
-# 1) try HD grid for evaluations (we don't need to stick to 32..)     vvvvvvvvvvvvvvvv
+# 1) tar -zcvf foo.tar.gz ./FOLDER_NAME --exclude-vcs
 # 2) Add batch norm to different blocks                                 vvvvvvvvvvvvvvv
 # 3) set different levelsets for evaluations
 # 4) Hourgalss?
@@ -32,14 +32,17 @@ import tfrecords_handler as TFH
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'archsweep_exp79')
+    parser.add_argument('--experiment_name', type=str, default= 'exp_rec')
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--grid_size', type=int,  default=36)
-    parser.add_argument('--img_size', type=int,  default=[137,137])
-#    parser.add_argument('--grid_size', type=int,  default=256)
-#    parser.add_argument('--img_size', type=int,  default=[224,224])  
+#    parser.add_argument('--grid_size', type=int,  default=36)
+#    parser.add_argument('--img_size', type=int,  default=[137,137])
+#    parser.add_argument('--im_per_obj', type=int,  default=24)
+    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--img_size', type=int,  default=[224,224])  
+    parser.add_argument('--im_per_obj', type=int,  default=20)
+    
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--test_size', type=int,  default=1)
@@ -47,7 +50,7 @@ def parse_args():
     parser.add_argument('--batch_norm', type=int,  default=1)
     parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--shuffle_rgb', type=int,  default=1)
-    parser.add_argument('--rgba', type=int,  default=0)
+    parser.add_argument('--rgba', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
@@ -63,7 +66,7 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
 #        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
@@ -71,13 +74,13 @@ def parse_args():
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
     else:
-        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
+        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
         parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidisharchsweep_exp60ape/checkpoints/")
+        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/")
     return parser.parse_args()
 config = parse_args()
 print('#############################################################################################')
@@ -124,52 +127,39 @@ for ii,key in enumerate(config.categories):
     classes2name[key]['id']=ii
     
 
-if config.rgba:
-    color_channels = 4
-else:
-    color_channels = 3
-
-
 #%%
     
-if config.grid_size==36:
-    train_iterator = TFH.iterator(config.path+'train/',config.batch_size,epochs=10000,shuffle=True)
-    test_iterator  = TFH.iterator(config.path+'test/',config.test_size,epochs=10000,shuffle=False)
-    run_mode       = tf.Variable(0, name='run_node',dtype=tf.int32)
-    mode_node      = tf.equal(run_mode,MODE_TRAIN, name='mode_node')
-    idx_node       = tf.placeholder(tf.int32,shape=(), name='idx_node')  
-    level_set      = tf.placeholder(tf.float32,shape=(),   name='levelset')  
-    tf.add_to_collection('istrainvar',mode_node)
-    next_element = tf.case([(tf.equal(MODE_TRAIN, run_mode), (lambda: train_iterator.get_next()  )),
-                            (tf.equal(MODE_TEST,  run_mode), (lambda: test_iterator.get_next() ))],
-                                                     default=(lambda: test_iterator.get_next() ) )
-    next_batch      = TFH.process_batch_train(next_element,idx_node,config)
-    next_batch_test = TFH.process_batch_test(next_element,idx_node,config)
+train_iterator = TFH.iterator(config.path+'train/',
+                              config.batch_size,
+                              epochs=10000,
+                              shuffle=True,
+                              img_size=config.img_size[0],
+                              im_per_obj=config.im_per_obj,
+                              grid_size=config.grid_size,
+                              num_samples=config.num_samples)
+test_iterator  = TFH.iterator(config.path+'test/',
+                              config.test_size,
+                              epochs=10000,
+                              shuffle=False,
+                              img_size=config.img_size[0],
+                              im_per_obj=config.im_per_obj,
+                              grid_size=config.grid_size,
+                              num_samples=config.num_samples)
+
+    
+run_mode       = tf.Variable(0, name='run_node',dtype=tf.int32)
+mode_node      = tf.equal(run_mode,MODE_TRAIN, name='mode_node')
+idx_node       = tf.placeholder(tf.int32,shape=(), name='idx_node')  
+level_set      = tf.placeholder(tf.float32,shape=(),   name='levelset')  
+tf.add_to_collection('istrainvar',mode_node)
+next_element = tf.case([(tf.equal(MODE_TRAIN, run_mode), (lambda: train_iterator.get_next()  )),
+                        (tf.equal(MODE_TEST,  run_mode), (lambda: test_iterator.get_next() ))],
+                                                 default=(lambda: test_iterator.get_next() ) )
+next_batch      = TFH.process_batch_train(next_element,idx_node,config)
+next_batch_test = TFH.process_batch_test(next_element,idx_node,config)
 
    
 
-elif config.grid_size==256:
-    SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-                     files=[],
-                     rand=True,
-                     batch_size=config.batch_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False)
-    
-    
-    SN_val     = ShapeNet(config.iccv_path+'test',config.mesh_path,
-                     files=[],
-                     rand=False,
-                     batch_size=config.batch_size,
-                     grid_size=config.grid_size,
-                     levelset=[0.00],
-                     num_samples=config.num_samples,
-                     list_=config.categories,
-                     rec_mode=False)    
- 
 
 
 grid_size_lr = config.grid_size
@@ -177,6 +167,34 @@ x            = np.linspace(-1, 1, grid_size_lr)
 y            = np.linspace(-1, 1, grid_size_lr)
 z            = np.linspace(-1, 1, grid_size_lr)
 xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
+
+
+
+
+    
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+#session.run(run_mode.assign(0)) 
+#session.run(train_iterator.initializer)
+#batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:1})
+#
+#psudo_sdf = batch['voxels'][0,:,:,:]*1.0
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#
+#vertices             = batch['vertices'][:,:,:]/(config.grid_size-1)*2-1
+#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#vertices             = batch_['samples_xyz'][:,:,:]
+#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#pic = batch['images'][0,0,:,:,:]
+#fig = plt.figure()
+#plt.imshow(pic)
+
 
 
 
@@ -281,21 +299,20 @@ loader = tf.train.Saver(var_list=all_vars)
 
 
 #%% Train
-def evaluate(test_iterator, mode_node, config, accuracy_t, iou_t):
+def evaluate(test_iterator, session, run_mode, config, accuracy_t, iou_t):
     session.run(run_mode.assign(1)) 
     aa_mov_test    = MOV_AVG(3000000) 
     dd_mov_test    = MOV_AVG(3000000) 
-    for epoch_test in range(24):
+    for epoch_test in range(config.im_per_obj):
         session.run(test_iterator.initializer)
         while True:
             try:
                 feed_dict = {lr_node            :config.learning_rate,
-                             idx_node           :epoch_test%24,
+                             idx_node           :epoch_test%config.im_per_obj,
                              level_set          :config.levelset}  
-                accuracy_t ,iou_t = session.run([accuracy_t, iou_t],feed_dict=feed_dict) 
-                aa_mov_avg_test = aa_mov_test.push(accuracy_t)
-                dd_mov_avg_test = dd_mov_test.push(iou_t)
-                print(str(dd_mov_avg_test))
+                accuracy_t_ ,iou_t_ = session.run([accuracy_t, iou_t],feed_dict=feed_dict) 
+                aa_mov_avg_test = aa_mov_test.push(accuracy_t_)
+                dd_mov_avg_test = dd_mov_test.push(iou_t_)
             except tf.errors.OutOfRangeError:
                 print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(aa_mov_avg_test)+' ,IOU: '+str(dd_mov_avg_test))
                 break
@@ -339,17 +356,15 @@ for epoch in range(1000):
     while True:
         try:
             feed_dict = {lr_node            :config.learning_rate,
-                         idx_node           :epoch%24,
+                         idx_node           :epoch%config.im_per_obj,
                          level_set          :config.levelset}     
-#            _, loss_, accuracy_ ,iou_ = session.run([train_op_cnn, loss ,accuracy, iou],feed_dict=feed_dict) 
-            acc_test, iou_test = evaluate(test_iterator, mode_node, config, accuracy_t, iou_t)
-            
+            _, loss_, accuracy_ ,iou_ = session.run([train_op_cnn, loss ,accuracy, iou],feed_dict=feed_dict) 
+
             aa_mov_avg = aa_mov.push(accuracy_)
             cc_mov_avg = cc_mov.push(loss_)
             dd_mov_avg = dd_mov.push(iou_)   
-            print(str(aa_mov_avg))
         except tf.errors.OutOfRangeError:
-            acc_test, iou_test = evaluate(test_iterator, mode_node, config, accuracy_t, iou_t)
+            acc_test, iou_test = evaluate(test_iterator, session, run_mode, config, accuracy_t, iou_t)
             
             acc_plot.append(np.expand_dims(np.array(aa_mov_avg),axis=-1))
             loss_plot.append(np.expand_dims(np.array(np.log(cc_mov_avg)),axis=-1))
@@ -442,8 +457,8 @@ np.save( '/media/gidi/SSD/Thesis/Data/Checkpoints/archsweep_exp60/Meta_mv12_ls=0
 
 
 
-
    
+
     
     
 

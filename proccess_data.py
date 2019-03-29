@@ -52,6 +52,7 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetICCV/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
@@ -60,6 +61,7 @@ def parse_args():
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetICCV/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
@@ -86,11 +88,9 @@ SN_train       = ShapeNet(config.path,config.mesh_path,
                  list_=config.categories,
                  rec_mode=True)
 for ii in range(0,SN_train.train_size):
-#    batch = SN_train.preprocess(type_='')
-#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
     batch = SN_train.get_batch_multi(type_='')
     print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-    path ='/media/gidi/SSD/Thesis/Data/ShapeNet_TF/train/'
+    path =config.path_tf+'train/'
     TFH.dataset_builder_fn(path,batch)    
     
 
@@ -104,10 +104,9 @@ SN_test        = ShapeNet(config.path,config.mesh_path,
                  list_=config.categories,
                  rec_mode=False)
 for ii in range(0,SN_test.train_size):
-#    batch = SN_test.preprocess(type_='')
     batch = SN_test.get_batch_multi(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
-    path ='/media/gidi/SSD/Thesis/Data/ShapeNet_TF/test/'
+    path =config.path_tf+'test/'
     TFH.dataset_builder_fn(path,batch)
 
 

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'
+path  = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records2/'
 type_ = 'iou_values_test.npy'
 
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/accuracy_values.npy')
@@ -27,7 +27,7 @@ name = 'archsweep_exp'
 #name = 'hsp_exp'
 #name = 'resnet5_exp'
 #name = 'study_sampling_ratios'
-#name = 'study_dnn_arch'
+name = 'records_fix_exp'
 
 plot_idx =0
 
@@ -58,7 +58,7 @@ plt.figure(ii)
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
 for ii in range(num_plots_alive):
-    if np.max(iou_test[ii])>0.675:
+    if np.max(iou_test[ii])>0.075:
         plt.plot(iou_test[ii])
         plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings[ii])
     if np.max(iou_test[ii])<0.60:
