@@ -74,7 +74,7 @@ def get_files(files_path):
 def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000):
     files    = get_files(path)
     if shuffle:
-        random.seed(4)
+        random.seed()
         random.shuffle(files)
     dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples)
     iterator = dataset.make_initializable_iterator()
@@ -84,7 +84,7 @@ def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid
 
 
 def process_batch_train(next_element,idx_node,config):
-    samples_xyz_np       = tf.random_uniform(minval=-1.,maxval=1.,shape=(config.batch_size,config.global_points,3))
+    samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(config.batch_size,1,1))
     vertices             = next_element['vertices']/(config.grid_size-1)*2-1
     gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.batch_size,config.num_samples,3))
     vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
@@ -92,6 +92,7 @@ def process_batch_train(next_element,idx_node,config):
     samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
     batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples+config.global_points,1)))
     samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples+config.global_points),4))
+    
     b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
     samples_ijk_np_flip  = tf.concat((b,j,i,k),axis=-1)
     voxels_gathered      = tf.gather_nd(next_element['voxels'],samples_ijk_np_flip)
