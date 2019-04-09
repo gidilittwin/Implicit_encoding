@@ -1,13 +1,42 @@
-python metafunctionals.py --experiment_name records_fix3_exp1 --learning_rate 0.00005 --batch_norm 1 --model_params_path ./archs/resnet_5.json --batch_size 32 --test_size 1 --noise_scale 0.1
-python metafunctionals.py --experiment_name records_fix3_exp2 --learning_rate 0.00005 --batch_norm 1 --model_params_path ./archs/resnet_5.json --batch_size 32 --test_size 1 --noise_scale 0.08
-python metafunctionals.py --experiment_name records_fix3_exp3 --learning_rate 0.00005 --batch_norm 1 --model_params_path ./archs/resnet_5.json --batch_size 32 --test_size 1 --noise_scale 0.06
-python metafunctionals.py --experiment_name records_fix3_exp4 --learning_rate 0.00005 --batch_norm 1 --model_params_path ./archs/resnet_5.json --batch_size 32 --test_size 1 --noise_scale 0.04
-python metafunctionals.py --experiment_name records_fix3_exp5 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --test_size 1 --noise_scale 0.1
-python metafunctionals.py --experiment_name records_fix3_exp6 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --test_size 1 --noise_scale 0.1
-python metafunctionals.py --experiment_name records_fix3_exp7 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --test_size 1 --noise_scale 0.1
-python metafunctionals.py --experiment_name records_fix3_exp8 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --test_size 1 --noise_scale 0.08
-python metafunctionals.py --experiment_name records_fix3_exp9 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --test_size 1 --noise_scale 0.08
-python metafunctionals.py --experiment_name records_fix3_exp10 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --test_size 1 --noise_scale 0.08
-python metafunctionals.py --experiment_name records_fix3_exp11 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5.json --test_size 1 --noise_scale 0.06
-python metafunctionals.py --experiment_name records_fix3_exp12 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w.json --test_size 1 --noise_scale 0.06
-python metafunctionals.py --experiment_name records_fix3_exp13 --batch_size 32 --batch_norm 0 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json --test_size 1 --noise_scale 0.06
+python train.py --experiment_name study_dnn32_arch1 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn1.json
+python train.py --experiment_name study_dnn32_arch2 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn2.json
+python train.py --experiment_name study_dnn32_arch3 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn3.json
+python train.py --experiment_name study_dnn32_arch4 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn4.json
+python train.py --experiment_name study_dnn32_arch5 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn5.json
+python train.py --experiment_name study_dnn32_arch6 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn6.json
+python train.py --experiment_name study_dnn32_arch7 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn7.json
+python train.py --experiment_name study_dnn32_arch8 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn8.json
+python train.py --experiment_name study_dnn32_arch9 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn9.json
+python train.py --experiment_name study_dnn32_arch10 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn10.json
+python train.py --experiment_name study_dnn32_arch11 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn11.json
+python train.py --experiment_name study_dnn32_arch12 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn12.json
+python train.py --experiment_name study_dnn32_arch13 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn1_relu.json
+python train.py --experiment_name study_dnn32_arch14 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn2_relu.json
+python train.py --experiment_name study_dnn32_arch15 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn3_relu.json
+python train.py --experiment_name study_dnn32_arch16 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn4_relu.json
+python train.py --experiment_name study_dnn32_arch17 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn5_relu.json
+python train.py --experiment_name study_dnn32_arch18 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn6_relu.json
+python train.py --experiment_name study_dnn32_arch19 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn7_relu.json
+python train.py --experiment_name study_dnn32_arch20 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn8_relu.json
+python train.py --experiment_name study_dnn32_arch21 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn9_relu.json
+python train.py --experiment_name study_dnn32_arch22 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn10_relu.json
+python train.py --experiment_name study_dnn32_arch23 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn11_relu.json
+python train.py --experiment_name study_dnn32_arch24 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn12_relu.json
+python train.py --experiment_name study_dnn32_arch25 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn1_tanh.json
+python train.py --experiment_name study_dnn32_arch26 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn2_tanh.json
+python train.py --experiment_name study_dnn32_arch27 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn3_tanh.json
+python train.py --experiment_name study_dnn32_arch28 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn4_tanh.json
+python train.py --experiment_name study_dnn32_arch29 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn5_tanh.json
+python train.py --experiment_name study_dnn32_arch30 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn6_tanh.json
+python train.py --experiment_name study_dnn32_arch31 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn7_tanh.json
+python train.py --experiment_name study_dnn32_arch32 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn8_tanh.json
+python train.py --experiment_name study_dnn32_arch33 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn9_tanh.json
+python train.py --experiment_name study_dnn32_arch34 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn10_tanh.json
+python train.py --experiment_name study_dnn32_arch35 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn11_tanh.json
+python train.py --experiment_name study_dnn32_arch36 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5_dn12_tanh.json
+python train.py --experiment_name study_dnn32_arch37 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_branch_relu.json
+python train.py --experiment_name study_dnn32_arch38 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_branch_elu.json
+python train.py --experiment_name study_dnn32_arch39 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_branch_tanh.json
+python train.py --experiment_name study_dnn32_arch40 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w_dn6_relu.json
+python train.py --experiment_name study_dnn32_arch41 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2_dn6_relu.json
+python train.py --experiment_name study_dnn32_arch42 --batch_size 32 --noise_scale 0.1 --learning_rate 0.00005 --model_params_path ./archs/resnet_5w2.json

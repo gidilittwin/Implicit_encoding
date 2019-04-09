@@ -36,7 +36,7 @@ def dataset_builder_fn(path,batch):
         
 
 
-def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples):
+def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size):
   dataset = tf.data.TFRecordDataset(filenames=filenames, compression_type='GZIP')
   def parser(record):
     keys_to_features = {
@@ -54,7 +54,7 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,gri
     parsed['vertices'] = tf.cast(tf.reshape(tf.decode_raw(parsed['vertices'],out_type=tf.int32),(num_samples,3)),tf.float32)/10.
     return parsed
   if shuffle:
-      dataset = dataset.shuffle(buffer_size=100)
+      dataset = dataset.shuffle(buffer_size=shuffle_size)
   dataset = dataset.map(parser)
   dataset = dataset.prefetch(buffer_size = 1 * batch_size)
   dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
@@ -71,12 +71,12 @@ def get_files(files_path):
         all_files = all_files+files
     return all_files
 
-def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000):
+def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000,shuffle_size=1000):
     files    = get_files(path)
     if shuffle:
         random.seed()
         random.shuffle(files)
-    dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples)
+    dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size)
     iterator = dataset.make_initializable_iterator()
     return iterator
     
@@ -118,7 +118,10 @@ def process_batch_test(next_element,idx_node,config):
         x_lr           = np.linspace(-1, 1, grid_size_lr)
         y_lr           = np.linspace(-1, 1, grid_size_lr)
         z_lr           = np.linspace(-1, 1, grid_size_lr)    
-    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr)    
+    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr) 
+    images               = next_element['images'][0,:,:,:,:]
+    if config.test_size==1:
+        images    = tf.expand_dims(tf.gather(images,idx_node,axis=0),axis=0)
     samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.test_size,1,1))
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
     samples_xyz_np       = tf.cast(tf.constant(samples_xyz_np),dtype=tf.float32)
@@ -127,10 +130,10 @@ def process_batch_test(next_element,idx_node,config):
     samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.test_size*grid_size_lr**3,4))
     b,i,j,k                = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
     samples_ijk_np_flip  = tf.squeeze(tf.concat((b,j,i,k),axis=-1))
-    voxels_gathered      = tf.gather_nd(next_element['voxels'],samples_ijk_np_flip)
+    voxels               = tf.tile(next_element['voxels'],(config.test_size,1,1,1))
+    voxels_gathered      = tf.gather_nd(voxels,samples_ijk_np_flip)
     samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.test_size,-1,1))
-    images               = next_element['images']
-    images               = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
+    images               = tf.cast(images,dtype=tf.float32)/255.
     if config.rgba==0:
         images           = images[:,:,:,0:3]
     return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images}
