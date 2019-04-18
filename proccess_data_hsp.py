@@ -33,22 +33,14 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
-        parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
-        parser.add_argument("--test_file"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/test_list.txt")
-        parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
-        parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")
-        parser.add_argument("--test_file"       , type=str, default="/private/home/wolf/gidishape/test_list.txt")
-        parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/exp31(benchmark=57.4)/-196069")
     return parser.parse_args()
 config = parse_args()
 
@@ -59,6 +51,8 @@ config = parse_args()
 #%%
 rec_mode     = False
 BATCH_SIZE   = 20
+reduce       = 1
+
 SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
                  files=[],
                  rand=False,
@@ -67,7 +61,8 @@ SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=rec_mode)
+                 rec_mode=rec_mode,
+                 reduce = reduce)
 for ii in range(0,SN_train.train_size):
     batch = SN_train.get_batch_multi(type_='')
     print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
@@ -85,7 +80,8 @@ SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=rec_mode)
+                 rec_mode=rec_mode,
+                 reduce = reduce)
 for ii in range(0,SN_test.train_size):
     batch = SN_test.get_batch_multi(type_='')
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
@@ -100,7 +96,8 @@ SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
                  levelset=[0.00],
                  num_samples=config.num_samples,
                  list_=config.categories,
-                 rec_mode=rec_mode)
+                 rec_mode=rec_mode,
+                 reduce = reduce)
 for ii in range(0,SN_val.train_size):
     batch = SN_val.get_batch_multi(type_='')
     print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
@@ -109,13 +106,24 @@ for ii in range(0,SN_val.train_size):
         
     
     
-#pic = batch['images'][15,:,:,:]
+#pic = batch['images'][5,:,:,:]
 #fig = plt.figure()
 #plt.imshow(pic/255.)    
     
     
 #%% Test Iterator
  
+#idx =10
+#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
+#cubed0 = {'vertices':verts0/(32-1)*2-1,'faces':faces0,'vertices_up':verts0/(32-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#    
+#    
+#vertices             = batch['vertices'][:,:,:,0]/(config.grid_size-1)*2-1
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
 #if False:    
 #    batch     = SN_train.get_batch(type_='')
 #    size_     = SN_train.train_size

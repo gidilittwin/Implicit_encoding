@@ -55,7 +55,7 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,gri
     return parsed
   if shuffle:
       dataset = dataset.shuffle(buffer_size=shuffle_size)
-  dataset = dataset.map(parser)
+  dataset = dataset.map(parser, num_parallel_calls=16)
   dataset = dataset.prefetch(buffer_size = 1 * batch_size)
   dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
   return dataset
@@ -99,9 +99,12 @@ def process_batch_train(next_element,idx_node,config):
     samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.batch_size,-1,1))
     images               = next_element['images']
     images               = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
-    if config.shuffle_rgb:
+    if config.augment:
         rgb_idx = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
         images  = tf.gather(images,rgb_idx,axis=-1)
+        images = tf.concat((images[0:config.batch_size/2,:,:,:],tf.reverse(images[(config.batch_size/2):,:,:,:],axis=[2])),axis=0)
+        filp_xyz = tf.concat((tf.tile(tf.constant([[[1.,1.,1.]]]),(config.batch_size/2,1,1)),tf.tile(tf.constant([[[-1.,1.,1.]]]),(config.batch_size/2,1,1))),axis=0)
+        samples_xyz_np = samples_xyz_np*filp_xyz
     if config.rgba==0:
         images           = images[:,:,:,0:3]
     return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images}

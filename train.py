@@ -21,25 +21,32 @@ def parse_args():
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=32)
+    parser.add_argument('--beta1', type=float,  default=0.9)
     
-    parser.add_argument('--grid_size', type=int,  default=36)
-    parser.add_argument('--img_size', type=int,  default=[137,137])
-    parser.add_argument('--im_per_obj', type=int,  default=24)
-    parser.add_argument('--test_size', type=int,  default=24)
-    parser.add_argument('--shuffle_size', type=int,  default=10000)
+#    parser.add_argument('--grid_size', type=int,  default=36)
+#    parser.add_argument('--img_size', type=int,  default=[137,137])
+#    parser.add_argument('--im_per_obj', type=int,  default=24)
+#    parser.add_argument('--test_size', type=int,  default=24)
+#    parser.add_argument('--shuffle_size', type=int,  default=1000)    
     
-#    parser.add_argument('--grid_size', type=int,  default=256)
-#    parser.add_argument('--img_size', type=int,  default=[224,224])  
+#    parser.add_argument('--grid_size', type=int,  default=32)
+#    parser.add_argument('--img_size', type=int,  default=[224,224])
 #    parser.add_argument('--im_per_obj', type=int,  default=20)
-#    parser.add_argument('--test_size', type=int,  default=1)
+#    parser.add_argument('--test_size', type=int,  default=20)
 #    parser.add_argument('--shuffle_size', type=int,  default=1000)
+    
+    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--img_size', type=int,  default=[224,224])  
+    parser.add_argument('--im_per_obj', type=int,  default=20)
+    parser.add_argument('--test_size', type=int,  default=1)
+    parser.add_argument('--shuffle_size', type=int,  default=100)
     
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=12)
     parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--bn_l0', type=int,  default=0)
-    parser.add_argument('--shuffle_rgb', type=int,  default=1)
+    parser.add_argument('--augment', type=int,  default=1)
     parser.add_argument('--rgba', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
@@ -56,11 +63,11 @@ def parse_args():
 #    parser.add_argument("--checkpoint_path" , type=str, default="./Data/Checkpoints/")
 #    parser.add_argument("--saved_model_path", type=str, default="./Data/Checkpoints/")
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
-        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256/")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
     else:
-        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF/")
+        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256/")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/")    
 
@@ -150,26 +157,48 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 #import matplotlib.pyplot as plt   
 #session = tf.Session()
 #session.run(tf.initialize_all_variables())
-#session.run(mode_node.assign(False)) 
+##session.run(mode_node.assign(False)) 
 #session.run(train_iterator.initializer)
 #batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:1})
-#
-#psudo_sdf = batch['voxels'][0,:,:,:]*1.0
+
+#idx =1
+#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
 #verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
 #cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
 #MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
 #
 #vertices             = batch['vertices'][:,:,:]/(config.grid_size-1)*2-1
-#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 #
 #vertices             = batch_['samples_xyz'][:,:,:]
-#cubed = {'vertices':vertices[0,:,:],'faces':faces0,'vertices_up':vertices[0,:,:]}
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 #
-#pic = batch['images'][0,0,:,:,:]
+#pic = batch['images'][idx,0,:,:,0:3]
 #fig = plt.figure()
 #plt.imshow(pic)
+
+#
+#
+#aa=batch_['samples_sdf'][0,1000:,:]
+#samps=batch_['samples_xyz'][0,1000:,:]
+#samples_ijk_np       = np.round(((samps+1)/2*(config.grid_size-1))).astype(np.int64)
+#arr_                = np.split(samples_ijk_np,3,axis=-1)
+#
+#voxels = batch['voxels'][0,:,:,:]
+#import scipy.ndimage as ndi
+#inner_volume       = voxels
+#outer_volume       = np.logical_not(voxels)
+#sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
+#sdf_                 = (sdf_o - sdf_i)/(config.grid_size-1)*2  
+#voxels_gathered      = sdf_[arr_[1],arr_[0],arr_[2]]
+#samples_sdf_np       = -1.*voxels_gathered + 0.5
+
+
+
+
 
 
 
@@ -197,6 +226,7 @@ def injection_wrapper(current,args_):
 #%% Training graph 
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
+    images                = tf.image.resize_images(images,[137,137])
     samples_sdf           = next_batch['samples_sdf']  
     samples_xyz           = next_batch['samples_xyz']
     evals_target          = {}
@@ -247,7 +277,7 @@ test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
 with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
     cnn_vars      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = '2d_cnn_model')
     lr_node       = tf.placeholder(tf.float32,shape=(), name='learning_rate') 
-    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=0.9,beta2=0.999)
+    optimizer     = tf.train.AdamOptimizer(lr_node,beta1=config.beta1,beta2=0.999)
     grads         = optimizer.compute_gradients(train_dict['loss'],var_list=cnn_vars)
     global_step   = tf.train.get_or_create_global_step()
     clip_constant = 10

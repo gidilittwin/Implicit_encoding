@@ -18,13 +18,14 @@ import scipy.io
 
     
 class ShapeNet(object):
-    def __init__(self , path_, mesh_path_, files, rand, batch_size=16, grid_size=32, levelset=0.0, num_samples=1000, list_=['02691156'],rec_mode=False,shuffle_rgb=True):
+    def __init__(self , path_, mesh_path_, files, rand, batch_size=16, grid_size=32, levelset=0.0, num_samples=1000, list_=['02691156'],rec_mode=False,shuffle_rgb=False,reduce=1):
         self.path_      = path_
         self.mesh_path_ = mesh_path_
         self.grid_size = grid_size
         self.binvox_32  = '/model.binvox'
         self.binvox_128 = '/models/model_normalized.solid.binvox'
         self.binvox_256 = '/model.mat'
+        self.reduce=reduce
         if grid_size != 256:
             self.train_paths = self.getBenchmark(files,list_)  
         else:
@@ -284,6 +285,9 @@ class ShapeNet(object):
             m1 = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/voxels0.npz')
             voxels_b = m1['voxels']   
             voxels_b = np.transpose(voxels_b,(0,2,1))
+            
+        if self.reduce!=1:
+            voxels_b = measure.block_reduce(voxels_b, (self.reduce,self.reduce,self.reduce), np.max)
         voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
         sdf_    = voxels_
         sdf.append(sdf_) 
@@ -307,7 +311,7 @@ class ShapeNet(object):
                 image = misc.imread(f).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]
-                if self.shuffle_rgb and self.rand==False:
+                if self.shuffle_rgb and self.rand!=False:
                      rgb = rgb[:,:,np.random.permutation(3)]
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
