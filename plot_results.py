@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records15/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records19/'
 baseline = 'study_dnn_arch18'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/accuracy_values_test.npy')
@@ -25,9 +25,11 @@ strings   = []
 name = 'archsweep_exp'
 #name = 'hsp_exp'
 #name = 'resnet5_exp'
-#name = 'study_dnn256_arch'
-name = 'study_dnn32_arch'
-#name = 'records_sweep'
+name = 'study_dnn256_v2_arch'
+#name = 'study_dnn32_arch'
+name = 'study_dnn256_cat'
+#name = 'study_dnn32_stage'
+
 plot_idx =15
 
 
@@ -35,15 +37,16 @@ plot_idx =15
         
 for ii in range(num_plots):
     try:
-        file_name = path+name+str(ii+1)+'/iou_values_test.npy'
-        iou_test.append(np.load(file_name))
-        file_name = path+name+str(ii+1)+'/accuracy_values_test.npy'
-        acc_test.append(np.load(file_name))
         file_name = path+name+str(ii+1)+'/accuracy_values.npy'
         acc_train.append(np.load(file_name))
         file_name = path+name+str(ii+1)+'/iou_values.npy'
         iou_train.append(np.load(file_name))
-        strings.append(str(ii+1))
+        strings.append(str(ii+1))        
+        
+        file_name = path+name+str(ii+1)+'/iou_values_test.npy'
+        iou_test.append(np.load(file_name))
+        file_name = path+name+str(ii+1)+'/accuracy_values_test.npy'
+        acc_test.append(np.load(file_name))
     except:
         print('missing - ' + str(ii))
 
@@ -53,6 +56,18 @@ num_plots_alive = len(iou_test)
 kill_list = []
 #for ii in range(num_plots_alive):
 
+
+plt.figure(4)
+plt.title('train iou')
+plt.plot(iou_values,'--')
+for ii in range(len(iou_train)):
+    plt.plot(iou_train[ii])
+    plt.text(len(iou_train[ii])-1,iou_train[ii][-1],strings[ii])
+
+
+
+
+
 plt.figure(ii)
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
@@ -60,9 +75,9 @@ for ii in range(num_plots_alive):
     if np.max(iou_test[ii])>0.0:
         plt.plot(iou_test[ii])
         plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings[ii])
-    if np.max(iou_test[ii])<0.60:
+    if np.max(iou_test[ii])<0.20:
         kill_list.append(strings[ii])
-plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
+#plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
 
     
 #plt.figure(2)
@@ -84,16 +99,6 @@ plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
 ##plt.plot(accuracy_values)    
 #plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
 #
-plt.figure(4)
-plt.title('train iou')
-plt.plot(iou_values,'--')
-
-for ii in range(num_plots_alive):
-    plt.plot(iou_train[ii])
-    if len(iou_train[ii])>plot_idx:
-        plt.text(plot_idx,iou_train[ii][plot_idx],strings[ii])
-
-
 
 
 

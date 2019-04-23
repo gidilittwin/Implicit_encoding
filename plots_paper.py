@@ -22,13 +22,13 @@ ids_per_class        = []
 Features_per_class_N = []
 names                = []
 for cc in range(0,13):
-    ious_per_class.append(ious[Classes==cc])
-    iou_per_class.append(np.mean(ious[Classes==cc]))
+    ious_per_class.append(ious_test[classes_test==cc])
+    iou_per_class.append(np.mean(ious_test[classes_test==cc]))
 #    Features_per_class.append(Features[Classes==cc,:])
-    ids_per_class.append(ids[Classes==cc])
+    ids_per_class.append(ids_test[classes_test==cc])
 #    perm = np.random.permutation(Features_per_class[-1].shape[0])
 #    Features_per_class_N.append(Features_per_class[-1][perm[:500],:])
-    names.append(classes2name[config.categories[cc]]['name'])
+    names.append(classes2name[config.category_names[cc]]['name'])
 mean_iou = np.mean(iou_per_class)    
 print(mean_iou)
 

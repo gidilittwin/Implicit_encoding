@@ -16,30 +16,41 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'test')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5.json')
+    parser.add_argument('--experiment_name', type=str, default= 'study_dnn32_arch33')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=32)
+    parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--beta1', type=float,  default=0.9)
+    parser.add_argument('--dropout', type=float,  default=1.0)
     
-#    parser.add_argument('--grid_size', type=int,  default=36)
-#    parser.add_argument('--img_size', type=int,  default=[137,137])
-#    parser.add_argument('--im_per_obj', type=int,  default=24)
-#    parser.add_argument('--test_size', type=int,  default=24)
-#    parser.add_argument('--shuffle_size', type=int,  default=1000)    
+    parser.add_argument('--grid_size', type=int,  default=36)
+    parser.add_argument('--grid_size_v', type=int,  default=36)
+    parser.add_argument('--img_size', type=int,  default=[137,137])
+    parser.add_argument('--im_per_obj', type=int,  default=24)
+    parser.add_argument('--test_size', type=int,  default=24)
+    parser.add_argument('--shuffle_size', type=int,  default=1000)  
+    parser.add_argument('--test_every', type=int,  default=1000)    
+    parser.add_argument('--save_every', type=int,  default=10000) 
     
+
 #    parser.add_argument('--grid_size', type=int,  default=32)
+#    parser.add_argument('--grid_size_v', type=int,  default=256)
 #    parser.add_argument('--img_size', type=int,  default=[224,224])
 #    parser.add_argument('--im_per_obj', type=int,  default=20)
 #    parser.add_argument('--test_size', type=int,  default=20)
 #    parser.add_argument('--shuffle_size', type=int,  default=1000)
+#    parser.add_argument('--test_every', type=int,  default=1000) 
+#    parser.add_argument('--save_every', type=int,  default=10000)    
     
-    parser.add_argument('--grid_size', type=int,  default=256)
-    parser.add_argument('--img_size', type=int,  default=[224,224])  
-    parser.add_argument('--im_per_obj', type=int,  default=20)
-    parser.add_argument('--test_size', type=int,  default=1)
-    parser.add_argument('--shuffle_size', type=int,  default=100)
+#    parser.add_argument('--grid_size', type=int,  default=256)
+#    parser.add_argument('--grid_size_v', type=int,  default=256)
+#    parser.add_argument('--img_size', type=int,  default=[224,224])  
+#    parser.add_argument('--im_per_obj', type=int,  default=20)
+#    parser.add_argument('--test_size', type=int,  default=1)
+#    parser.add_argument('--shuffle_size', type=int,  default=100)
+#    parser.add_argument('--test_every', type=int,  default=100000)  
+#    parser.add_argument('--save_every', type=int,  default=10000)    
     
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--multi_image', type=int,  default=0)
@@ -52,22 +63,24 @@ def parse_args():
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
     parser.add_argument('--global_points', type=int,  default=1000)    
-    parser.add_argument('--noise_scale', type=float,  default=0.1)
-    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
-    parser.add_argument('--learning_rate', type=float,  default=0.00001)
+    parser.add_argument('--noise_scale', type=float,  default=0.05)
+#    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
+    parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
+#    parser.add_argument('--categories'      , type=int,  default=[0], help='number of point samples')
+    parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
+    parser.add_argument('--learning_rate', type=float,  default=0.00005)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=False)
+    parser.add_argument('--finetune'  , type=bool,  default=True)
     parser.add_argument('--plot_every', type=int,  default=1000)
-    parser.add_argument('--test_every', type=int,  default=10000)    
 #    parser.add_argument("--path"            , type=str, default="./Data/ShapeNet_TF/")
 #    parser.add_argument("--checkpoint_path" , type=str, default="./Data/Checkpoints/")
 #    parser.add_argument("--saved_model_path", type=str, default="./Data/Checkpoints/")
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
-        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256/")
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
     else:
-        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256/")
+        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF/")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/")    
 
@@ -80,7 +93,7 @@ print('#########################################################################
 
 
 
-if isinstance(config.categories, basestring):
+if isinstance(config.categories, int):
     config.categories = [config.categories]
 
 class MOV_AVG(object):
@@ -113,8 +126,8 @@ if not os.path.exists(directory):
 
 with open('./classes.json', 'r') as f:
     classes2name = json.load(f)
-for ii,key in enumerate(config.categories):
-    classes2name[key]['id']=ii
+#for ii,key in enumerate(config.categories):
+#    classes2name[key]['id']=ii
     
 
 #%% Data iterators
@@ -126,7 +139,8 @@ train_iterator = TFH.iterator(config.path+'train/',
                               im_per_obj=config.im_per_obj,
                               grid_size=config.grid_size,
                               num_samples=config.num_samples,
-                              shuffle_size=config.shuffle_size)
+                              shuffle_size=config.shuffle_size,
+                              categories = config.categories)
 test_iterator  = TFH.iterator(config.path+'test/',
                               1,
                               epochs=10000,
@@ -135,7 +149,8 @@ test_iterator  = TFH.iterator(config.path+'test/',
                               im_per_obj=config.im_per_obj,
                               grid_size=config.grid_size,
                               num_samples=config.num_samples,
-                              shuffle_size=config.shuffle_size)
+                              shuffle_size=config.shuffle_size,
+                              categories = config.categories)
     
 
 idx_node          = tf.placeholder(tf.int32,shape=(), name='idx_node')  
@@ -160,14 +175,14 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 ##session.run(mode_node.assign(False)) 
 #session.run(train_iterator.initializer)
 #batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:1})
-
+#
 #idx =1
 #psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
 #verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
 #cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
 #MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
 #
-#vertices             = batch['vertices'][:,:,:]/(config.grid_size-1)*2-1
+#vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
 #cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 #
@@ -179,8 +194,8 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 #fig = plt.figure()
 #plt.imshow(pic)
 
-#
-#
+
+
 #aa=batch_['samples_sdf'][0,1000:,:]
 #samps=batch_['samples_xyz'][0,1000:,:]
 #samples_ijk_np       = np.round(((samps+1)/2*(config.grid_size-1))).astype(np.int64)
@@ -395,13 +410,27 @@ for epoch in range(10000):
                 np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
                 np.save(directory+'/iou_values_test.npy',np.concatenate(iou_plot_test)) 
                 if iou_test>max_test_iou:
-                    saver.save(session, directory+'/'+str(step), global_step=step)
                     saver.save(session, directory+'/latest', global_step=0)
                     max_test_iou = iou_test
                 print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
+            if step % config.save_every == config.save_every -1:  
+                saver.save(session, directory+'/latest_train', global_step=0)
+                
                     
             step+=1                
         except tf.errors.OutOfRangeError:
             break
  
+
+#config.levelset=0.2
+#acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
+#np.save(directory+'/results_ious_0.2.npy',ious_test)  
+#np.save(directory+'/results_ids_0.2.npy',ids_test)  
+#np.save(directory+'/results_classes_0.2.npy',classes_test)  
+
+
+
+
+
+             
 

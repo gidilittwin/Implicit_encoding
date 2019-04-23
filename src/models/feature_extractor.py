@@ -3,8 +3,10 @@ import tensorflow as tf
 from model_ops import cell1D, cell2D_res, CONV2D
 
 def mydropout(mode_node, x, prob):
-    return tf.cond(mode_node, lambda: tf.nn.dropout(x, prob), lambda: x)
-
+    if prob!=1.0:
+        return tf.cond(mode_node, lambda: tf.nn.dropout(x, prob), lambda: x)
+    else:
+        return x
 
 
 
@@ -75,6 +77,8 @@ def regressor(features,args_):
     with tf.variable_scope("fully",reuse=tf.AUTO_REUSE):
         for ii, layer in enumerate(config.model_params['decoder']):
             features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
+        
+        features = mydropout(mode, features, config.dropout)
         tf.add_to_collection('embeddings',features)
         features_size = features.get_shape().as_list()[-1]
 
@@ -85,26 +89,29 @@ def regressor(features,args_):
             for ll in range(0,24,step_size):
                 features_avg.append(tf.tile(tf.reduce_mean(features[ll:ll+step_size,:],axis=0,keep_dims=True) ,(step_size,1)) )
             features = tf.concat(features_avg,axis=0)    
-        
+
+        # branch out
+        num_layers_in_branch = len(config.model_params['expand'])
         for ii in range(len(theta)):
             if 'expand' in config.model_params.keys():
-                factor = config.model_params['expand']['factor']
-#                if config.model_params['expand']['activation']=='relu':
-#                    act_=tf.nn.relu
-#                elif config.model_params['expand']['activation']=='elu':
-#                    act_=tf.nn.elu
-#                elif config.model_params['expand']['activation']=='tanh':
-#                    act_=tf.tanh        
-                features_ = cell1D(features,features_size*factor, mode, SCOPE='expand'+str(ii), with_act=True, with_bn=False)
+                current = features    
+                if num_layers_in_branch==1:
+                    factor  = config.model_params['expand'][0]['factor']
+                    current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii), with_act=True, with_bn=False)
+                else:
+                    for ll in range(num_layers_in_branch):
+                        factor  = config.model_params['expand'][ll]['factor']
+                        current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii)+'_'+str(ll), with_act=True, with_bn=False)
+
             else:
-                features_ = features
+                current = features
                 
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
             stdev    = 0.02
-            ww = tf.reshape(cell1D(features_,layer_in*layer_out, mode, SCOPE='w'+str(ii),stddev=stdev, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
-            bb = tf.reshape(cell1D(features_,layer_out,          mode, SCOPE='b'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
-            gg = 1.+ tf.reshape(cell1D(features_,layer_out,          mode, SCOPE='g'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            ww = tf.reshape(cell1D(current,layer_in*layer_out, mode, SCOPE='w'+str(ii),stddev=stdev, with_act=False, with_bn=False),(featue_size[0],layer_in,layer_out) )
+            bb = tf.reshape(cell1D(current,layer_out,          mode, SCOPE='b'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
+            gg = 1.+ tf.reshape(cell1D(current,layer_out,          mode, SCOPE='g'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,layer_out) )
             weights.append({'w':ww,'b':bb,'g':gg})
         tf.add_to_collection('weights',weights)
     return weights

@@ -63,16 +63,18 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,gri
 
 
 
-def get_files(files_path):
+def get_files(files_path,categories):
     all_files = []
-    for cat in range(0,13):
+    if categories==None:
+        categories = range(0,13)
+    for cat in categories:
         files_path_cat = files_path+str(cat)+'/'
         files = [f for f in glob.glob(files_path_cat + "*.tfrecords")]
         all_files = all_files+files
     return all_files
 
-def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000,shuffle_size=1000):
-    files    = get_files(path)
+def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000,shuffle_size=1000,categories=None):
+    files    = get_files(path,categories=categories)
     if shuffle:
         random.seed()
         random.shuffle(files)
@@ -85,7 +87,7 @@ def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid
 
 def process_batch_train(next_element,idx_node,config):
     samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(config.batch_size,1,1))
-    vertices             = next_element['vertices']/(config.grid_size-1)*2-1
+    vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
     gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.batch_size,config.num_samples,3))
     vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
     samples_xyz_np       = tf.concat((samples_xyz_np,vertices),axis=1)

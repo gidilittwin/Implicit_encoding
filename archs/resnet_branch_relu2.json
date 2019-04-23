@@ -1,8 +1,8 @@
 {
     "theta"           : [{"w":32,"in":3}, {"w":32,"in":32}, {"w":32,"in":32}, {"w":32,"in":32}, {"w":32,"in":32}, {"w":1 ,"in":32}],
-    "dnn_params"      : {"activations":"tanh","normalize":false},
+    "dnn_params"      : {"activations":"relu","normalize":false},
     "decoder"         : [],
-    "expand"          : [{"l":1,"factor":2,"activation":"tanh"}],
+    "expand"          : [{"l":1,"factor":1,"activation":"relu"},{"l":2,"factor":2,"activation":"relu"}],
     "encoder"         : {"base_size":128, "BN":false, "input":{"k":5,"stride":1},
                             "residuals":[{"k":3, "s_in":1, "s_out":1, "stride":2},
                                          {"k":3, "s_in":1, "s_out":1, "stride":1},
