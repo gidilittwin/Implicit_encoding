@@ -4,13 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records19/'
-baseline = 'study_dnn_arch18'
-accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/accuracy_values.npy')
-accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/accuracy_values_test.npy')
-iou_values          =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/iou_values.npy')
-iou_values_test     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/iou_values_test.npy')
-loss_values         =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/paper6/'+baseline+'/loss_values.npy')
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'
+baseline = 'study_dnn32_arch33'
+accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values.npy')
+accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values_test.npy')
+iou_values          =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/iou_values.npy')
+iou_values_test     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/iou_values_test.npy')
+loss_values         =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/loss_values.npy')
 
 iou_test  = []
 iou_train = []
@@ -19,16 +19,12 @@ acc_train = []
 num_plots = 200
 strings   = []
 
-#name = 'dnn_arch_exp'
-#name = 'cnn_arch_exp'
-#name = 'decoder_exp'
+
 name = 'archsweep_exp'
-#name = 'hsp_exp'
-#name = 'resnet5_exp'
 name = 'study_dnn256_v2_arch'
-#name = 'study_dnn32_arch'
-name = 'study_dnn256_cat'
-#name = 'study_dnn32_stage'
+#name = 'study_dnn32_dropout'
+#name = 'study_dnn256_cat'
+name = 'study_dnn32_stage_v3_'
 
 plot_idx =15
 

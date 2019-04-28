@@ -20,12 +20,16 @@ def volumetric_softmax(node,name):
     
      
 
-def multiplexer(data_node, mode_node):
+def multiplexer(example,args_):
+    mode      = args_[0]
+    config    = args_[1]
+    in_node   = tf.one_hot(tf.squeeze(example,-1),43794)
     with tf.variable_scope("Multiplexer"):
-        current = cell1D(data_node,64, mode_node, SCOPE='l1', with_act=False, with_bn=False)        
-#        current = cell1D(current,256, mode_node, SCOPE='l2', with_act=True, with_bn=False)
-#        current = cell1D(current,256, mode_node, SCOPE='l3', with_act=False, with_bn=False)
-        current = tf.tanh(current)
+        current = cell1D(in_node,128, mode, SCOPE='l1', with_act=False, with_bn=False)        
+        current = cell1D(current,256, mode, SCOPE='l2', with_act=True, with_bn=False)
+        current = cell1D(current,256, mode, SCOPE='l3', with_act=True, with_bn=False)
+        current = cell1D(current,512, mode, SCOPE='l4', with_act=True, with_bn=False)
+        current = cell1D(current,512, mode, SCOPE='l5', with_act=False, with_bn=False)
     return current
 
 
@@ -91,21 +95,28 @@ def regressor(features,args_):
             features = tf.concat(features_avg,axis=0)    
 
         # branch out
-        num_layers_in_branch = len(config.model_params['expand'])
         for ii in range(len(theta)):
+#            if 'expand' in config.model_params.keys():
+#                num_layers_in_branch = len(config.model_params['expand'])
+#                current = features    
+#                if num_layers_in_branch==1:
+#                    factor  = config.model_params['expand'][0]['factor']
+#                    current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii), with_act=True, with_bn=False)
+#                else:
+#                    for ll in range(num_layers_in_branch):
+#                        factor  = config.model_params['expand'][ll]['factor']
+#                        current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii)+'_'+str(ll), with_act=True, with_bn=False)
+#            else:
+#                current = features            
+            
             if 'expand' in config.model_params.keys():
-                current = features    
-                if num_layers_in_branch==1:
-                    factor  = config.model_params['expand'][0]['factor']
-                    current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii), with_act=True, with_bn=False)
-                else:
-                    for ll in range(num_layers_in_branch):
-                        factor  = config.model_params['expand'][ll]['factor']
-                        current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii)+'_'+str(ll), with_act=True, with_bn=False)
-
+                current = features        
+                for ll in range(len(config.model_params['expand'])):
+                    factor  = config.model_params['expand'][ll]['factor']
+                    current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii)+'_'+str(ll), with_act=True, with_bn=False)
             else:
                 current = features
-                
+
             layer_out = theta[ii]['w']
             layer_in  = theta[ii]['in']
             stdev    = 0.02

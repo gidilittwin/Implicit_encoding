@@ -16,42 +16,26 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'study_dnn32_arch33')
+    parser.add_argument('--experiment_name', type=str, default= 'test')
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    
+    parser.add_argument('--stage', type=int,  default=1)
+
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--grid_size_v', type=int,  default=36)
     parser.add_argument('--img_size', type=int,  default=[137,137])
     parser.add_argument('--im_per_obj', type=int,  default=24)
     parser.add_argument('--test_size', type=int,  default=24)
     parser.add_argument('--shuffle_size', type=int,  default=1000)  
-    parser.add_argument('--test_every', type=int,  default=1000)    
+    parser.add_argument('--test_every', type=int,  default=100000)    
     parser.add_argument('--save_every', type=int,  default=10000) 
-    
+    parser.add_argument("--postfix"   , type=str, default="")
+    parser.add_argument('--fast_eval', type=int,  default=0)    
 
-#    parser.add_argument('--grid_size', type=int,  default=32)
-#    parser.add_argument('--grid_size_v', type=int,  default=256)
-#    parser.add_argument('--img_size', type=int,  default=[224,224])
-#    parser.add_argument('--im_per_obj', type=int,  default=20)
-#    parser.add_argument('--test_size', type=int,  default=20)
-#    parser.add_argument('--shuffle_size', type=int,  default=1000)
-#    parser.add_argument('--test_every', type=int,  default=1000) 
-#    parser.add_argument('--save_every', type=int,  default=10000)    
-    
-#    parser.add_argument('--grid_size', type=int,  default=256)
-#    parser.add_argument('--grid_size_v', type=int,  default=256)
-#    parser.add_argument('--img_size', type=int,  default=[224,224])  
-#    parser.add_argument('--im_per_obj', type=int,  default=20)
-#    parser.add_argument('--test_size', type=int,  default=1)
-#    parser.add_argument('--shuffle_size', type=int,  default=100)
-#    parser.add_argument('--test_every', type=int,  default=100000)  
-#    parser.add_argument('--save_every', type=int,  default=10000)    
-    
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=12)
@@ -66,26 +50,59 @@ def parse_args():
     parser.add_argument('--noise_scale', type=float,  default=0.05)
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
-#    parser.add_argument('--categories'      , type=int,  default=[0], help='number of point samples')
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
-    parser.add_argument('--learning_rate', type=float,  default=0.00005)
+    parser.add_argument('--learning_rate', type=float,  default=0.0001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=True)
+    parser.add_argument('--finetune'  , type=bool,  default=False)
     parser.add_argument('--plot_every', type=int,  default=1000)
-#    parser.add_argument("--path"            , type=str, default="./Data/ShapeNet_TF/")
-#    parser.add_argument("--checkpoint_path" , type=str, default="./Data/Checkpoints/")
-#    parser.add_argument("--saved_model_path", type=str, default="./Data/Checkpoints/")
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
-        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
+        parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
     else:
-        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF/")
-        parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints/")
-        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints/")    
+        parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF")
+        parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints2/")
+        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints2/")    
 
     return parser.parse_args()
 config = parse_args()
+
+if config.grid_size==32:
+    config.grid_size_v = 256
+    config.img_size    = [224,224]
+    config.im_per_obj  = 20
+    config.test_size   = 20
+    config.shuffle_size= 1000
+    config.test_every  = 10000
+    config.save_every  = 10000
+    config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+    config.fast_eval   = 0
+    config.path        = config.path+str(config.grid_size)+'/'
+elif config.grid_size==64:
+    config.grid_size_v = 256
+    config.img_size    = [224,224]
+    config.im_per_obj  = 20
+    config.test_size   = 20
+    config.shuffle_size= 1000
+    config.test_every  = 10000
+    config.save_every  = 10000
+    config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+    config.fast_eval   = 0
+    config.path        = config.path+str(config.grid_size)+'/'
+elif config.grid_size==256:
+    config.grid_size_v = 256
+    config.img_size    = [224,224]
+    config.im_per_obj  = 20
+    config.test_size   = 1
+    config.shuffle_size= 100
+    config.test_every  = 10000
+    config.save_every  = 10000
+    config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+    config.fast_eval   = 1
+    config.path        = config.path+str(config.grid_size)+'/'
+
+
+
 print('#############################################################################################')
 print('###############################  '+config.experiment_name+'   ################################################')
 print('#############################################################################################')
@@ -141,6 +158,8 @@ train_iterator = TFH.iterator(config.path+'train/',
                               num_samples=config.num_samples,
                               shuffle_size=config.shuffle_size,
                               categories = config.categories)
+
+
 test_iterator  = TFH.iterator(config.path+'test/',
                               1,
                               epochs=10000,
@@ -159,6 +178,7 @@ next_element      = train_iterator.get_next()
 next_element_test = test_iterator.get_next()
 next_batch        = TFH.process_batch_train(next_element,idx_node,config)
 next_batch_test   = TFH.process_batch_test(next_element_test,idx_node,config)
+
 
 grid_size_lr = config.grid_size
 x            = np.linspace(-1, 1, grid_size_lr)
@@ -231,6 +251,11 @@ def f_wrapper(image,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
         current = CNN.resnet_config(image,args_)
         return CNN.regressor(current,args_)
+    
+def m_wrapper(ids,args_):
+    with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
+        current = CNN.multiplexer(ids,args_)
+        return CNN.regressor(current,args_)    
 
 def injection_wrapper(current,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
@@ -249,6 +274,7 @@ def build_graph(next_batch,config,batch_size):
     evals_target['y']     = samples_sdf
     evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
     g_weights             = f_wrapper(images,[mode_node,config])
+#    g_weights             = m_wrapper(next_batch['ids'] ,[mode_node,config])
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
@@ -328,7 +354,11 @@ def evaluate(test_iterator, session, mode_node, config, test_dict, next_element_
     classes       = []
     ids           = []  
     ious          = []
-    for epoch_test in range(config.im_per_obj/config.test_size):
+    if config.fast_eval!=0:
+        num_epochs = config.im_per_obj/config.test_size
+    else:
+        num_epochs = 1
+    for epoch_test in range(num_epochs):
         session.run(test_iterator.initializer)
         while True:
             try:
@@ -400,21 +430,21 @@ for epoch in range(10000):
                 acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
                 loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
                 iou_plot.append(np.expand_dims(np.array(iou_mov_avg),axis=-1)) 
-                np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
-                np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
-                np.save(directory+'/iou_values.npy',np.concatenate(iou_plot)) 
+                np.save(directory+'/loss_values'+config.postfix+'.npy',np.concatenate(loss_plot))
+                np.save(directory+'/accuracy_values'+config.postfix+'.npy',np.concatenate(acc_plot))  
+                np.save(directory+'/iou_values'+config.postfix+'.npy',np.concatenate(iou_plot)) 
             if step % config.test_every == config.test_every -1:            
                 acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
                 acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
                 iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))            
-                np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
-                np.save(directory+'/iou_values_test.npy',np.concatenate(iou_plot_test)) 
+                np.save(directory+'/accuracy_values_test'+config.postfix+'.npy',np.concatenate(acc_plot_test))  
+                np.save(directory+'/iou_values_test'+config.postfix+'.npy',np.concatenate(iou_plot_test)) 
                 if iou_test>max_test_iou:
-                    saver.save(session, directory+'/latest', global_step=0)
+                    saver.save(session, directory+'/latest'+config.postfix, global_step=0)
                     max_test_iou = iou_test
                 print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.save_every == config.save_every -1:  
-                saver.save(session, directory+'/latest_train', global_step=0)
+                saver.save(session, directory+'/latest_train'+config.postfix, global_step=0)
                 
                     
             step+=1                

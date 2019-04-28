@@ -109,7 +109,7 @@ def process_batch_train(next_element,idx_node,config):
         samples_xyz_np = samples_xyz_np*filp_xyz
     if config.rgba==0:
         images           = images[:,:,:,0:3]
-    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images}
+    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids']}
 
 
 def process_batch_test(next_element,idx_node,config):
@@ -141,7 +141,7 @@ def process_batch_test(next_element,idx_node,config):
     images               = tf.cast(images,dtype=tf.float32)/255.
     if config.rgba==0:
         images           = images[:,:,:,0:3]
-    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images}
+    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':tf.tile(next_element['ids'],(config.test_size,1))}
 
 
 
