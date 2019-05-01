@@ -18,7 +18,7 @@ def _float_feature(value):
 
 
 
-def dataset_builder_fn(path,batch):
+def dataset_builder_fn(path,batch,compress=True):
     example = tf.train.Example(features=tf.train.Features(feature={
         'voxels': _bytes_feature(batch['voxels'][0,:,:,:].tostring()),
         'images': _bytes_feature(batch['images'].astype(np.uint8).tostring()),
@@ -30,14 +30,20 @@ def dataset_builder_fn(path,batch):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)    
     tfrecords_filename = dir_name+'/'+str(batch['ids'][0,0])+'.tfrecords'
-    options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+    if compress:
+        options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+    else:
+        options = None
     with tf.python_io.TFRecordWriter(tfrecords_filename, options=options) as writer:
         writer.write(example.SerializeToString())
         
 
 
-def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size):
-  dataset = tf.data.TFRecordDataset(filenames=filenames, compression_type='GZIP')
+def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size,compression):
+  if compression:
+      dataset = tf.data.TFRecordDataset(filenames=filenames, compression_type='GZIP')
+  else:
+      dataset = tf.data.TFRecordDataset(filenames=filenames)
   def parser(record):
     keys_to_features = {
         "voxels":   tf.FixedLenFeature((), tf.string, default_value=""),
@@ -73,12 +79,12 @@ def get_files(files_path,categories):
         all_files = all_files+files
     return all_files
 
-def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000,shuffle_size=1000,categories=None):
+def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid_size=36,num_samples=10000,shuffle_size=1000,categories=None,compression=False):
     files    = get_files(path,categories=categories)
     if shuffle:
         random.seed()
         random.shuffle(files)
-    dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size)
+    dataset  = dataset_input_fn(files,batch_size,epochs,shuffle,img_size,im_per_obj,grid_size,num_samples,shuffle_size,compression)
     iterator = dataset.make_initializable_iterator()
     return iterator
     
@@ -112,6 +118,55 @@ def process_batch_train(next_element,idx_node,config):
     return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids']}
 
 
+def process_batch_center_train(next_element,config):
+    mini_batch_size      = config.batch_size/config.multi_image_views
+    samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(mini_batch_size,1,1))
+    vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
+    gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(mini_batch_size,config.num_samples,3))
+    vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
+    samples_xyz_np       = tf.concat((samples_xyz_np,vertices),axis=1)
+    samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
+    batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,mini_batch_size,dtype=np.int32),(mini_batch_size,1,1)),(1,config.num_samples+config.global_points,1)))
+    samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(mini_batch_size*(config.num_samples+config.global_points),4))
+    b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
+    samples_ijk_np_flip  = tf.concat((b,j,i,k),axis=-1)
+    voxels_gathered      = tf.gather_nd(next_element['voxels'],samples_ijk_np_flip)
+    samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(mini_batch_size,-1,1))
+    random_views         = tf.random_uniform((config.multi_image_views,),0,config.im_per_obj,dtype=tf.int32)
+    images               = tf.cast(tf.gather(next_element['images'],random_views,axis=1),dtype=tf.float32)/255.
+    
+    if config.augment:
+        rgb_idx          = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
+        images           = tf.gather(images,rgb_idx,axis=-1)
+        flip             = tf.random_uniform((1,),0.,1.)
+        filp_xyz         = tf.constant([[[-1.,1.,1.]]])
+        images           = tf.where(tf.greater(flip[0],0.5), images        , tf.reverse(images,axis=[2]))
+        samples_xyz_np   = tf.where(tf.greater(flip[0],0.5), samples_xyz_np, samples_xyz_np*filp_xyz)
+    if config.rgba==0:
+        images           = images[:,:,:,0:3]
+    return {'samples_xyz':tf.tile(samples_xyz_np,(config.im_per_obj,1,1)),'samples_sdf':tf.tile(samples_sdf_np,(config.im_per_obj,1,1)),'images':images,'ids':tf.tile(next_element['ids'],(config.im_per_obj,1))}
+
+def process_batch_evaluate(next_element,idx_node,config):
+    samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(config.test_size,1,1))
+    vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
+    gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.test_size,config.num_samples,3))
+    vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
+    samples_xyz_np       = tf.concat((samples_xyz_np,vertices),axis=1)
+    samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
+    batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.test_size,dtype=np.int32),(config.test_size,1,1)),(1,config.num_samples+config.global_points,1)))
+    samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.test_size*(config.num_samples+config.global_points),4))
+    b,i,j,k                = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
+    samples_ijk_np_flip  = tf.squeeze(tf.concat((b,j,i,k),axis=-1))
+    voxels               = tf.tile(next_element['voxels'],(config.test_size,1,1,1))
+    voxels_gathered      = tf.gather_nd(voxels,samples_ijk_np_flip)
+    samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.test_size,-1,1))
+    images               = tf.cast(next_element['images'][0,:,:,:,:],dtype=tf.float32)/255.
+    if config.rgba==0:
+        images           = images[:,:,:,0:3]
+    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':tf.tile(next_element['ids'],(config.test_size,1))}
+
+
+
 def process_batch_test(next_element,idx_node,config):
     if config.grid_size==36:
         grid_size_lr   = 32*config.eval_grid_scale
@@ -128,6 +183,7 @@ def process_batch_test(next_element,idx_node,config):
     if config.test_size==1:
         images    = tf.expand_dims(tf.gather(images,idx_node,axis=0),axis=0)
     samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.test_size,1,1))
+    
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
     samples_xyz_np       = tf.cast(tf.constant(samples_xyz_np),dtype=tf.float32)
     samples_ijk_np       = tf.constant(samples_ijk_np)

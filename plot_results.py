@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/alpha2/'
 baseline = 'study_dnn32_arch33'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values_test.npy')
@@ -20,28 +20,31 @@ num_plots = 200
 strings   = []
 
 
-name = 'archsweep_exp'
+name = 'center_loss_exp'
 name = 'study_dnn256_v2_arch'
 #name = 'study_dnn32_dropout'
-#name = 'study_dnn256_cat'
-name = 'study_dnn32_stage_v3_'
+#name = 'fastrecords_256_v2_exp'
+#name = 'study_dnn32_stage_v3_'
+#name = 'stages_class_exp'
 
 plot_idx =15
 
 
+postfix = ''
+#postfix = '_stage2-256'
+#postfix = '1_256'
 
-        
 for ii in range(num_plots):
     try:
-        file_name = path+name+str(ii+1)+'/accuracy_values.npy'
+        file_name = path+name+str(ii+1)+'/accuracy_values'+postfix+'.npy'
         acc_train.append(np.load(file_name))
-        file_name = path+name+str(ii+1)+'/iou_values.npy'
+        file_name = path+name+str(ii+1)+'/iou_values'+postfix+'.npy'
         iou_train.append(np.load(file_name))
         strings.append(str(ii+1))        
         
-        file_name = path+name+str(ii+1)+'/iou_values_test.npy'
+        file_name = path+name+str(ii+1)+'/iou_values_test'+postfix+'.npy'
         iou_test.append(np.load(file_name))
-        file_name = path+name+str(ii+1)+'/accuracy_values_test.npy'
+        file_name = path+name+str(ii+1)+'/accuracy_values_test'+postfix+'.npy'
         acc_test.append(np.load(file_name))
     except:
         print('missing - ' + str(ii))

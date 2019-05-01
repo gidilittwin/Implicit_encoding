@@ -92,7 +92,8 @@ def regressor(features,args_):
             step_size = config.multi_image_views
             for ll in range(0,24,step_size):
                 features_avg.append(tf.tile(tf.reduce_mean(features[ll:ll+step_size,:],axis=0,keep_dims=True) ,(step_size,1)) )
-            features = tf.concat(features_avg,axis=0)    
+#                features_avg.append(tf.reduce_mean(features[ll:ll+step_size,:],axis=0,keep_dims=True)  )
+            tf.add_to_collection('centers',tf.concat(features_avg,axis=0) )   
 
         # branch out
         for ii in range(len(theta)):

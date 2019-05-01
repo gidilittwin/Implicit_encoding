@@ -20,25 +20,27 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--batch_size', type=int,  default=24)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=1)
-
+    parser.add_argument('--multi_image', type=int,  default=1)
+    parser.add_argument('--multi_image_views', type=int,  default=4)
+    parser.add_argument('--alpha', type=float,  default=0.003)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--grid_size_v', type=int,  default=36)
+    parser.add_argument('--compression', type=int,  default=1)
+    
     parser.add_argument('--img_size', type=int,  default=[137,137])
     parser.add_argument('--im_per_obj', type=int,  default=24)
     parser.add_argument('--test_size', type=int,  default=24)
     parser.add_argument('--shuffle_size', type=int,  default=1000)  
-    parser.add_argument('--test_every', type=int,  default=100000)    
+    parser.add_argument('--test_every', type=int,  default=10000)    
     parser.add_argument('--save_every', type=int,  default=10000) 
     parser.add_argument("--postfix"   , type=str, default="")
     parser.add_argument('--fast_eval', type=int,  default=0)    
 
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
-    parser.add_argument('--multi_image', type=int,  default=0)
-    parser.add_argument('--multi_image_views', type=int,  default=12)
     parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--augment', type=int,  default=1)
@@ -93,21 +95,21 @@ elif config.grid_size==256:
     config.grid_size_v = 256
     config.img_size    = [224,224]
     config.im_per_obj  = 20
-    config.test_size   = 1
+    config.test_size   = 20
     config.shuffle_size= 100
     config.test_every  = 10000
     config.save_every  = 10000
+    config.compression = 0
     config.postfix     = str(config.stage)+'_'+str(config.grid_size)
-    config.fast_eval   = 1
-    config.path        = config.path+str(config.grid_size)+'/'
-
-
-
-print('#############################################################################################')
-print('###############################  '+config.experiment_name+'   ################################################')
-print('#############################################################################################')
-
-
+    config.fast_eval   = 0
+    config.path        = config.path+str(config.grid_size)+'_v2/'
+elif config.grid_size==36:
+    config.path        = config.path+'/'
+    
+if config.multi_image==1:
+    train_iterator_batch_size = config.batch_size/config.multi_image_views
+else:
+    train_iterator_batch_size = config.batch_size
 
 
 if isinstance(config.categories, int):
@@ -145,11 +147,19 @@ with open('./classes.json', 'r') as f:
     classes2name = json.load(f)
 #for ii,key in enumerate(config.categories):
 #    classes2name[key]['id']=ii
+
+
+
+print('#############################################################################################')
+print('###############################  '+config.experiment_name+'   ################################################')
+print('#############################################################################################')
+
+
     
 
 #%% Data iterators
 train_iterator = TFH.iterator(config.path+'train/',
-                              config.batch_size,
+                              train_iterator_batch_size,
                               epochs=10000,
                               shuffle=True,
                               img_size=config.img_size[0],
@@ -157,7 +167,8 @@ train_iterator = TFH.iterator(config.path+'train/',
                               grid_size=config.grid_size,
                               num_samples=config.num_samples,
                               shuffle_size=config.shuffle_size,
-                              categories = config.categories)
+                              categories = config.categories,
+                              compression = config.compression)
 
 
 test_iterator  = TFH.iterator(config.path+'test/',
@@ -169,15 +180,24 @@ test_iterator  = TFH.iterator(config.path+'test/',
                               grid_size=config.grid_size,
                               num_samples=config.num_samples,
                               shuffle_size=config.shuffle_size,
-                              categories = config.categories)
+                              categories = config.categories,
+                              compression = config.compression)
     
 
 idx_node          = tf.placeholder(tf.int32,shape=(), name='idx_node')  
 level_set         = tf.placeholder(tf.float32,shape=(),   name='levelset')  
 next_element      = train_iterator.get_next()
 next_element_test = test_iterator.get_next()
-next_batch        = TFH.process_batch_train(next_element,idx_node,config)
-next_batch_test   = TFH.process_batch_test(next_element_test,idx_node,config)
+
+if config.multi_image==1:
+    next_batch        = TFH.process_batch_center_train(next_element,config)
+else:
+    next_batch        = TFH.process_batch_train(next_element,idx_node,config)
+
+if config.grid_size==256:
+    next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
+else:
+    next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
 
 
 grid_size_lr = config.grid_size
@@ -189,19 +209,20 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
 
-#import matplotlib.pyplot as plt   
-#session = tf.Session()
-#session.run(tf.initialize_all_variables())
-##session.run(mode_node.assign(False)) 
-#session.run(train_iterator.initializer)
-#batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:1})
-#
-#idx =1
-#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
+import matplotlib.pyplot as plt   
+session = tf.Session()
+session.run(tf.initialize_all_variables())
+#session.run(mode_node.assign(False)) 
+session.run(train_iterator.initializer)
+batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
+#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+
+idx =0
+psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
+cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+
 #vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
 #cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
@@ -284,19 +305,22 @@ def build_graph(next_batch,config,batch_size):
     correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
     err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    norm                  = evals_function['dydx_norm']
+#    norm                  = evals_function['dydx_norm']
 #    sample_w              = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
 #    loss_class            = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
 #    loss_class            = loss_class/tf.reduce_mean(sample_w,axis=-1)
     loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
     loss                  = tf.reduce_mean(loss_class)
+    if config.multi_image:
+       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
+       loss = loss + config.alpha*center_loss
     X                     = tf.cast(labels,tf.bool)
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
 #    features              = tf.get_collection('embeddings')
-    return {'loss':loss,'accuracy':accuracy,'err':err,'norm':norm,'iou':iou,'iou_image':iou_image}
-
+#    return {'loss':loss,'accuracy':accuracy,'err':err,'norm':norm,'iou':iou,'iou_image':iou_image}
+    return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image}
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
