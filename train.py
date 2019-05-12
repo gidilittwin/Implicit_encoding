@@ -16,28 +16,31 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'test')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh.json')
+    parser.add_argument('--experiment_name', type=str, default= 'fastrecords_256_v2_exp18')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=24)
+    parser.add_argument('--batch_size', type=int,  default=32)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=1)
-    parser.add_argument('--multi_image', type=int,  default=1)
-    parser.add_argument('--multi_image_views', type=int,  default=4)
+    parser.add_argument('--stage', type=int,  default=0)
+    parser.add_argument('--multi_image', type=int,  default=0)
+    parser.add_argument('--multi_image_views', type=int,  default=24)
+    parser.add_argument('--multi_image_pool', type=str,  default='max')
+    
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=36)
-    parser.add_argument('--grid_size_v', type=int,  default=36)
+    parser.add_argument('--grid_size', type=int,  default=32)
+    parser.add_argument('--grid_size_v', type=int,  default=32)
     parser.add_argument('--compression', type=int,  default=1)
+    parser.add_argument('--pretrained', type=int,  default=0)
     
     parser.add_argument('--img_size', type=int,  default=[137,137])
     parser.add_argument('--im_per_obj', type=int,  default=24)
     parser.add_argument('--test_size', type=int,  default=24)
     parser.add_argument('--shuffle_size', type=int,  default=1000)  
     parser.add_argument('--test_every', type=int,  default=10000)    
-    parser.add_argument('--save_every', type=int,  default=10000) 
-    parser.add_argument("--postfix"   , type=str, default="")
+    parser.add_argument('--save_every', type=int,  default=1000) 
+    parser.add_argument("--postfix_load"   , type=str, default="")
     parser.add_argument('--fast_eval', type=int,  default=0)    
 
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
@@ -48,8 +51,9 @@ def parse_args():
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
-    parser.add_argument('--global_points', type=int,  default=1000)    
-    parser.add_argument('--noise_scale', type=float,  default=0.05)
+    parser.add_argument('--global_points', type=int,  default=1000) 
+    parser.add_argument('--global_points_test', type=int,  default=2000)    
+    parser.add_argument('--noise_scale', type=float,  default=0.15)
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
@@ -61,10 +65,12 @@ def parse_args():
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
+        parser.add_argument("--pretrained_path",  type=str, default="/media/gidi/SSD/Thesis/Data/pretrained/")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints2/")
-        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints2/")    
+        parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints2/")   
+        parser.add_argument("--pretrained_path",  type=str, default="/private/home/wolf/gidishape/pretrained/")
 
     return parser.parse_args()
 config = parse_args()
@@ -76,7 +82,7 @@ if config.grid_size==32:
     config.test_size   = 20
     config.shuffle_size= 1000
     config.test_every  = 10000
-    config.save_every  = 10000
+    config.save_every  = 1000
     config.postfix     = str(config.stage)+'_'+str(config.grid_size)
     config.fast_eval   = 0
     config.path        = config.path+str(config.grid_size)+'/'
@@ -87,10 +93,23 @@ elif config.grid_size==64:
     config.test_size   = 20
     config.shuffle_size= 1000
     config.test_every  = 10000
-    config.save_every  = 10000
+    config.save_every  = 1000
     config.postfix     = str(config.stage)+'_'+str(config.grid_size)
     config.fast_eval   = 0
     config.path        = config.path+str(config.grid_size)+'/'
+elif config.grid_size==128:
+    config.grid_size_v = 256
+    config.img_size    = [137,137]
+    config.im_per_obj  = 20
+    config.test_size   = 20
+    config.shuffle_size= 100
+    config.test_every  = 10000
+    config.save_every  = 1000
+    config.compression = 0
+    config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
+    config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)
+    config.fast_eval   = 0
+    config.path        = config.path+str(config.grid_size)+'_v3/'
 elif config.grid_size==256:
     config.grid_size_v = 256
     config.img_size    = [224,224]
@@ -98,13 +117,18 @@ elif config.grid_size==256:
     config.test_size   = 20
     config.shuffle_size= 100
     config.test_every  = 10000
-    config.save_every  = 10000
+    config.save_every  = 1000
     config.compression = 0
-    config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+    config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
+    config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)
     config.fast_eval   = 0
     config.path        = config.path+str(config.grid_size)+'_v2/'
 elif config.grid_size==36:
     config.path        = config.path+'/'
+    config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
+    config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)    
+if config.pretrained==1:
+    config.rgba = 0
     
 if config.multi_image==1:
     train_iterator_batch_size = config.batch_size/config.multi_image_views
@@ -194,7 +218,7 @@ if config.multi_image==1:
 else:
     next_batch        = TFH.process_batch_train(next_element,idx_node,config)
 
-if config.grid_size==256:
+if config.grid_size==256 or config.grid_size==128:
     next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
 else:
     next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
@@ -209,20 +233,20 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
 
-import matplotlib.pyplot as plt   
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-#session.run(mode_node.assign(False)) 
-session.run(train_iterator.initializer)
-batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
-#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-
-idx =0
-psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.5)
-cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-
+#import matplotlib.pyplot as plt   
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+##session.run(mode_node.assign(False)) 
+#session.run(train_iterator.initializer)
+#batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
+##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+#
+#idx =9
+#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#
 #vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
 #cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
@@ -231,18 +255,27 @@ MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')
 #cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 #
-#pic = batch['images'][idx,0,:,:,0:3]
+#
+#vertices             = batch_['samples_xyz'][idx,:,:]
+#vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+#vertices              = vertices*vertices_on
+#cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#
+#
+#pic = batch_['images'][idx,:,:,0:3]
 #fig = plt.figure()
 #plt.imshow(pic)
-
-
-
-#aa=batch_['samples_sdf'][0,1000:,:]
-#samps=batch_['samples_xyz'][0,1000:,:]
+#
+#
+#
+#aa=batch_['samples_sdf'][idx,1000:,:]
+#samps=batch_['samples_xyz'][idx,1000:,:]
 #samples_ijk_np       = np.round(((samps+1)/2*(config.grid_size-1))).astype(np.int64)
 #arr_                = np.split(samples_ijk_np,3,axis=-1)
 #
-#voxels = batch['voxels'][0,:,:,:]
+#voxels = batch['voxels'][idx,:,:,:]
 #import scipy.ndimage as ndi
 #inner_volume       = voxels
 #outer_volume       = np.logical_not(voxels)
@@ -268,6 +301,12 @@ def g_wrapper(coordinates,args_):
         evaluated_function = SF.deep_shape(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
 
+def g2_wrapper(coordinates,args_):
+    with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
+        evaluated_function = SF.deep_colors(coordinates,args_[0],args_[1],args_[2])
+        return evaluated_function
+    
+    
 def f_wrapper(image,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
         current = CNN.resnet_config(image,args_)
@@ -278,6 +317,13 @@ def m_wrapper(ids,args_):
         current = CNN.multiplexer(ids,args_)
         return CNN.regressor(current,args_)    
 
+def f2_wrapper(image,args_):
+    with tf.variable_scope('',reuse=tf.AUTO_REUSE):
+        current = CNN.resnet_50(image,args_)
+    with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
+        return CNN.regressor(current,args_) 
+    
+    
 def injection_wrapper(current,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
         return CNN.regressor(current,args_)
@@ -287,15 +333,16 @@ def injection_wrapper(current,args_):
 #%% Training graph 
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
-    images                = tf.image.resize_images(images,[137,137])
     samples_sdf           = next_batch['samples_sdf']  
     samples_xyz           = next_batch['samples_xyz']
     evals_target          = {}
     evals_target['x']     = samples_xyz
     evals_target['y']     = samples_sdf
     evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
-    g_weights             = f_wrapper(images,[mode_node,config])
-#    g_weights             = m_wrapper(next_batch['ids'] ,[mode_node,config])
+    if config.pretrained:
+        g_weights             = f2_wrapper(images,[mode_node,config])
+    else:
+        g_weights             = f_wrapper(images,[mode_node,config])
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
@@ -311,30 +358,44 @@ def build_graph(next_batch,config,batch_size):
 #    loss_class            = loss_class/tf.reduce_mean(sample_w,axis=-1)
     loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
     loss                  = tf.reduce_mean(loss_class)
-    if config.multi_image:
-       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
-       loss = loss + config.alpha*center_loss
+#    if config.multi_image:
+#       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
+#       loss = loss + config.alpha*center_loss
     X                     = tf.cast(labels,tf.bool)
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
-#    features              = tf.get_collection('embeddings')
-#    return {'loss':loss,'accuracy':accuracy,'err':err,'norm':norm,'iou':iou,'iou_image':iou_image}
     return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image}
+
+
+
+def build_image_graph(next_batch,config,batch_size):
+    images                = next_batch['images'] 
+    samples_sdf           = next_batch['samples_sdf']  
+    samples_xyz           = next_batch['samples_xyz']
+    evals_target          = {}
+    evals_target['x']     = samples_xyz
+    evals_target['y']     = samples_sdf
+    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
+    if config.pretrained:
+        g_weights             = f2_wrapper(images,[mode_node,config])
+    else:
+        g_weights             = f_wrapper(images,[mode_node,config])
+#    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    evals_function        = SF.sample_points_list_2D(model_fn = g2_wrapper,args=[mode_node,g_weights,config], shape = config.grid_size, use_samps=False)
+    labels                = tf.cast(next_batch['images'],tf.float32)/255.
+    logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,config.grid_size,config.grid_size,1))) #- levelset
+    loss                  = tf.reduce_mean((labels-logits)**2)
+    err                   = tf.reduce_mean(tf.sqrt((labels-logits)**2))
+    acc                   = 1.-tf.reduce_mean(tf.sqrt((labels-logits)**2))
+    return {'loss':loss,'err':err,'accuracy':acc,'logits':logits,'images':next_batch['images'] }
+
+
+
+
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
-
-#injected_embeddings   = tf.placeholder(tf.float32,shape=(None,2048),   name='injected_embeddings')  
-#function_injected     = injection_wrapper(injected_embeddings,[mode_node,config])
-#evals_function_inject = function_wrapper(evals_target['x'],args_=[mode_node,function_injected,config])
-#logits_inject         = tf.reshape(evals_function_inject,(config.batch_size,-1,1)) #- levelset
-#logits_inject_iou     = tf.concat((logits_inject-level_set,-logits_inject+level_set),axis=-1)
-#predictions_inject    = tf.nn.softmax(logits_inject_iou)
-#X_inject              = tf.cast(labels,tf.bool)
-#Y_inject              = tf.cast(tf.argmax(predictions_inject , 2),tf.bool)
-#iou_image_inject      = tf.reduce_sum(tf.cast(tf.logical_and(X_inject,Y_inject),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_inject,Y_inject),tf.float32),axis=1)
-
 
 
 
@@ -353,6 +414,9 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 saver    = tf.train.Saver(var_list=all_vars)
 loader   = tf.train.Saver(var_list=all_vars)
+if config.pretrained:
+    pretrained_vars   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = 'resnet_v2_50')
+    pretrained        = tf.train.Saver(var_list=pretrained_vars)
 
 
 
@@ -418,13 +482,16 @@ acc_plot_test  = []
 iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
+
+if config.pretrained:
+    pretrained.restore(session,config.pretrained_path+'resnet_v2_50.ckpt')
 if config.finetune:
-    loader.restore(session, directory+'/latest-0')
-    loss_plot     = np.load(directory+'/loss_values.npy')
-    acc_plot      = np.load(directory+'/accuracy_values.npy')  
-    iou_plot      = np.load(directory+'/iou_values.npy')      
-    acc_plot_test = np.load(directory+'/accuracy_values_test.npy') 
-    iou_plot_test = np.load(directory+'/iou_values_test.npy') 
+    loader.restore(session, directory+'/latest_train'+config.postfix_load+'-0')
+    loss_plot     = np.load(directory+'/loss_values'+config.postfix_load+'.npy')
+    acc_plot      = np.load(directory+'/accuracy_values'+config.postfix_load+'.npy')  
+    iou_plot      = np.load(directory+'/iou_values'+config.postfix_load+'.npy')      
+    acc_plot_test = np.load(directory+'/accuracy_values_test'+config.postfix_load+'.npy') 
+    iou_plot_test = np.load(directory+'/iou_values_test'+config.postfix_load+'.npy') 
     loss_plot     = np.split(loss_plot,loss_plot.shape[0])
     acc_plot      = np.split(acc_plot,acc_plot.shape[0])
     iou_plot      = np.split(iou_plot,iou_plot.shape[0])
@@ -454,23 +521,21 @@ for epoch in range(10000):
                 acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
                 loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
                 iou_plot.append(np.expand_dims(np.array(iou_mov_avg),axis=-1)) 
-                np.save(directory+'/loss_values'+config.postfix+'.npy',np.concatenate(loss_plot))
-                np.save(directory+'/accuracy_values'+config.postfix+'.npy',np.concatenate(acc_plot))  
-                np.save(directory+'/iou_values'+config.postfix+'.npy',np.concatenate(iou_plot)) 
+                np.save(directory+'/loss_values'+config.postfix_save+'.npy',np.concatenate(loss_plot))
+                np.save(directory+'/accuracy_values'+config.postfix_save+'.npy',np.concatenate(acc_plot))  
+                np.save(directory+'/iou_values'+config.postfix_save+'.npy',np.concatenate(iou_plot)) 
             if step % config.test_every == config.test_every -1:            
                 acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
                 acc_plot_test.append(np.expand_dims(np.array(acc_test),axis=-1))
                 iou_plot_test.append(np.expand_dims(np.array(iou_test),axis=-1))            
-                np.save(directory+'/accuracy_values_test'+config.postfix+'.npy',np.concatenate(acc_plot_test))  
-                np.save(directory+'/iou_values_test'+config.postfix+'.npy',np.concatenate(iou_plot_test)) 
+                np.save(directory+'/accuracy_values_test'+config.postfix_save+'.npy',np.concatenate(acc_plot_test))  
+                np.save(directory+'/iou_values_test'+config.postfix_save+'.npy',np.concatenate(iou_plot_test)) 
                 if iou_test>max_test_iou:
-                    saver.save(session, directory+'/latest'+config.postfix, global_step=0)
+                    saver.save(session, directory+'/latest'+config.postfix_save, global_step=0)
                     max_test_iou = iou_test
                 print('Testing:  max_test_accuracy: '+str(max_test_acc)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.save_every == config.save_every -1:  
-                saver.save(session, directory+'/latest_train'+config.postfix, global_step=0)
-                
-                    
+                saver.save(session, directory+'/latest_train'+config.postfix_save, global_step=0)
             step+=1                
         except tf.errors.OutOfRangeError:
             break

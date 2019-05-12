@@ -169,3 +169,28 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
     return evals
         
 
+
+
+
+
+def sample_points_list_2D(model_fn,args,shape = 28,samples=None,use_samps=False):
+    config = args[-1]
+    if use_samps==False:
+        x = np.linspace(0.,1., shape)
+        u,v = np.meshgrid(x,x)
+        samples = tf.concat((tf.reshape(u,(1,-1,1)),tf.reshape(v,(1,-1,1))),axis=-1)
+        samples = tf.cast(tf.tile(samples,(config.batch_size,1,1)),tf.float32)
+        
+    response    = model_fn(samples,args)
+#    dy_dx   = []
+#    for ii in range(shape[0]):
+#        dydx   = tf.gradients(response[ii,:,:],samples)[0]
+#        dy_dx.append(dydx)     
+#    dy_dx = tf.concat(dy_dx,axis=0) 
+#    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
+#    mask    = tf.cast(tf.greater(response,0.),tf.float32)
+#    evals = {'x':samples,'y':response,'dydx':dy_dx,'dydx_norm':dy_dx_n,'mask':mask}
+    evals = {'x':samples,'y':response}
+    return evals
+        
+

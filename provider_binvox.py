@@ -11,6 +11,7 @@ import scipy.ndimage as ndi
 from scipy import misc
 from skimage import measure
 import scipy.io
+import skimage.transform 
 
 
 
@@ -288,6 +289,8 @@ class ShapeNet(object):
             
         if self.reduce!=1:
             voxels_b = measure.block_reduce(voxels_b, (self.reduce,self.reduce,self.reduce), np.max)
+#            voxels_b = 1.0*voxels_b>0.5
+            
         voxels_ = -1.0*voxels_b.astype(np.float32)+0.5
         sdf_    = voxels_
         sdf.append(sdf_) 
@@ -308,11 +311,12 @@ class ShapeNet(object):
         perm = np.random.permutation(len(image_files[0]))        
         for im in range(self.batch_size):
             with open(image_files[0][perm[im]], 'rb') as f:
-                image = misc.imread(f).astype(np.float32)
+                image = (misc.imread(f).astype(np.float32)/255.)*2-1.
+                image = ((skimage.transform.resize(image, (137,137))+1.)/2.*255.).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]
-                if self.shuffle_rgb and self.rand!=False:
-                     rgb = rgb[:,:,np.random.permutation(3)]
+#                if self.shuffle_rgb and self.rand!=False:
+#                     rgb = rgb[:,:,np.random.permutation(3)]
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
 

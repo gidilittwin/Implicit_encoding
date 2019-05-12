@@ -4,13 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/alpha2/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/alpha9/'
 baseline = 'study_dnn32_arch33'
-accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values.npy')
-accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/accuracy_values_test.npy')
-iou_values          =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/iou_values.npy')
-iou_values_test     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/iou_values_test.npy')
-loss_values         =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records20/'+baseline+'/loss_values.npy')
+accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values.npy')
+accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values_test.npy')
+iou_values          =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/iou_values.npy')
+iou_values_test     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/iou_values_test.npy')
+loss_values         =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/loss_values.npy')
 
 iou_test  = []
 iou_train = []
@@ -18,21 +18,25 @@ acc_test  = []
 acc_train = []
 num_plots = 200
 strings   = []
+strings_test   = []
+
+postfix = ''
 
 
 name = 'center_loss_exp'
-name = 'study_dnn256_v2_arch'
-#name = 'study_dnn32_dropout'
+name = 'multi_image_encode_exp'
+#name = '256_pre_exp'
 #name = 'fastrecords_256_v2_exp'
+name = 'light_128_v2_'
+name = 'light_256_v3_'
 #name = 'study_dnn32_stage_v3_'
-#name = 'stages_class_exp'
 
 plot_idx =15
 
 
-postfix = ''
-#postfix = '_stage2-256'
-#postfix = '1_256'
+#postfix = '_stage3-256'
+postfix = '1_256'
+#postfix = '0_36'
 
 for ii in range(num_plots):
     try:
@@ -46,6 +50,7 @@ for ii in range(num_plots):
         iou_test.append(np.load(file_name))
         file_name = path+name+str(ii+1)+'/accuracy_values_test'+postfix+'.npy'
         acc_test.append(np.load(file_name))
+        strings_test.append(str(ii+1))        
     except:
         print('missing - ' + str(ii))
 
@@ -56,7 +61,7 @@ kill_list = []
 #for ii in range(num_plots_alive):
 
 
-plt.figure(4)
+plt.figure()
 plt.title('train iou')
 plt.plot(iou_values,'--')
 for ii in range(len(iou_train)):
@@ -67,40 +72,31 @@ for ii in range(len(iou_train)):
 
 
 
-plt.figure(ii)
+plt.figure()
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
 for ii in range(num_plots_alive):
     if np.max(iou_test[ii])>0.0:
         plt.plot(iou_test[ii])
-        plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings[ii])
+        plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings_test[ii])
     if np.max(iou_test[ii])<0.20:
-        kill_list.append(strings[ii])
-#plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
+        kill_list.append(strings_test[ii])
 
+
+if True==False:
     
-#plt.figure(2)
-#plt.title('test acc')
-#for ii in range(num_plots_alive):
-#    plt.plot(acc_test[ii])    
-#plt.plot(accuracy_values_test)    
-#plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)    
-#    
-#plt.figure(3)
-#plt.title('train acc')
-#dead = []
-#for ii in range(num_plots_alive):
-#    plt.plot(acc_train[ii])  
-#    if np.max(acc_train[ii])<0.75:
-#        print(strings[ii])
-#        dead.append(strings[ii])
-#        
-##plt.plot(accuracy_values)    
-#plt.legend(strings,shadow=True, loc=(0.01, 0.48), handlelength=1.5, fontsize=5)
-#
+    ii=31
+    plt.figure()
+    plt.title('test iou')
+    plt.plot(iou_values_test,'--')
+    if np.max(iou_test[ii])>0.0:
+        plt.plot(iou_test[ii])
+        plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings_test[ii])
 
-
-
-
-
-
+        
+        
+        
+        
+        
+        
+        
