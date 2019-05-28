@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/alpha9/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/01/'
 baseline = 'study_dnn32_arch33'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values_test.npy')
@@ -23,20 +23,20 @@ strings_test   = []
 postfix = ''
 
 
-name = 'center_loss_exp'
-name = 'multi_image_encode_exp'
-#name = '256_pre_exp'
-#name = 'fastrecords_256_v2_exp'
-name = 'light_128_v2_'
-name = 'light_256_v3_'
-#name = 'study_dnn32_stage_v3_'
-
+#name = 'multi_image_encode_exp'
+name = 'encode_128_v3_'
+name = 'encode_256_v4_'; postfix = '0_256'
+#name = 'encode_256_v4_'
+#name = 'fastrecords_256_v2_exp'; postfix = '2_256'
+#name = 'light_128_v3_'; postfix = '1_128'
+#name = 'light_256_v3_'; postfix = '1_256'
+#name = 'study_dnn32_stage_v3_'; postfix = '_stage3-256'
+#name = 'dip_v2_exp'; postfix = '0_32'
 plot_idx =15
 
 
 #postfix = '_stage3-256'
-postfix = '1_256'
-#postfix = '0_36'
+
 
 for ii in range(num_plots):
     try:
@@ -76,7 +76,7 @@ plt.figure()
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
 for ii in range(num_plots_alive):
-    if np.max(iou_test[ii])>0.0:
+    if np.max(iou_test[ii])>0.00:
         plt.plot(iou_test[ii])
         plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings_test[ii])
     if np.max(iou_test[ii])<0.20:
@@ -84,8 +84,7 @@ for ii in range(num_plots_alive):
 
 
 if True==False:
-    
-    ii=31
+    ii=1
     plt.figure()
     plt.title('test iou')
     plt.plot(iou_values_test,'--')

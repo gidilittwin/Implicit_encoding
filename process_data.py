@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetICCV/")
         parser.add_argument("--train_file"      , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/train_list.txt")
@@ -61,7 +61,7 @@ def parse_args():
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/exp31(benchmark=57.4)/-196069")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetICCV/")
         parser.add_argument("--train_file"      , type=str, default="/private/home/wolf/gidishape/train_list.txt")

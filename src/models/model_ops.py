@@ -147,6 +147,23 @@ def cell2D(in_node, k1, k2, M, N, mode_node, stride, SCOPE, padding='SAME', bn=T
             conv1 = tf.nn.relu(conv1)
         print(conv1.get_shape())        
         return conv1
+
+def cell2D_t(in_node, k1, k2, M, N, mode_node, stride, SCOPE, padding='SAME', bn=True, act=True):
+    with tf.variable_scope(SCOPE) as scope:
+        input_shape = in_node.get_shape().as_list()
+        conv0_w, conv0_b = CONV2D([k1,k2,M,N])
+        conv0_w = tf.transpose(conv0_w,(0,1,3,2))
+        current = tf.nn.conv2d_transpose(in_node,
+                                conv0_w,
+                                [input_shape[0],input_shape[1]*2,input_shape[2]*2,N],
+                                strides = [1,2,2,1]) +conv0_b
+        if bn==True:
+            current = BatchNorm(current,mode_node,scope)
+        if act==True:
+            current = tf.nn.relu(current)
+        print(current.get_shape())        
+        return current
+
         
 def cell1D(in_node,output_size, mode_node, SCOPE=None, stddev=0.02, bias_start=0.0, with_act=True, with_bn=True,act_type=lrelu):
     with tf.variable_scope(SCOPE,reuse=tf.AUTO_REUSE) as scope:
@@ -165,7 +182,21 @@ def cell1D(in_node,output_size, mode_node, SCOPE=None, stddev=0.02, bias_start=0
         print(output.get_shape())        
         return output
 
-
+def cell1D_residual(in_,width, mode_node, relu0=True, SCOPE=None):
+    with tf.variable_scope(SCOPE,reuse=tf.AUTO_REUSE):
+        shape_ = in_.get_shape().as_list()
+        if relu0:
+            c1 = tf.nn.relu(in_)
+        else:
+            c1 = in_
+        c2 = cell1D(c1,width, mode_node, SCOPE='l1', with_act=False, with_bn=False, stddev=np.sqrt(2)/np.sqrt(shape_[-1]))
+        c2 = tf.nn.relu(c2)
+        c3 = cell1D(c2,width, mode_node, SCOPE='l2', with_act=False, with_bn=False, stddev=np.sqrt(2)/np.sqrt(width))
+        if width==shape_[-1]:
+            return in_+c3
+        elif width==2*shape_[-1]:
+            return tf.concat((in_,in_),axis=1)+c3
+        
 
 
 def cell2D_res(in_node, k, M, N, mode_node, stride, SCOPE,use_bn=True):

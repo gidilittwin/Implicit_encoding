@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from model_ops import cell1D, cell2D_res, CONV2D
+from model_ops import cell1D, cell2D_res, CONV2D, cell1D_residual, cell2D_t
 from tensorflow.contrib.slim.nets import resnet_v2
 import tensorflow.contrib.slim as slim
 
@@ -25,13 +25,17 @@ def volumetric_softmax(node,name):
 
 def multiplexer(example,args_):
     mode      = args_[0]
+    config    = args_[-1]
     in_node   = tf.one_hot(tf.squeeze(example,-1),43794)
+    width     = config.block_width
+    embedding_size = config.embedding_size
     with tf.variable_scope("Multiplexer"):
-        current = cell1D(in_node,128, mode, SCOPE='l1', with_act=False, with_bn=False)        
-        current = cell1D(current,256, mode, SCOPE='l2', with_act=True, with_bn=False)
-        current = cell1D(current,256, mode, SCOPE='l3', with_act=True, with_bn=False)
-        current = cell1D(current,512, mode, SCOPE='l4', with_act=True, with_bn=False)
-        current = cell1D(current,512, mode, SCOPE='l5', with_act=False, with_bn=False)
+        current = cell1D(in_node,embedding_size, mode, SCOPE='one_hot_emb', with_act=False, with_bn=False, stddev=0.1)    
+        for block in range(config.num_blocks):
+            is_0    = block!=0
+            current = cell1D_residual(current,width, mode, relu0=is_0, SCOPE='block_'+str(block))
+        if config.bottleneck!=width:
+            current = cell1D(current,config.bottleneck, mode, SCOPE='bootleneck', with_act=False, with_bn=False, stddev=np.sqrt(2)/np.sqrt(width))    
     return current
 
 
@@ -70,27 +74,27 @@ def mlp(xyz, mode_node, theta, config):
         conv0_w, conv0_b = CONV2D([1,1,66,256])
         c0      = tf.nn.conv2d(inputs,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
-        current = tf.nn.relu(current)
+        current = tf.tanh(current)
     with tf.variable_scope("1"):
         conv0_w, conv0_b = CONV2D([1,1,256,256])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
-        current = tf.nn.relu(current)
+        current = tf.tanh(current)
     with tf.variable_scope("2"):
         conv0_w, conv0_b = CONV2D([1,1,256,256])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)  
-        current = tf.nn.relu(current)
+        current = tf.tanh(current)
     with tf.variable_scope("3"):
         conv0_w, conv0_b = CONV2D([1,1,256,256])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
-        current = tf.nn.relu(current)
+        current = tf.tanh(current)
     with tf.variable_scope("4"):
         conv0_w, conv0_b = CONV2D([1,1,256,256])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
-        current = tf.nn.relu(current)
+        current = tf.tanh(current)
     with tf.variable_scope("out"):
         conv0_w, conv0_b = CONV2D([1,1,256,1])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
@@ -99,7 +103,20 @@ def mlp(xyz, mode_node, theta, config):
     return sdf
 
 
-
+def render(example,args_):
+    mode      = args_[0]
+    config    = args_[1]
+    current   = tf.expand_dims(example,axis=1)
+    ch_in     = current.get_shape().as_list()[-1]
+    ch_out    = 128
+    for layer in range(8):
+        current = cell2D_t(current, 3, 3, ch_in, ch_out, mode, stride=2, SCOPE="render_layer_"+str(layer), padding='SAME', bn=True, act=True)                                
+        ch_in   = ch_out
+    with tf.variable_scope("project_image"):
+        conv0_w, conv0_b = CONV2D([1,1,ch_out,3])
+        current      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
+        current = tf.nn.bias_add(current, conv0_b)  
+    return current
 
 
 def resnet_config(example,args_):
@@ -201,7 +218,37 @@ def regressor(features,args_):
 
 
 
+def conv_regressor(features,args_):
+    mode    = args_[0]
+    config  = args_[1]
+    weights = []
+    theta   = config.model_params['theta']
+    featue_size  = tf.shape(features)
+    with tf.variable_scope("fully",reuse=tf.AUTO_REUSE):
+        for ii, layer in enumerate(config.model_params['decoder']):
+            features = cell1D(features,layer['size'], mode, SCOPE='decode'+str(ii+1), with_act=layer['act'], with_bn=layer['batch_norm'])
+        features = mydropout(mode, features, config.dropout)
+        tf.add_to_collection('embeddings',features)
+        features_size = features.get_shape().as_list()[-1]
 
+        # branch out
+        for ii in range(len(theta)):        
+            if 'expand' in config.model_params.keys():
+                current = features        
+                for ll in range(len(config.model_params['expand'])):
+                    factor  = config.model_params['expand'][ll]['factor']
+                    current = cell1D(current,features_size*factor, mode, SCOPE='expand'+str(ii)+'_'+str(ll), with_act=True, with_bn=False)
+            else:
+                current = features
+            layer_out = theta[ii]['w']
+            layer_in  = theta[ii]['in']
+            kernel_size  = theta[ii]['k']
+            stdev    = 0.02
+            ww = tf.reshape(cell1D(current,layer_in*layer_out*kernel_size*kernel_size, mode, SCOPE='w'+str(ii),stddev=stdev, with_act=False, with_bn=False),(featue_size[0],kernel_size,kernel_size,layer_out,layer_in) )
+            bb = tf.reshape(cell1D(current,layer_out,          mode, SCOPE='b'+str(ii),stddev=stdev, with_act=False, with_bn=False) ,(featue_size[0],1,1,layer_out) )
+            weights.append({'w':ww,'b':bb})
+        tf.add_to_collection('weights',weights)
+    return weights
 
 
 

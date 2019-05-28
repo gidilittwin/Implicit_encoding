@@ -31,12 +31,12 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF128_v3/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF128_v3/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256_v2/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
     return parser.parse_args()
@@ -49,23 +49,24 @@ config = parse_args()
 #%%
 rec_mode     = False
 BATCH_SIZE   = 20
-reduce       = 2
+reduce       = 1
+ii=0
 
-SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode,
-                 reduce = reduce)
-for ii in range(0,SN_train.train_size):
-    batch = SN_train.get_batch_multi(type_='')
-    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-    path =config.path_tf+'train/'
-    TFH.dataset_builder_fn(path,batch,compress=False)   
+#SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+#                 files=[],
+#                 rand=False,
+#                 batch_size=BATCH_SIZE,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=rec_mode,
+#                 reduce = reduce)
+#for ii in range(0,SN_train.train_size):
+#    batch = SN_train.get_batch_multi(type_='')
+#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+#    path =config.path_tf+'train/'
+#    TFH.dataset_builder_fn(path,batch,compress=False)   
     
 
 SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
@@ -83,22 +84,23 @@ for ii in range(0,SN_test.train_size):
     print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
     path =config.path_tf+'test/'
     TFH.dataset_builder_fn(path,batch,compress=False)   
+
     
-SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
-                 files=[],
-                 rand=False,
-                 batch_size=BATCH_SIZE,
-                 grid_size=config.grid_size,
-                 levelset=[0.00],
-                 num_samples=config.num_samples,
-                 list_=config.categories,
-                 rec_mode=rec_mode,
-                 reduce = reduce)
-for ii in range(0,SN_val.train_size):
-    batch = SN_val.get_batch_multi(type_='')
-    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
-    path =config.path_tf+'val/'
-    TFH.dataset_builder_fn(path,batch,compress=False)   
+#SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
+#                 files=[],
+#                 rand=False,
+#                 batch_size=BATCH_SIZE,
+#                 grid_size=config.grid_size,
+#                 levelset=[0.00],
+#                 num_samples=config.num_samples,
+#                 list_=config.categories,
+#                 rec_mode=rec_mode,
+#                 reduce = reduce)
+#for ii in range(0,SN_val.train_size):
+#    batch = SN_val.get_batch_multi(type_='')
+#    print(str(SN_val.train_step)+' /'+str(SN_val.train_size))
+#    path =config.path_tf+'val/'
+#    TFH.dataset_builder_fn(path,batch,compress=False)   
         
     
     

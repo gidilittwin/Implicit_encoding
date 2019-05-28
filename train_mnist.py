@@ -168,7 +168,7 @@ next_batch['images']  = tf.placeholder(tf.uint8,shape=(None,28,28,1), name='imag
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
     embedding             = f_embedding(images,[mode_node,config])
-    evals_function        = SF.sample_points_list_2D(model_fn = g_embedding,args=[mode_node,embedding,config],shape = config.grid_size, use_samps=False)
+    evals_function        = SF.sample_points_list_2D(model_fn = g_embedding,args=[mode_node,embedding,config],shape = [batch_size,config.grid_size], use_samps=False)
     labels                = tf.cast(next_batch['images'],tf.float32)/255.
     logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,config.grid_size,config.grid_size,1))) #- levelset
     loss                  = tf.reduce_mean((labels-logits)**2)

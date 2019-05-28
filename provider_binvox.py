@@ -275,6 +275,8 @@ class ShapeNet(object):
         images      = []
         alpha       = []
         vertices    = []
+        camera_mat  = []
+        camera_pose = []          
         last_slash  = self.path_.rfind('/')
         j=0
         if self.grid_size!=256:
@@ -312,14 +314,20 @@ class ShapeNet(object):
         for im in range(self.batch_size):
             with open(image_files[0][perm[im]], 'rb') as f:
                 image = (misc.imread(f).astype(np.float32)/255.)*2-1.
-                image = ((skimage.transform.resize(image, (137,137))+1.)/2.*255.).astype(np.float32)
+#                image = ((skimage.transform.resize(image, (137,137))+1.)/2.*255.).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]
 #                if self.shuffle_rgb and self.rand!=False:
 #                     rgb = rgb[:,:,np.random.permutation(3)]
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
-
+#            if self.grid_size!=256:
+#               camera_pose.append(self.cam_params[indexes])
+#                cam_mat,cam_pose = self.camera_info(params)
+#                camera_mat.append(cam_mat)
+#                camera_pose.append(cam_pose)                
+                
+        camera   = self.cam_params[indexes]
         voxels   = np.tile(np.transpose(np.stack(voxels,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
         sdf      = np.tile(np.transpose(np.stack(sdf,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
         images   = np.stack(images,axis=0)
@@ -328,7 +336,7 @@ class ShapeNet(object):
         ids      = np.tile(np.stack(train_id,axis=0)  ,(self.batch_size,1))         
         vertices = np.tile(np.stack(vertices,axis=0) ,(self.batch_size,1,1,1))         
         return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
-
+#        return {'classes':classes,'voxels':voxels,'ids':ids,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'camera':camera}
 
 
 

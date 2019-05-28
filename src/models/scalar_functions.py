@@ -61,6 +61,40 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     return c1
 
 
+def cell_conv_t(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
+    with tf.variable_scope(scope):
+
+        ww          = weights['w']
+        bb          = weights['b']
+        ww_shape    = ww.get_shape().as_list()       
+        input_shape = in_node.get_shape().as_list()
+        batch_size  = in_node.get_shape().as_list()[0]
+        if len(input_shape)==3:
+            ww     = tf.transpose(tf.squeeze(ww,(1,2)),(0,2,1))
+            bb     = tf.squeeze(bb,1)
+            c1     = tf.matmul(in_node,ww) + bb 
+            result = tf.reshape(c1,(batch_size,2,2,-1))        
+        else:
+            result = []
+            for inst in range(batch_size):
+                if ww_shape[1]==3:
+                    c1 = tf.nn.conv2d_transpose(in_node[inst:inst+1,:,:,:],
+                                            ww[inst,:,:,:,:],
+                                            [1,input_shape[1]*2,input_shape[2]*2,ww_shape[-2]],
+                                            strides = [1,2,2,1]) 
+                elif ww_shape[1]==1:
+                    c1 = tf.nn.conv2d_transpose(in_node[inst:inst+1,:,:,:],
+                                            ww[inst,:,:,:,:],
+                                            [1,input_shape[1],input_shape[2],ww_shape[-2]],
+                                            strides = [1,1,1,1])                     
+                result.append(c1)
+            result = tf.concat(result,axis=0) + bb
+        if bn==True:
+            result = BatchNorm(result,mode,scope)
+        if act!=None:
+            result = act(result)
+    return result
+
 
 
 
@@ -104,6 +138,29 @@ def deep_shape(xyz, mode_node, theta, config):
     return sdf
 
 
+def deep_sensor(image, mode_node, theta, config):
+    dnn_params = config.model_params['dnn_params']    
+    if dnn_params['activations']=='relu':
+        act_=tf.nn.relu
+    elif dnn_params['activations']=='elu':
+        act_=tf.nn.elu
+    elif dnn_params['activations']=='tanh':
+        act_=tf.tanh        
+    elif dnn_params['activations']=='lrelu':
+        act_=lrelu 
+        
+    for ii in range(len(theta)):
+        if ii<len(theta)-1:
+            act=act_
+            bn = False
+        else:
+            act=None
+            bn = False
+        in_size = image.get_shape().as_list()[-1]
+        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
+        image = cell_conv_t(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=dnn_params['normalize'],bn=bn) 
+    sdf = image
+    return sdf
 
 
 
@@ -173,24 +230,43 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
 
 
 
-def sample_points_list_2D(model_fn,args,shape = 28,samples=None,use_samps=False):
+def sample_points_list_2D(model_fn,args,shape = [32,28],samples=None,use_samps=False):
     config = args[-1]
     if use_samps==False:
-        x = np.linspace(0.,1., shape)
+        x = np.linspace(0.,1., shape[1])
         u,v = np.meshgrid(x,x)
         samples = tf.concat((tf.reshape(u,(1,-1,1)),tf.reshape(v,(1,-1,1))),axis=-1)
-        samples = tf.cast(tf.tile(samples,(config.batch_size,1,1)),tf.float32)
-        
+        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
     response    = model_fn(samples,args)
-#    dy_dx   = []
-#    for ii in range(shape[0]):
-#        dydx   = tf.gradients(response[ii,:,:],samples)[0]
-#        dy_dx.append(dydx)     
-#    dy_dx = tf.concat(dy_dx,axis=0) 
-#    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
-#    mask    = tf.cast(tf.greater(response,0.),tf.float32)
-#    evals = {'x':samples,'y':response,'dydx':dy_dx,'dydx_norm':dy_dx_n,'mask':mask}
     evals = {'x':samples,'y':response}
     return evals
         
+
+def const_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
+    config = args[-1]
+    if use_samps==False:
+        samples = tf.ones((shape[0],1,shape[1]),tf.float32)
+#        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
+    response    = model_fn(samples,args)
+    evals = {'x':samples,'y':response}
+    return evals
+
+
+
+def camera_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
+    config = args[-1]
+    if use_samps==False:
+        samples = tf.ones((shape[0],1,shape[1]),tf.float32)
+#        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
+    response    = model_fn(samples,args)
+    evals = {'x':samples,'y':response}
+    return evals
+
+
+
+
+
+
+
+
 

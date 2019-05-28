@@ -24,6 +24,7 @@ def dataset_builder_fn(path,batch,compress=True):
         'images': _bytes_feature(batch['images'].astype(np.uint8).tostring()),
         'classes': _bytes_feature(batch['classes'][0,0].tostring()),
         'ids': _bytes_feature(batch['ids'][0,0].tostring()),
+#        'camera': _bytes_feature(batch['camera'].tostring()),
         'vertices': _bytes_feature((batch['vertices'][0,:,:,:]*10).astype(np.int32).tostring()),
         }))
     dir_name = path+str(batch['classes'][0,0])
