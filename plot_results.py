@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/01/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/alpha2/'
 baseline = 'study_dnn32_arch33'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values_test.npy')
@@ -25,12 +25,12 @@ postfix = ''
 
 #name = 'multi_image_encode_exp'
 name = 'encode_128_v3_'
-name = 'encode_256_v4_'; postfix = '0_256'
+#name = 'encode_256_v4_'; postfix = '0_256'
 #name = 'encode_256_v4_'
 #name = 'fastrecords_256_v2_exp'; postfix = '2_256'
-#name = 'light_128_v3_'; postfix = '1_128'
-#name = 'light_256_v3_'; postfix = '1_256'
-#name = 'study_dnn32_stage_v3_'; postfix = '_stage3-256'
+name = 'light_128_v3_'; postfix = '1_128'
+#name = 'light_256_v3_'; postfix = '2_256'
+name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
 #name = 'dip_v2_exp'; postfix = '0_32'
 plot_idx =15
 
@@ -70,8 +70,6 @@ for ii in range(len(iou_train)):
 
 
 
-
-
 plt.figure()
 plt.title('test iou')
 plt.plot(iou_values_test,'--')
@@ -93,9 +91,37 @@ if True==False:
         plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings_test[ii])
 
         
-        
-        
-        
-        
+evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/monday_morning2/*.out'
+#evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/metafunctionals_mondaymorning/*.out'
+
+import glob
+slurms = glob.glob(evalpath)
+iou_256 = []
+iou_32 = []
+iou_128 = []
+
+NAMES = []
+for ii in range(len(slurms)):
+    slurm = slurms[ii]
+    with open(slurm) as myfile:
+        line = list(myfile)[-5]
+        try:
+#            iou_256.append(float(line[line.find('IOU: ')+5:line.find('IOU: ')+12]))
+#            iou_32.append(float(line[line.find('IOU32: ')+7:line.find('IOU32: ')+14]))
+            
+            iou_128.append(float(line[line.find('max_test_IOU: ')+15:line.find('max_test_IOU: ')+20]))
+        except:
+#            iou_256.append(0.)
+#            iou_32.append(0.)  
+            iou_128.append(0.0)
+        NAMES.append(slurm)     
+            
+            
+NAMES[np.argmax(iou_128)       ]     
+            
+            
+            
+            
+            
         
         

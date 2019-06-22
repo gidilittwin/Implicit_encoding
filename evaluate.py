@@ -16,14 +16,14 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'fastrecords_256_v2_exp2')
+    parser.add_argument('--experiment_name', type=str, default= 'study_128_v4_18')
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=1)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=2)
+    parser.add_argument('--stage', type=int,  default=1)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=4)
     parser.add_argument('--alpha', type=float,  default=0.003)
@@ -81,7 +81,9 @@ config.shuffle_size= 100
 config.test_every  = 10000
 config.save_every  = 10000
 config.compression = 0
-config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+#config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+config.postfix     = str(config.stage)+'_128'
+
 config.fast_eval   = 0
 config.path        = config.path+str(config.grid_size)+'_v2/'
 
@@ -128,7 +130,7 @@ with open('./classes.json', 'r') as f:
 print('#############################################################################################')
 print('###############################  '+config.experiment_name+'   ################################################')
 print('#############################################################################################')
-
+print('levelset= ',str(config.levelset))
 
     
 
@@ -292,7 +294,7 @@ def build_graph(next_batch,config,batch_size):
     X_32 = tf.reshape(tf.greater(X_32,0.5),(1,-1))
     Y_32 = tf.reshape(tf.greater(Y_32,0.5),(1,-1))
     iou_32_image             = tf.reduce_sum(tf.cast(tf.logical_and(X_32,Y_32),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_32,Y_32),tf.float32),axis=1)
-    iou_32                   = tf.reduce_mean(iou_image)
+    iou_32                   = tf.reduce_mean(iou_32_image)
     
     return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'X':X,'Y':Y,'iou_32_image':iou_32_image,'iou_32':iou_32}
 
@@ -335,7 +337,7 @@ iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
 
-loader.restore(session, directory+'/latest_train'+config.postfix+'-0')
+loader.restore(session, directory+'/latest'+config.postfix+'-0')
 #loss_plot     = np.load(directory+'/loss_values'+config.postfix+'.npy')
 #acc_plot      = np.load(directory+'/accuracy_values'+config.postfix+'.npy')  
 #iou_plot      = np.load(directory+'/iou_values'+config.postfix+'.npy')      
@@ -365,7 +367,7 @@ for epoch_test in range(num_epochs):
         try:
             feed_dict = {idx_node           :epoch_test%config.im_per_obj,
                          level_set          :config.levelset}  
-            accuracy_t_ ,iou_t_, iou_image_t, iou_32t_, iou_image_32t, batch_ = session.run([test_dict, next_element_test],feed_dict=feed_dict) 
+            accuracy_t_ ,iou_t_, iou_image_t, iou_32t_, iou_image_32t, batch_ = session.run([test_dict['accuracy'],test_dict['iou'],test_dict['iou_image'],test_dict['iou_32'],test_dict['iou_32_image'], next_element_test],feed_dict=feed_dict) 
             acc_mov_avg_test = acc_mov_test.push(accuracy_t_)
             iou_mov_avg_test = iou_mov_test.push(iou_t_)
             iou_mov_avg_test_32 = iou_mov_test_32.push(iou_32t_)
@@ -384,8 +386,8 @@ ious     = np.concatenate(ious,axis=0)
 ious32   = np.concatenate(ious32,axis=0) 
 ids      = np.concatenate(ids,axis=0)[:,0]     
 
-np.save(directory+'/classes_ls='+str(config.levelset)+'.npy',np.concatenate(classes))
-np.save(directory+'/ious_ls='+str(config.levelset)+'.npy',np.concatenate(ious))  
-np.save(directory+'/ious32_ls='+str(config.levelset)+'.npy',np.concatenate(ious32)) 
-np.save(directory+'/ids_ls='+str(config.levelset)+'.npy',np.concatenate(ids)) 
+np.save(directory+'/classes_ls='+str(config.levelset)+'.npy',classes)
+np.save(directory+'/ious_ls='+str(config.levelset)+'.npy',ious) 
+np.save(directory+'/ious32_ls='+str(config.levelset)+'.npy',ious32)
+np.save(directory+'/ids_ls='+str(config.levelset)+'.npy',ids)
 

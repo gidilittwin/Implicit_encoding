@@ -65,41 +65,41 @@ def mnist_config(example,args_):
     return features
     
 def mlp(xyz, mode_node, theta, config):
-    features = cell1D(theta,64, mode_node, SCOPE='decode', with_act=True, with_bn=False)
-    features  = tf.reshape(features,(128,1,1,64))
-    features = tf.tile(features,(1,784,1,1))
+    features = cell1D(theta,config.embedding_size, mode_node, SCOPE='decode', with_act=True, with_bn=False)
+    features  = tf.reshape(features,(-1,1,1,config.embedding_size))
+    features = tf.tile(features,(1,1000,1,1))
     xyz  = tf.expand_dims(xyz,axis=2)
     inputs = tf.concat((xyz,features),axis=-1)
     with tf.variable_scope("Input"):
-        conv0_w, conv0_b = CONV2D([1,1,66,256])
+        conv0_w, conv0_b = CONV2D([1,1,config.embedding_size+3,config.block_width])
         c0      = tf.nn.conv2d(inputs,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
         current = tf.tanh(current)
     with tf.variable_scope("1"):
-        conv0_w, conv0_b = CONV2D([1,1,256,256])
+        conv0_w, conv0_b = CONV2D([1,1,config.block_width,config.block_width])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
         current = tf.tanh(current)
     with tf.variable_scope("2"):
-        conv0_w, conv0_b = CONV2D([1,1,256,256])
+        conv0_w, conv0_b = CONV2D([1,1,config.block_width,config.block_width])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)  
         current = tf.tanh(current)
     with tf.variable_scope("3"):
-        conv0_w, conv0_b = CONV2D([1,1,256,256])
+        conv0_w, conv0_b = CONV2D([1,1,config.block_width,config.block_width])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
         current = tf.tanh(current)
     with tf.variable_scope("4"):
-        conv0_w, conv0_b = CONV2D([1,1,256,256])
+        conv0_w, conv0_b = CONV2D([1,1,config.block_width,config.block_width])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         current = tf.nn.bias_add(c0, conv0_b)
         current = tf.tanh(current)
     with tf.variable_scope("out"):
-        conv0_w, conv0_b = CONV2D([1,1,256,1])
+        conv0_w, conv0_b = CONV2D([1,1,config.block_width,1])
         c0      = tf.nn.conv2d(current,conv0_w,strides=[1, 1, 1, 1],padding='SAME')
         sdf = tf.nn.bias_add(c0, conv0_b)
-    sdf = tf.squeeze(sdf,(2,3))
+    sdf = tf.squeeze(sdf,2)
     return sdf
 
 

@@ -50,8 +50,11 @@ def lrelu(x, leak=0.2, name="LRelU"):
 def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
         if normalize==True:
-            weights['w'] = weights['w']/tf.norm(weights['w'],axis=2,keep_dims=True)
-            c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']            
+#            shape = weights['w'].get_shape().as_list()
+#            weights['w'] = tf.eye(batch_shape=[shape[0]],num_rows=shape[1],num_columns=shape[2],dtype=tf.float32) + weights['w']/tf.norm(weights['w'],axis=2,keep_dims=True)
+#            c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']  
+            c1 = tf.matmul(in_node,weights['w']) + weights['b'] + 0.*weights['g'] 
+            
         else:
             c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']
         if bn==True:
@@ -214,15 +217,17 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
         samples = samples*tf.pow(U,1/3.)
         
     response    = model_fn(samples,args)
-#    dy_dx   = []
+    
+    dy_dx   = []
+#    dy_dx = tf.gradients(response,samples)[0]
 #    for ii in range(shape[0]):
-#        dydx   = tf.gradients(response[ii,:,:],samples)[0]
+#        dydx   = tf.gradients(response[0,0,:],samples[0,0,:])[0]
 #        dy_dx.append(dydx)     
 #    dy_dx = tf.concat(dy_dx,axis=0) 
 #    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
-#    mask    = tf.cast(tf.greater(response,0.),tf.float32)
-#    evals = {'x':samples,'y':response,'dydx':dy_dx,'dydx_norm':dy_dx_n,'mask':mask}
-    evals = {'x':samples,'y':response}
+    
+    
+    evals = {'x':samples,'y':response}#,'dydx':dy_dx,'dydx_norm':dy_dx_n}
     return evals
         
 

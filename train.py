@@ -3,6 +3,9 @@ import json
 import tensorflow as tf
 import numpy as np
 from src.utilities import mesh_handler as MESHPLOT
+#from src.utilities.depthestimate import tf_nndistance as CHAMFER
+#from src.utilities.external import tf_nndistance as CHAMFER
+#from src.utilities.nn_distance import tf_nndistance_cpu as CHAMFER
 from src.models import scalar_functions as SF
 from src.models import feature_extractor as CNN
 import os
@@ -16,20 +19,22 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'fastrecords_256_v2_exp2')
+    parser.add_argument('--experiment_name', type=str, default= 'study_128_v4_18')
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=4)
+    parser.add_argument('--batch_size', type=int,  default=32)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=3)
+    parser.add_argument('--stage', type=int,  default=2)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
-    
+    parser.add_argument('--norm_loss_alpha', type=float,  default=0.0000)
+
+    parser.add_argument('--surfaces', type=int,  default=0)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--grid_size', type=int,  default=128)
     parser.add_argument('--grid_size_v', type=int,  default=256)
     parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
@@ -46,7 +51,7 @@ def parse_args():
     parser.add_argument('--test_every', type=int,  default=10000)    
     parser.add_argument('--save_every', type=int,  default=1000) 
     parser.add_argument("--postfix_load"   , type=str, default="")
-    parser.add_argument('--fast_eval', type=int,  default=0)    
+    parser.add_argument('--fast_eval', type=int,  default=1)    
 
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--batch_norm', type=int,  default=0)
@@ -54,14 +59,13 @@ def parse_args():
     parser.add_argument('--augment', type=int,  default=1)
     parser.add_argument('--rgba', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
-    parser.add_argument('--radius', type=float,  default=0.1)
     parser.add_argument('--num_samples', type=int,  default=10000)
-    parser.add_argument('--global_points', type=int,  default=10000) 
-    parser.add_argument('--global_points_test', type=int,  default=10000)    
-    parser.add_argument('--noise_scale', type=float,  default=0.15)
+    parser.add_argument('--global_points', type=int,  default=1000) 
+    parser.add_argument('--global_points_test', type=int,  default=1000)    
+    parser.add_argument('--noise_scale', type=float,  default=[0.1])
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
-#    parser.add_argument('--categories'      , type=int,  default=[0], help='number of point samples')
+#    parser.add_argument('--categories'      , type=int,  default=[2], help='number of point samples')
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--learning_rate', type=float,  default=0.00001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
@@ -197,7 +201,7 @@ train_iterator = TFH.iterator(config.path+'train/',
                               img_size=config.img_size[0],
                               im_per_obj=config.im_per_obj,
                               grid_size=config.grid_size,
-                              num_samples=config.num_samples,
+                              num_samples=10000,
                               shuffle_size=config.shuffle_size,
                               categories = config.categories,
                               compression = config.compression)
@@ -210,7 +214,7 @@ test_iterator  = TFH.iterator(config.path+'test/',
                               img_size=config.img_size[0],
                               im_per_obj=config.im_per_obj,
                               grid_size=config.grid_size,
-                              num_samples=config.num_samples,
+                              num_samples=10000,
                               shuffle_size=config.shuffle_size,
                               categories = config.categories,
                               compression = config.compression)
@@ -221,16 +225,19 @@ level_set         = tf.placeholder(tf.float32,shape=(),   name='levelset')
 next_element      = train_iterator.get_next()
 next_element_test = test_iterator.get_next()
 
-if config.multi_image==1:
-    next_batch        = TFH.process_batch_center_train(next_element,config)
+if not config.surfaces:
+    if config.multi_image==1:
+        next_batch        = TFH.process_batch_center_train(next_element,config)
+    else:
+        next_batch        = TFH.process_batch_train(next_element,idx_node,config)
+    if config.grid_size==256 or config.grid_size==128 or config.grid_size==32:
+        next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
+    else:
+        next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
+        
 else:
-    next_batch        = TFH.process_batch_train(next_element,idx_node,config)
-
-if config.grid_size==256 or config.grid_size==128 or config.grid_size==32:
-    next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
-else:
-    next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
-
+    next_batch        = TFH.process_batch_surface(next_element,idx_node,config,config.batch_size)
+    next_batch_test   = TFH.process_batch_surface_test(next_element_test,idx_node,config,config.test_size)
 
 grid_size_lr = config.grid_size
 x            = np.linspace(-1, 1, grid_size_lr)
@@ -239,61 +246,51 @@ z            = np.linspace(-1, 1, grid_size_lr)
 xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
+if True==False:
 
-
-#import matplotlib.pyplot as plt   
-#session = tf.Session()
-#session.run(tf.initialize_all_variables())
-##session.run(mode_node.assign(False)) 
-#session.run(train_iterator.initializer)
-#batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
-##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-#
-#idx =9
-#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
-#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#vertices             = batch_['samples_xyz'][:,:,:]
-#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#
-#vertices             = batch_['samples_xyz'][idx,:,:]
-#vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
-#vertices              = vertices*vertices_on
-#cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#
-#
-#pic = batch_['images'][17,:,:,0:3]
-#fig = plt.figure()
-#plt.imshow(pic)
-#
-#
-#
-#aa=batch_['samples_sdf'][idx,1000:,:]
-#samps=batch_['samples_xyz'][idx,1000:,:]
-#samples_ijk_np       = np.round(((samps+1)/2*(config.grid_size-1))).astype(np.int64)
-#arr_                = np.split(samples_ijk_np,3,axis=-1)
-#
-#voxels = batch['voxels'][idx,:,:,:]
-#import scipy.ndimage as ndi
-#inner_volume       = voxels
-#outer_volume       = np.logical_not(voxels)
-#sdf_o = ndi.distance_transform_edt(outer_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
-#sdf_i = ndi.distance_transform_edt(inner_volume, return_indices=False) #- ndi.distance_transform_edt(inner_volume)
-#sdf_                 = (sdf_o - sdf_i)/(config.grid_size-1)*2  
-#voxels_gathered      = sdf_[arr_[1],arr_[0],arr_[2]]
-#samples_sdf_np       = -1.*voxels_gathered + 0.5
-
-
+    import matplotlib.pyplot as plt   
+    session = tf.Session()
+    session.run(tf.initialize_all_variables())
+    #session.run(mode_node.assign(False)) 
+    session.run(train_iterator.initializer)
+    batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
+    idx=0
+    
+    vertices             = batch_['samples_xyz'][:,:,:]
+    cubed = {'vertices':vertices[0,:,:],'faces':[],'vertices_up':vertices[0,:,:]}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
+    
+    psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+    verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+    cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+    MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+    
+    vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
+    cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
+    vertices             = batch_['samples_xyz'][:,:,:]
+    cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
+    
+    vertices             = batch_['samples_xyz'][idx,:,:]
+    vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+    vertices              = vertices*vertices_on
+    cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    #
+    #
+    #
+    pic = batch_['images'][0,:,:,3]
+    fig = plt.figure()
+    plt.imshow(pic)
+    
+    aa=np.max(psudo_sdf,axis=-3)
+    
+    
+    
 
 
 
@@ -309,6 +306,11 @@ def g_wrapper(coordinates,args_):
         evaluated_function = SF.deep_shape(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function   
 
+def g_wrapper2(coordinates,args_):
+    with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
+        evaluated_function = CNN.mlp(coordinates,args_[0],args_[1],args_[2])
+        return evaluated_function   
+    
 def g_conv_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
         evaluated_function = SF.deep_sensor(coordinates,args_[0],args_[1],args_[2])
@@ -319,6 +321,11 @@ def f_wrapper(image,args_):
         current = CNN.resnet_config(image,args_)
         return CNN.regressor(current,args_)
 
+def f3_wrapper(image,args_):
+    with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
+        current = CNN.resnet_config(image,args_)
+        return current
+    
 def r_wrapper(encoding,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
         current = CNN.render(encoding,args_)
@@ -348,6 +355,7 @@ def injection_wrapper(current,args_):
 
 
 #%% Training graph 
+        
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
     samples_sdf           = next_batch['samples_sdf']  
@@ -359,7 +367,6 @@ def build_graph(next_batch,config,batch_size):
     if config.pretrained:
         g_weights             = f2_wrapper(images,[mode_node,config])
     else:
-#        g_weights             = m_wrapper(next_batch['ids'],[mode_node,config])
         g_weights             = f_wrapper(images,[mode_node,config])
 
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
@@ -367,16 +374,16 @@ def build_graph(next_batch,config,batch_size):
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
     logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
     logits_ce             = tf.concat((logits,-logits),axis=-1)
+    
+#    logits_ce             = logits_ce*tf.Variable([1.0], name='scale_node')
+    
     predictions           = tf.nn.softmax(logits_iou)
     correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
     err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-#    norm                  = evals_function['dydx_norm']
-#    sample_w              = tf.squeeze(tf.exp(-(evals_target['y']-config.levelset)**2/config.radius),axis=-1)
-#    loss_class            = tf.reduce_mean(sample_w*tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
-#    loss_class            = loss_class/tf.reduce_mean(sample_w,axis=-1)
     loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
-    loss                  = tf.reduce_mean(loss_class)
+    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
+    loss                  = tf.reduce_mean(loss_class) + config.norm_loss_alpha*loss_sdf
 #    if config.multi_image:
 #       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
 #       loss = loss + config.alpha*center_loss
@@ -384,10 +391,32 @@ def build_graph(next_batch,config,batch_size):
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
-    return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image}
+    return {'loss':loss,'loss_class':tf.reduce_mean(loss_class),'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'loss_sdf':loss_sdf,'evals_function':evals_function}
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
+
+    
+    
+    
+#def build_graph(next_batch,config,batch_size):
+#    images                = next_batch['images'] 
+#    vertices              = next_batch['vertices']  
+#    samples_xyz           = next_batch['samples_xyz']
+#    evals_target          = {}
+#    evals_target['x']     = samples_xyz
+#    evals_target['y']     = vertices
+#    g_weights             = f_wrapper(images,[mode_node,config])
+#    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+#    evals_function['y']   = samples_xyz + evals_function['y'] 
+#    dist                  = CHAMFER.nn_distance_cpu(evals_function['y'],evals_target['y'])
+#    loss                  = 0.5*(tf.reduce_mean(dist[0]**2) + tf.reduce_mean(dist[2]**2))
+#    err                   = 0.5*(tf.reduce_mean(dist[0]) + tf.reduce_mean(dist[2]))
+#    acc                   = err
+#    return {'loss':loss,'err':err,'accuracy':acc,'images':images,'iou':acc,'iou_image':acc, 'vertices':evals_target['y'] ,'shape':evals_function['y']}
+#
+#train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
+#test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
 
 
 #def build_image_graph(next_batch,config,batch_size):
@@ -516,19 +545,10 @@ step           = 0
 acc_mov        = MOV_AVG(300) # moving mean
 loss_mov       = MOV_AVG(300) # moving mean
 iou_mov        = MOV_AVG(300) # moving mean
+sdf_mov        = MOV_AVG(300) # moving mean
 
 
-
-#acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
-#print('iou_test: '+str(iou_test))                
-#
-#np.save(directory+'/ids_test'+config.postfix_save+'.npy',ids_test)  
-#np.save(directory+'/ious_test'+config.postfix_save+'.npy',ious_test) 
-#np.save(directory+'/classes_test'+config.postfix_save+'.npy',classes_test)  
-#np.save(directory+'/iou_test'+config.postfix_save+'.npy',iou_test) 
-                
-                
-                
+               
 session.run(mode_node.assign(True)) 
 for epoch in range(1000000):
     session.run(train_iterator.initializer)
@@ -539,11 +559,12 @@ for epoch in range(1000000):
                          level_set          :config.levelset}     
             _, train_dict_ = session.run([train_op_cnn, train_dict],feed_dict=feed_dict) 
             acc_mov_avg  = acc_mov.push(train_dict_['accuracy'])
-            loss_mov_avg = loss_mov.push(train_dict_['loss'])
+            loss_mov_avg = loss_mov.push(train_dict_['loss_class'])
             iou_mov_avg  = iou_mov.push(train_dict_['iou'])   
-            
-            if step % 100 == 0:
-                print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
+            sdf_mov_avg  = sdf_mov.push(train_dict_['loss_sdf'])   
+
+            if step % 10 == 0:
+                print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,avg_loss_sdf: '+str(sdf_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.plot_every == 0:
                 acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
                 loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
@@ -568,85 +589,61 @@ for epoch in range(1000000):
             break
  
     
+  
+#%% RENDERING
+#if True==False:
+ 
+
+
+x    = tf.placeholder(tf.float32,shape=(4,10,3), name='xx')  
+y    = tf.reduce_sum(x**2,axis=-1,keep_dims=True)
+
+
+dy_dx = tf.gradients(y,x)
+
+sess = tf.Session()
+
+x_val = np.random.randint(0, 10, (4, 10,3))*1.0
+y_val, dy_dx_val = sess.run([y, dy_dx], {x:x_val})
+
     
 #%% TESTING
 if True==False:
-    images                = next_batch['images'] 
-    samples_sdf           = next_batch['samples_sdf']  
-    samples_xyz           = next_batch['samples_xyz']
-    evals_target          = {}
-    evals_target['x']     = samples_xyz
-    evals_target['y']     = samples_sdf
-    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
-    g_weights             = f_wrapper(images,[mode_node,config])
-    evals_function        = SF.camera_vector(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [config.batch_size,10], use_samps=False)
-    eval_rendering        = r_wrapper(evals_function['y'],[mode_node,config])
-    labels                = tf.image.resize_images(images[:,:,:,0:3],eval_rendering.shape[1:3])
-    logits                = eval_rendering
-
-
-
-
-
-
-#    images                = next_batch['images'] 
-#    samples_sdf           = next_batch['samples_sdf']  
-#    samples_xyz           = next_batch['samples_xyz']
-#    evals_target          = {}
-#    evals_target['x']     = samples_xyz
-#    evals_target['y']     = samples_sdf
-#    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
-#    g_weights             = f_conv_wrapper(images,[mode_node,config])
-#    evals_function        = SF.const_vector(model_fn = g_conv_wrapper,args=[mode_node,g_weights,config],shape = [config.batch_size,4], use_samps=False)
-##    labels                = tf.image.resize_images(labels,evals_function['y'].shape[1:3])
-##    logits                = tf.reshape(evals_function['y'],(config.batch_size,4096,4096,3)) #- levelset
-#    logits = evals_function['y']
-
-    session.run(mode_node.assign(False)) 
+ 
+    
+    
+    
+    session.run(mode_node.assign(True)) 
     session.run(train_iterator.initializer)
     feed_dict = {lr_node            :config.learning_rate,
-                 idx_node           :0,
+                 idx_node           :0%config.im_per_obj,
                  level_set          :config.levelset}     
-    train_dict_,logits_,logits_hd = session.run( [train_dict,tf.sigmoid(train_dict['logits']),tf.sigmoid(logits)],feed_dict=feed_dict) 
-    
-    import matplotlib.pyplot as plt   
-    pics1 = logits_
-#    pics1 =(pics*255).astype(np.uint8)
-    fig = plt.figure()
-    plt.imshow(pics1[0,:,:,0:3])
-
-    pics = logits_hd
-    pics =(pics*255).astype(np.uint8)
-    fig = plt.figure()
-    plt.imshow(pics[0,:,:,0:3])
-    
-
-    pics = train_dict_['images'][:,:,:,:]
-#    pics =(pics*255).astype(np.uint8)
-    fig = plt.figure()
-    plt.imshow(pics[0,:,:,0:3])
     
     
-    #config.levelset=0.2
-    #acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
-    #np.save(directory+'/results_ious_0.2.npy',ious_test)  
-    #np.save(directory+'/results_ids_0.2.npy',ids_test)  
-    #np.save(directory+'/results_classes_0.2.npy',classes_test)  
-    #import matplotlib.pyplot as plt   
-    #pics = train_dict_['logits']
-    ##pics=(pics).astype(np.uint8)
+    batch_, next_batch_, train_dict_ = session.run([next_element, next_batch, train_dict],feed_dict=feed_dict) 
+        
+    samples          = next_batch_['samples_xyz'][0,:,:]
+    field            = next_batch_['samples_sdf'][0,:,0]
+    vertices         = samples[field<0,:]
     
+    cubed = {'vertices':vertices,'faces':[],'vertices_up':vertices}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
     
+    psudo_sdf = batch_['voxels'][0,:,:,:]*1.0
+    verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+    cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+    MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#    
+#    import matplotlib.pyplot as plt   
+#    pic = next_batch_['images'][0,:,:,0:3]
+#    fig = plt.figure()
+#    plt.imshow(pic)
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    vertices_         = train_dict_['vertices'][0,:,:]
+    shape_            = train_dict_['shape'][0,:,:]
+    sphere_           = next_batch_['samples_xyz'][0,:,:]
+    cubed             = {'vertices':shape_,'faces':[],'vertices_up':shape_}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
     
     
     
@@ -672,7 +669,7 @@ if True==False:
     dispaly_iterator  = TFH.iterator(config.path+'train/',
                                   1,
                                   epochs=10000,
-                                  shuffle=False,
+                                  shuffle=True,
                                   img_size=config.img_size[0],
                                   im_per_obj=config.im_per_obj,
                                   grid_size=config.grid_size,
@@ -700,11 +697,11 @@ if True==False:
     
     session = tf.Session()
     session.run(tf.initialize_all_variables())
-    loader.restore(session, directory+'/latest_train'+config.postfix_load+'-0')
+    loader.restore(session, directory+'/latest'+config.postfix_load+'-0')
     session.run(mode_node.assign(False)) 
     session.run(dispaly_iterator.initializer)
     feed_dict = {idx_node           :0,
-                 level_set          :0.0}   
+                 level_set          :0}   
     
     
       

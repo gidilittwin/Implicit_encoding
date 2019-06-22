@@ -95,12 +95,20 @@ def iterator(path,batch_size,epochs,shuffle=True,img_size=137,im_per_obj=24,grid
 def process_batch_train(next_element,idx_node,config):
     samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(config.batch_size,1,1))
     vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
-    gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale,shape=(config.batch_size,config.num_samples,3))
-    vertices             = tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0)
-    samples_xyz_np       = tf.concat((samples_xyz_np,vertices),axis=1)
+    num_scales = len(config.noise_scale)
+    
+    if config.num_samples>0:
+        vertices_ = []
+        for scale in range(num_scales):
+            gaussian_noise       = tf.random_normal(mean=0.0,stddev=config.noise_scale[scale],shape=(config.batch_size,config.num_samples,3))
+            vertices_.append(tf.clip_by_value((vertices+gaussian_noise),clip_value_min=-1.0,clip_value_max=1.0))
+        vertices_ = tf.concat(vertices_,axis=1)  
+        samples_xyz_np       = tf.concat((samples_xyz_np,vertices_),axis=1)
+    
+    
     samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
-    batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples+config.global_points,1)))
-    samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples+config.global_points),4))
+    batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples*num_scales+config.global_points,1)))
+    samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples*num_scales+config.global_points),4))
     
     b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
     samples_ijk_np_flip  = tf.concat((b,j,i,k),axis=-1)
@@ -207,6 +215,38 @@ def process_batch_test(next_element,idx_node,config):
 
 
 
+def process_batch_surface(next_element,idx_node,config,batch_size):
+    samples_xyz_np = tf.random_normal(shape=(batch_size,config.global_points,3),
+                                        mean=0.0,
+                                        stddev=1.0,
+                                        dtype=tf.float32)
+    
+    samples_xyz_np_norm = tf.sqrt(tf.reduce_sum(samples_xyz_np**2,axis=-1,keep_dims=True))
+    samples_xyz_np      = 0.75*samples_xyz_np/ samples_xyz_np_norm
+    images              = next_element['images']
+    images              = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
+    vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
+    if config.augment:
+        rgb_idx = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
+        images  = tf.gather(images,rgb_idx,axis=-1)
+        images  = tf.concat((images[0:batch_size/2,:,:,:],tf.reverse(images[(batch_size/2):,:,:,:],axis=[2])),axis=0)
+        filp_xyz = tf.concat((tf.tile(tf.constant([[[1.,1.,1.]]]),(batch_size/2,1,1)),tf.tile(tf.constant([[[-1.,1.,1.]]]),(batch_size/2,1,1))),axis=0)
+        samples_xyz_np = samples_xyz_np*filp_xyz
+    if config.rgba==0:
+        images           = images[:,:,:,0:3]
+    return {'samples_xyz':samples_xyz_np,'vertices':vertices,'images':images,'ids':next_element['ids']}
     
 
-
+def process_batch_surface_test(next_element,idx_node,config,batch_size):
+    samples_xyz_np = tf.random_normal(shape=(batch_size,config.global_points,3),
+                                        mean=0.0,
+                                        stddev=1.0,
+                                        dtype=tf.float32)
+    samples_xyz_np_norm = tf.sqrt(tf.reduce_sum(samples_xyz_np**2,axis=-1,keep_dims=True))
+    samples_xyz_np      = 0.75*samples_xyz_np/ samples_xyz_np_norm
+    images              = tf.cast(next_element['images'],dtype=tf.float32)[0,:,:,:,:]/255.
+    vertices            = tf.tile(next_element['vertices']/(config.grid_size_v-1)*2-1,(batch_size,1,1))
+    if config.rgba==0:
+        images           = images[:,:,:,0:3]
+    return {'samples_xyz':samples_xyz_np,'vertices':vertices,'images':images,'ids':tf.tile(next_element['ids'],(config.test_size,1))}
+   
