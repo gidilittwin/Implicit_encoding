@@ -270,7 +270,15 @@ def camera_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
 
 
 
-
+def render_sil(evals_function,config):
+    
+    occupancy = tf.sigmoid(tf.reshape(evals_function['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1)))
+    emptyness = 1.-occupancy
+    visability_z = tf.math.cumprod(emptyness,
+                    axis=3,
+                    exclusive=True,
+                    reverse=False,
+                    name='z_vis')*occupancy
 
 
 

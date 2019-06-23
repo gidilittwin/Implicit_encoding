@@ -20,7 +20,7 @@ from skimage import measure
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'test')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_sdf.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=2)
@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--alpha', type=float,  default=0.003)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--grid_size_v', type=int,  default=256)
-    parser.add_argument('--compression', type=int,  default=1)
+    parser.add_argument('--compression', type=int,  default=0)
     parser.add_argument('--pretrained', type=int,  default=0)
     
     parser.add_argument('--embedding_size', type=int,  default=256)
@@ -60,8 +60,8 @@ def parse_args():
     parser.add_argument('--rgba', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--num_samples', type=int,  default=0)
-    parser.add_argument('--global_points', type=int,  default=1000) 
-    parser.add_argument('--global_points_test', type=int,  default=1000)    
+    parser.add_argument('--global_points', type=int,  default=32**3) 
+    parser.add_argument('--global_points_test', type=int,  default=32**3)    
     parser.add_argument('--noise_scale', type=float,  default=[0.1])
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
@@ -76,12 +76,17 @@ def parse_args():
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--pretrained_path",  type=str, default="/media/gidi/SSD/Thesis/Data/pretrained/")
+    elif socket.gethostname() == 'Gidis-MBP-3':
+        parser.add_argument("--path"            , type=str, default="/Users/gidilittwin/meta_data/ShapeNet_TF")
+        parser.add_argument("--checkpoint_path" , type=str, default="/Users/gidilittwin/meta_data/checkpoints/")
+        parser.add_argument("--saved_model_path", type=str, default="/Users/gidilittwin/meta_data/checkpoints/")   
+        parser.add_argument("--pretrained_path",  type=str, default="/Users/gidilittwin/meta_data/pretrained/")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints2/")
         parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints2/")   
         parser.add_argument("--pretrained_path",  type=str, default="/private/home/wolf/gidishape/pretrained/")
-
+    
     return parser.parse_args()
 config = parse_args()
 
@@ -136,6 +141,7 @@ elif config.grid_size==256:
     config.fast_eval   = 0
     config.path        = config.path+str(config.grid_size)+'_v2/'
 elif config.grid_size==36:
+    config.grid_size_v = 36
     config.path        = config.path+'/'
     config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
     config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)    
@@ -226,11 +232,16 @@ next_element      = train_iterator.get_next()
 next_element_test = test_iterator.get_next()
 
 if not config.surfaces:
-    if config.multi_image==1:
-        next_batch        = TFH.process_batch_center_train(next_element,config)
-    else:
-        next_batch        = TFH.process_batch_train(next_element,idx_node,config)
-    if config.grid_size==256 or config.grid_size==128 or config.grid_size==32 or config.grid_size==36:
+    
+    
+    # if config.multi_image==1:
+    #     next_batch        = TFH.process_batch_center_train(next_element,config)
+    # else:
+    #     next_batch        = TFH.process_batch_train(next_element,idx_node,config)
+        
+    next_batch = TFH.process_batch_render(next_element,idx_node,config)
+        
+    if config.grid_size==256 or config.grid_size==128 or config.grid_size==32:
         next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
     else:
         next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
@@ -280,20 +291,27 @@ if True==False:
     vertices              = vertices*vertices_on
     cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
     MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-    #
-    #
-    #
-    pic = batch_['images'][0,:,:,3]
+    
+    
+    
+    pic = batch_['images'][idx,:,:,3]
     fig = plt.figure()
     plt.imshow(pic)
     
-    aa=np.max(psudo_sdf,axis=-3)
     
     
     
+    aa=np.max(psudo_sdf*(zz_lr+1)/2.,axis=-1)
+    fig = plt.figure()
+    plt.imshow(aa)    
+    
+    aa=np.max(psudo_sdf*(xx_lr+1)/2.,axis=-2)
+    fig = plt.figure()
+    plt.imshow(aa)    
 
-
-
+    aa=np.max(psudo_sdf*(yy_lr+1)/2.,axis=-3)
+    fig = plt.figure()
+    plt.imshow(aa)   
 
 
 
@@ -367,16 +385,18 @@ def build_graph(next_batch,config,batch_size):
     if config.pretrained:
         g_weights             = f2_wrapper(images,[mode_node,config])
     else:
-        g_weights             = f3_wrapper(images,[mode_node,config])
+        g_weights             = f_wrapper(images,[mode_node,config])
 
-    evals_function        = SF.sample_points_list(model_fn = g_wrapper2,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    
+    evals_function        = SF.render_sil(evals_function,config)
+
+    
+    
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
     logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
     logits_ce             = tf.concat((logits,-logits),axis=-1)
-    
-#    logits_ce             = logits_ce*tf.Variable([1.0], name='scale_node')
-    
     predictions           = tf.nn.softmax(logits_iou)
     correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
@@ -384,9 +404,6 @@ def build_graph(next_batch,config,batch_size):
     loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
 #    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
     loss                  = tf.reduce_mean(loss_class) #+ config.norm_loss_alpha*loss_sdf
-#    if config.multi_image:
-#       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
-#       loss = loss + config.alpha*center_loss
     X                     = tf.cast(labels,tf.bool)
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)

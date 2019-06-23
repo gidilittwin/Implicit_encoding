@@ -96,7 +96,6 @@ def process_batch_train(next_element,idx_node,config):
     samples_xyz_np       = tf.tile(tf.random_uniform(minval=-1.,maxval=1.,shape=(1,config.global_points,3)),(config.batch_size,1,1))
     vertices             = next_element['vertices']/(config.grid_size_v-1)*2-1
     num_scales = len(config.noise_scale)
-    
     if config.num_samples>0:
         vertices_ = []
         for scale in range(num_scales):
@@ -105,10 +104,39 @@ def process_batch_train(next_element,idx_node,config):
         vertices_ = tf.concat(vertices_,axis=1)  
         samples_xyz_np       = tf.concat((samples_xyz_np,vertices_),axis=1)
     
-    
     samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
     batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples*num_scales+config.global_points,1)))
     samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples*num_scales+config.global_points),4))
+    
+    b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
+    samples_ijk_np_flip  = tf.concat((b,j,i,k),axis=-1)
+    voxels_gathered      = tf.gather_nd(next_element['voxels'],samples_ijk_np_flip)
+    samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.batch_size,-1,1))
+    images               = next_element['images']
+    images               = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
+    if config.augment:
+#        shuf_idx = tf.transpose(tf.random_shuffle(tf.tile(tf.constant([[0],[1],[2]]),(1,config.batch_size))))
+#        rgb_idx  = tf.concat((shuf_idx,tf.tile(tf.constant([[3]]),(config.batch_size,1))),axis=1)
+        rgb_idx = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
+        images  = tf.gather(images,rgb_idx,axis=-1)
+        images = tf.concat((images[0:config.batch_size/2,:,:,:],tf.reverse(images[(config.batch_size/2):,:,:,:],axis=[2])),axis=0)
+        filp_xyz = tf.concat((tf.tile(tf.constant([[[1.,1.,1.]]]),(config.batch_size/2,1,1)),tf.tile(tf.constant([[[-1.,1.,1.]]]),(config.batch_size/2,1,1))),axis=0)
+        samples_xyz_np = samples_xyz_np*filp_xyz
+    if config.rgba==0:
+        images           = images[:,:,:,0:3]
+    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids']}
+
+def process_batch_render(next_element,idx_node,config):
+    grid_size_lr   = config.grid_size*config.eval_grid_scale
+    x_lr           = np.linspace(-1, 1, grid_size_lr)
+    y_lr           = np.linspace(-1, 1, grid_size_lr)
+    z_lr           = np.linspace(-1, 1, grid_size_lr)    
+    xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr) 
+    samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1))
+
+    samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
+    batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples+config.global_points,1)))
+    samples_ijk_np       = tf.reshape(tf.concat((batch_idx,samples_ijk_np),axis=-1),(config.batch_size*(config.num_samples+config.global_points),4))
     
     b,i,j,k              = tf.split(samples_ijk_np,[1,1,1,1],axis=-1)
     samples_ijk_np_flip  = tf.concat((b,j,i,k),axis=-1)
