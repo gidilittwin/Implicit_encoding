@@ -16,7 +16,7 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'light_128_v3_3')
+    parser.add_argument('--experiment_name', type=str, default= 'study_dnn32_stage_v3_')
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=4)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--grid_size', type=int,  default=32)
     parser.add_argument('--grid_size_v', type=int,  default=256)
     parser.add_argument('--compression', type=int,  default=0)
     parser.add_argument('--pretrained', type=int,  default=0)
@@ -83,6 +83,7 @@ config.save_every  = 10000
 config.compression = 0
 #config.postfix     = str(config.stage)+'_'+str(config.grid_size)
 config.postfix     = str(config.stage)+'_128'
+config.postfix     = 'stage2-32'
 
 config.fast_eval   = 0
 config.path        = config.path+str(config.grid_size)+'_v2/'
@@ -337,7 +338,7 @@ iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
 
-loader.restore(session, directory+'/latest'+config.postfix+'-0')
+loader.restore(session, directory+'/latest_train'+config.postfix+'-0')
 #loss_plot     = np.load(directory+'/loss_values'+config.postfix+'.npy')
 #acc_plot      = np.load(directory+'/accuracy_values'+config.postfix+'.npy')  
 #iou_plot      = np.load(directory+'/iou_values'+config.postfix+'.npy')      
