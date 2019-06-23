@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=32)
+    parser.add_argument('--batch_size', type=int,  default=2)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=0)
@@ -230,7 +230,7 @@ if not config.surfaces:
         next_batch        = TFH.process_batch_center_train(next_element,config)
     else:
         next_batch        = TFH.process_batch_train(next_element,idx_node,config)
-    if config.grid_size==256 or config.grid_size==128 or config.grid_size==32:
+    if config.grid_size==256 or config.grid_size==128 or config.grid_size==32 or config.grid_size==36:
         next_batch_test = TFH.process_batch_evaluate(next_element_test,idx_node,config)
     else:
         next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
@@ -382,8 +382,8 @@ def build_graph(next_batch,config,batch_size):
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
     err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
-    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
-    loss                  = tf.reduce_mean(loss_class) + config.norm_loss_alpha*loss_sdf
+#    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
+    loss                  = tf.reduce_mean(loss_class) #+ config.norm_loss_alpha*loss_sdf
 #    if config.multi_image:
 #       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
 #       loss = loss + config.alpha*center_loss
@@ -391,7 +391,7 @@ def build_graph(next_batch,config,batch_size):
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
-    return {'loss':loss,'loss_class':tf.reduce_mean(loss_class),'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'loss_sdf':loss_sdf,'evals_function':evals_function}
+    return {'loss':loss,'loss_class':tf.reduce_mean(loss_class),'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image}
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
@@ -545,7 +545,7 @@ step           = 0
 acc_mov        = MOV_AVG(300) # moving mean
 loss_mov       = MOV_AVG(300) # moving mean
 iou_mov        = MOV_AVG(300) # moving mean
-sdf_mov        = MOV_AVG(300) # moving mean
+#sdf_mov        = MOV_AVG(300) # moving mean
 
 
                
@@ -561,10 +561,10 @@ for epoch in range(1000000):
             acc_mov_avg  = acc_mov.push(train_dict_['accuracy'])
             loss_mov_avg = loss_mov.push(train_dict_['loss_class'])
             iou_mov_avg  = iou_mov.push(train_dict_['iou'])   
-            sdf_mov_avg  = sdf_mov.push(train_dict_['loss_sdf'])   
+#            sdf_mov_avg  = sdf_mov.push(train_dict_['loss_sdf'])   
 
             if step % 10 == 0:
-                print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,avg_loss_sdf: '+str(sdf_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
+                print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.plot_every == 0:
                 acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
                 loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
