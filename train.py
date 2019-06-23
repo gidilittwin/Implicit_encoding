@@ -60,8 +60,8 @@ def parse_args():
     parser.add_argument('--rgba', type=int,  default=1)
     parser.add_argument('--symetric', type=int,  default=0)
     parser.add_argument('--num_samples', type=int,  default=0)
-    parser.add_argument('--global_points', type=int,  default=32**3) 
-    parser.add_argument('--global_points_test', type=int,  default=32**3)    
+    parser.add_argument('--global_points', type=int,  default=36**3) 
+    parser.add_argument('--global_points_test', type=int,  default=36**3)    
     parser.add_argument('--noise_scale', type=float,  default=[0.1])
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
@@ -388,10 +388,8 @@ def build_graph(next_batch,config,batch_size):
         g_weights             = f_wrapper(images,[mode_node,config])
 
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
-    
-    evals_function        = SF.render_sil(evals_function,config)
-
-    
+    evals_function        = SF.render_sil(evals_function,evals_target,config)
+    loss_class            = evals_function['loss_sil']
     
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
@@ -401,14 +399,14 @@ def build_graph(next_batch,config,batch_size):
     correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
     err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
+    # loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
 #    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
     loss                  = tf.reduce_mean(loss_class) #+ config.norm_loss_alpha*loss_sdf
     X                     = tf.cast(labels,tf.bool)
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
-    return {'loss':loss,'loss_class':tf.reduce_mean(loss_class),'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image}
+    return {'loss':loss,'loss_class':loss_class,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'evals_function':evals_function}
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)

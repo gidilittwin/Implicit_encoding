@@ -210,16 +210,11 @@ def process_batch_evaluate(next_element,idx_node,config):
 
 
 def process_batch_test(next_element,idx_node,config):
-    if config.grid_size==36:
-        grid_size_lr   = 32*config.eval_grid_scale
-        x_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        y_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-        z_lr           = np.linspace(-32./36, 32./36, grid_size_lr)
-    else:
-        grid_size_lr   = config.grid_size*config.eval_grid_scale
-        x_lr           = np.linspace(-1, 1, grid_size_lr)
-        y_lr           = np.linspace(-1, 1, grid_size_lr)
-        z_lr           = np.linspace(-1, 1, grid_size_lr)    
+
+    grid_size_lr   = config.grid_size*config.eval_grid_scale
+    x_lr           = np.linspace(-1, 1, grid_size_lr)
+    y_lr           = np.linspace(-1, 1, grid_size_lr)
+    z_lr           = np.linspace(-1, 1, grid_size_lr)    
     xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr) 
     images               = next_element['images'][0,:,:,:,:]
     if config.test_size==1:
