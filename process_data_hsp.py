@@ -48,8 +48,8 @@ config = parse_args()
 
 #%%
 rec_mode     = False
-#BATCH_SIZE   = 20
-BATCH_SIZE   = 1
+BATCH_SIZE   = 20
+#BATCH_SIZE   = 1
 
 reduce       = 8
 ii=0
@@ -82,15 +82,15 @@ SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  rec_mode=rec_mode,
                  reduce = reduce)
 for ii in range(0,SN_test.train_size):
-#    try:
+    try:
 
-#        batch = SN_test.get_batch_multi(type_='')
-        batch = SN_test.preprocess_iccv(type_='')
+        batch = SN_test.get_batch_multi(type_='')
+#        batch = SN_test.preprocess_iccv(type_='')
         print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
         path =config.path_tf+'test/'
-#        TFH.dataset_builder_fn(path,batch,compress=False)  
-#    except:
-#        print(str(ii))
+        TFH.dataset_builder_fn(path,batch,compress=False)  
+    except:
+        print(str(ii))
     
 #SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
 #                 files=[],

@@ -30,7 +30,7 @@ name = 'encode_128_v3_'
 #name = 'fastrecords_256_v2_exp'; postfix = '2_256'
 name = 'light_128_v3_'; postfix = '1_128'
 #name = 'light_256_v3_'; postfix = '2_256'
-name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
+#name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-256'
 plot_idx =15
 
