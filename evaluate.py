@@ -140,7 +140,7 @@ print('levelset= ',str(config.levelset))
 
 #%% Data iterators
 
-test_iterator  = TFH.iterator(config.path+'train/',
+test_iterator  = TFH.iterator(config.path+'test/',
                               1,
                               epochs=10000,
                               shuffle=False,
@@ -168,40 +168,40 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
 
-import matplotlib.pyplot as plt   
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-#session.run(mode_node.assign(False)) 
-session.run(test_iterator.initializer)
-batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+#import matplotlib.pyplot as plt   
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+##session.run(mode_node.assign(False)) 
+#session.run(test_iterator.initializer)
 #batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-
-idx =0
-psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-
-vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
-cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-vertices             = batch_['samples_xyz'][:,:,:]
-cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-
-vertices             = batch_['samples_xyz'][idx,:,:]
-vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
-vertices              = vertices*vertices_on
-cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-
-
-pic = batch_['images'][idx,:,:,0:3]
-fig = plt.figure()
-plt.imshow(pic)
+##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+#
+#idx =0
+#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#
+#vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#vertices             = batch_['samples_xyz'][:,:,:]
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#
+#vertices             = batch_['samples_xyz'][idx,:,:]
+#vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+#vertices              = vertices*vertices_on
+#cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#
+#
+#pic = batch_['images'][idx,:,:,0:3]
+#fig = plt.figure()
+#plt.imshow(pic)
 
 
 
