@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=4)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=256)
+    parser.add_argument('--grid_size', type=int,  default=32)
     parser.add_argument('--grid_size_v', type=int,  default=256)
     parser.add_argument('--compression', type=int,  default=0)
     parser.add_argument('--pretrained', type=int,  default=0)
@@ -53,6 +53,8 @@ def parse_args():
     parser.add_argument('--noise_scale', type=float,  default=0.05)
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
+#    parser.add_argument('--categories'      , type=int,  default=[4], help='number of point samples')
+
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--learning_rate', type=float,  default=0.0001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
@@ -138,7 +140,7 @@ print('levelset= ',str(config.levelset))
 
 #%% Data iterators
 
-test_iterator  = TFH.iterator(config.path+'test/',
+test_iterator  = TFH.iterator(config.path+'train/',
                               1,
                               epochs=10000,
                               shuffle=False,
@@ -166,40 +168,40 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
 
-#import matplotlib.pyplot as plt   
-#session = tf.Session()
-#session.run(tf.initialize_all_variables())
-##session.run(mode_node.assign(False)) 
-#session.run(test_iterator.initializer)
+import matplotlib.pyplot as plt   
+session = tf.Session()
+session.run(tf.initialize_all_variables())
+#session.run(mode_node.assign(False)) 
+session.run(test_iterator.initializer)
+batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
 #batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-#
-#idx =0
-#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
-#vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
-#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#vertices             = batch_['samples_xyz'][:,:,:]
-#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#
-#vertices             = batch_['samples_xyz'][idx,:,:]
-#vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
-#vertices              = vertices*vertices_on
-#cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
-#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-#
-#
-#
-#pic = batch_['images'][idx,:,:,0:3]
-#fig = plt.figure()
-#plt.imshow(pic)
+
+idx =0
+psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+
+vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
+cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+
+vertices             = batch_['samples_xyz'][:,:,:]
+cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+
+
+vertices             = batch_['samples_xyz'][idx,:,:]
+vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+vertices              = vertices*vertices_on
+cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+
+
+
+pic = batch_['images'][idx,:,:,0:3]
+fig = plt.figure()
+plt.imshow(pic)
 
 
 
@@ -339,7 +341,8 @@ iou_plot_test  = []
 max_test_acc   = 0.
 max_test_iou   = 0.
 
-loader.restore(session, directory+'/latest'+config.postfix+'-0')
+#loader.restore(session, directory+'/latest'+config.postfix+'-0')
+loader.restore(session, directory+'/latest_stage2-32-0')
 #loss_plot     = np.load(directory+'/loss_values'+config.postfix+'.npy')
 #acc_plot      = np.load(directory+'/accuracy_values'+config.postfix+'.npy')  
 #iou_plot      = np.load(directory+'/iou_values'+config.postfix+'.npy')      
@@ -419,7 +422,7 @@ if True==False:
                                   grid_size=config.grid_size,
                                   num_samples=config.num_samples,
                                   shuffle_size=config.shuffle_size,
-                                  categories = config.categories,
+                                  categories = [0],
                                   compression = config.compression)
 
     next_element_display = dispaly_iterator.get_next()
@@ -470,5 +473,26 @@ if True==False:
      
     
 
+    vertices             = evals_target_['x']
+    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
     
+    vertices             = batch_['samples_xyz'][:,:,:]
+    cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
+    
+    vertices             = batch_['samples_xyz'][idx,:,:]
+    vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+    vertices              = vertices*vertices_on
+    cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    
+    
+    
+    pic = batch_['images'][idx,:,:,0:3]
+    fig = plt.figure()
+    plt.imshow(pic)
+    
+
     

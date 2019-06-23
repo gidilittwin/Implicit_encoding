@@ -313,7 +313,7 @@ class ShapeNet(object):
         perm = np.random.permutation(len(image_files[0]))        
         for im in range(self.batch_size):
             with open(image_files[0][perm[im]], 'rb') as f:
-                image = (misc.imread(f).astype(np.float32)/255.)*2-1.
+                image = misc.imread(f).astype(np.float32)
 #                image = ((skimage.transform.resize(image, (137,137))+1.)/2.*255.).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]

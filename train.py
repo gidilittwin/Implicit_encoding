@@ -19,8 +19,8 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'test')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
+    parser.add_argument('--experiment_name', type=str, default= 'study_dnn32_stage_v3_18')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=2)
@@ -34,7 +34,7 @@ def parse_args():
 
     parser.add_argument('--surfaces', type=int,  default=0)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=36)
+    parser.add_argument('--grid_size', type=int,  default=32)
     parser.add_argument('--grid_size_v', type=int,  default=256)
     parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
@@ -367,9 +367,9 @@ def build_graph(next_batch,config,batch_size):
     if config.pretrained:
         g_weights             = f2_wrapper(images,[mode_node,config])
     else:
-        g_weights             = f3_wrapper(images,[mode_node,config])
+        g_weights             = f_wrapper(images,[mode_node,config])
 
-    evals_function        = SF.sample_points_list(model_fn = g_wrapper2,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
     logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
@@ -530,7 +530,9 @@ max_test_iou   = 0.
 if config.pretrained:
     pretrained.restore(session,config.pretrained_path+'resnet_v2_50.ckpt')
 if config.finetune:
-    loader.restore(session, directory+'/latest_train'+config.postfix_load+'-0')
+#    loader.restore(session, directory+'/latest_train'+config.postfix_load+'-0')
+    loader.restore(session, directory+'/latest_stage2-32-0')
+    
     loss_plot     = np.load(directory+'/loss_values'+config.postfix_load+'.npy')
     acc_plot      = np.load(directory+'/accuracy_values'+config.postfix_load+'.npy')  
     iou_plot      = np.load(directory+'/iou_values'+config.postfix_load+'.npy')      
@@ -547,6 +549,9 @@ loss_mov       = MOV_AVG(300) # moving mean
 iou_mov        = MOV_AVG(300) # moving mean
 #sdf_mov        = MOV_AVG(300) # moving mean
 
+
+
+acc_test, iou_test, classes_test, ids_test, ious_test = evaluate(test_iterator, session, mode_node, config, test_dict, next_element_test)
 
                
 session.run(mode_node.assign(True)) 

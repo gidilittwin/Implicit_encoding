@@ -54,21 +54,21 @@ BATCH_SIZE   = 20
 reduce       = 8
 ii=0
 
-#SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
-#                 files=[],
-#                 rand=False,
-#                 batch_size=BATCH_SIZE,
-#                 grid_size=config.grid_size,
-#                 levelset=[0.00],
-#                 num_samples=config.num_samples,
-#                 list_=config.categories,
-#                 rec_mode=rec_mode,
-#                 reduce = reduce)
-#for ii in range(0,SN_train.train_size):
-#    batch = SN_train.get_batch_multi(type_='')
-#    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
-#    path =config.path_tf+'train/'
-#    TFH.dataset_builder_fn(path,batch,compress=False)   
+SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
+                 files=[],
+                 rand=False,
+                 batch_size=BATCH_SIZE,
+                 grid_size=config.grid_size,
+                 levelset=[0.00],
+                 num_samples=config.num_samples,
+                 list_=config.categories,
+                 rec_mode=rec_mode,
+                 reduce = reduce)
+for ii in range(0,SN_train.train_size):
+    batch = SN_train.get_batch_multi(type_='')
+    print(str(SN_train.train_step)+' /'+str(SN_train.train_size))
+    path =config.path_tf+'train/'
+    TFH.dataset_builder_fn(path,batch,compress=False)   
     
 
 SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
