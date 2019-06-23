@@ -67,7 +67,7 @@ def parse_args():
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
 #    parser.add_argument('--categories'      , type=int,  default=[2], help='number of point samples')
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
-    parser.add_argument('--learning_rate', type=float,  default=0.00001)
+    parser.add_argument('--learning_rate', type=float,  default=0.000001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
     parser.add_argument('--finetune'  , type=bool,  default=False)
     parser.add_argument('--plot_every', type=int,  default=1000)
@@ -406,7 +406,7 @@ def build_graph(next_batch,config,batch_size):
     Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
     iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
     iou                   = tf.reduce_mean(iou_image)
-    return {'loss':loss,'loss_class':loss_class,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'evals_function':evals_function}
+    return {'loss':loss,'loss_class':tf.reduce_mean(loss_class),'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'evals_function':evals_function}
 
 train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
 test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
@@ -562,6 +562,7 @@ loss_mov       = MOV_AVG(300) # moving mean
 iou_mov        = MOV_AVG(300) # moving mean
 #sdf_mov        = MOV_AVG(300) # moving mean
 
+# train_dict_ = session.run(train_dict,feed_dict=feed_dict) 
 
                
 session.run(mode_node.assign(True)) 

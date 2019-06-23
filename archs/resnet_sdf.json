@@ -1,5 +1,5 @@
 {
-    "theta"           : [{"w":8,"in":3}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":1 ,"in":8}],
+    "theta"           : [{"w":8,"in":3}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":8,"in":8}, {"w":1 ,"in":8}],
     "dnn_params"      : {"activations":"tanh","normalize":false},
     "decoder"         : [],
     "expand"          : [{"l":1,"factor":1,"activation":"tanh"}],

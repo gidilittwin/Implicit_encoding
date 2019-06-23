@@ -272,7 +272,7 @@ def camera_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
 
 def render_sil(evals_function,evals_target,config):
     
-    occupancy_gt = -1*(0.5+tf.reshape(evals_target['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1)))
+    occupancy_gt = -1*(-0.5+tf.reshape(evals_target['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1)))
     occupancy = tf.sigmoid(tf.reshape(evals_function['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1)))
     emptyness = 1.-occupancy
     
@@ -289,23 +289,11 @@ def render_sil(evals_function,evals_target,config):
                     reverse=True,
                     name='z_vis')*occupancy
 
-    # v_bottom = tf.cumprod(emptyness,
-    #                 axis=3,
-    #                 exclusive=True,
-    #                 reverse=True,
-    #                 name='z_vis')*occupancy
-                                        
-    v_left = tf.cumprod(emptyness,
+    v_right = tf.cumprod(emptyness,
                     axis=2,
                     exclusive=True,
-                    reverse=False,
-                    name='z_vis')*occupancy
-
-    # v_right = tf.cumprod(emptyness,
-    #                 axis=3,
-    #                 exclusive=True,
-    #                 reverse=True,
-    #                 name='z_vis')*occupancy                                        
+                    reverse=True,
+                    name='z_vis')*occupancy                                        
 
 
     v_front = tf.cumprod(emptyness,
@@ -314,23 +302,17 @@ def render_sil(evals_function,evals_target,config):
                     reverse=True,
                     name='z_vis')*occupancy
 
-    # v_back = tf.cumprod(emptyness,
-    #                 axis=3,
-    #                 exclusive=True,
-    #                 reverse=False,
-    #                 name='z_vis')*occupancy  
-                                      
-    evals_function['v_top']   = tf.reduce_sum(v_top ,axis=3)
-    evals_function['v_left']   = tf.reduce_sum(v_left    ,axis=2)                            
-    evals_function['v_front']   = tf.reduce_sum(v_front  ,axis=1)
+    evals_function['v_top']   = tf.reduce_max(v_top ,axis=3)
+    evals_function['v_right']   = tf.reduce_max(v_right    ,axis=2)                            
+    evals_function['v_front']   = tf.reduce_max(v_front  ,axis=1)
     evals_function['v_top_gt']   = tf.reduce_max(occupancy_gt ,axis=3)
-    evals_function['v_left_gt']   = tf.reduce_max(occupancy_gt    ,axis=2)                            
+    evals_function['v_right_gt']   = tf.reduce_max(occupancy_gt    ,axis=2)                            
     evals_function['v_front_gt']   = tf.reduce_max(occupancy_gt  ,axis=1) 
     
     
-    evals_function['loss_sil'] = 0.5*(tf.reduce_mean(((evals_function['v_top']-evals_function['v_top_gt'])**2))
-                                +tf.reduce_mean((evals_function['v_left']-evals_function['v_left_gt'])**2)
-                                +tf.reduce_mean((evals_function['v_front']-evals_function['v_front_gt'])**2))
+    evals_function['loss_sil'] = 0.5*(tf.reduce_mean(((evals_function['v_top']-evals_function['v_top_gt'])**2),axis=(1,2))
+                                +tf.reduce_mean((evals_function['v_right']-evals_function['v_right_gt'])**2,axis=(1,2))
+                                +tf.reduce_mean((evals_function['v_front']-evals_function['v_front_gt'])**2,axis=(1,2)))
     
 
                               
