@@ -1,12 +1,12 @@
 
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from provider_binvox import ShapeNet as ShapeNet 
-import matplotlib.pyplot as plt
-from src.utilities import mesh_handler as MESHPLOT
-import scipy.ndimage as ndi
-from skimage import measure
+#import matplotlib.pyplot as plt
+#from src.utilities import mesh_handler as MESHPLOT
+#import scipy.ndimage as ndi
+#from skimage import measure
 import tfrecords_handler as TFH
 import argparse
 import socket
@@ -31,12 +31,12 @@ def parse_args():
     parser.add_argument('--finetune'  , type=bool,  default=False)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF256_v2/")
+        parser.add_argument("--path_tf"         , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF32/")
         parser.add_argument("--mesh_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNetHSP/")
     else:
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNetRendering/")
-        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF256_v2/")
+        parser.add_argument("--path_tf"         , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF32/")
         parser.add_argument("--mesh_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetMesh/ShapeNetCore.v2/")
         parser.add_argument("--iccv_path"       , type=str, default="/private/home/wolf/gidishape/data/ShapeNetHSP/")
     return parser.parse_args()
@@ -48,8 +48,10 @@ config = parse_args()
 
 #%%
 rec_mode     = False
-BATCH_SIZE   = 20
-reduce       = 1
+#BATCH_SIZE   = 20
+BATCH_SIZE   = 1
+
+reduce       = 8
 ii=0
 
 #SN_train     = ShapeNet(config.iccv_path+'train',config.mesh_path,
@@ -80,11 +82,15 @@ SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  rec_mode=rec_mode,
                  reduce = reduce)
 for ii in range(0,SN_test.train_size):
-    batch = SN_test.get_batch_multi(type_='')
-    print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
-    path =config.path_tf+'test/'
-    TFH.dataset_builder_fn(path,batch,compress=False)   
+#    try:
 
+#        batch = SN_test.get_batch_multi(type_='')
+        batch = SN_test.preprocess_iccv(type_='')
+        print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
+        path =config.path_tf+'test/'
+#        TFH.dataset_builder_fn(path,batch,compress=False)  
+#    except:
+#        print(str(ii))
     
 #SN_val     = ShapeNet(config.iccv_path+'val',config.mesh_path,
 #                 files=[],

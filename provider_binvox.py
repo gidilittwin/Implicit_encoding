@@ -397,6 +397,9 @@ class ShapeNet(object):
                     voxels[jj[bb]:jj[bb]+16,ii[bb]:ii[bb]+16,kk[bb]:kk[bb]+16] = voxels_[idx[bb],:,:,:]
                 voxels = np.transpose(voxels,(0,2,1))
                 verts, faces, normals, values = measure.marching_cubes_lewiner(voxels,0.5)
+                np.save(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+paths[j]+'/verts0'+'.npy',verts)
+                np.savez_compressed( self.path_[0:last_slash]+'/blenderRenderPreprocess/'+paths[j]+'/voxels0.npz', voxels=voxels)
+            
             except:
                 print('voxel file:' + files[j] + ' is missing')  
                 voxels  = np.zeros((256,256,256),dtype=np.bool)

@@ -16,8 +16,8 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'study_128_v4_18')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
+    parser.add_argument('--experiment_name', type=str, default= 'light_128_v3_3')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=1)
@@ -168,8 +168,8 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 #session = tf.Session()
 #session.run(tf.initialize_all_variables())
 ##session.run(mode_node.assign(False)) 
-#session.run(train_iterator.initializer)
-#batch,batch_ = session.run([next_element,next_batch],feed_dict={idx_node:0})
+#session.run(test_iterator.initializer)
+#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
 ##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
 #
 #idx =0
@@ -177,7 +177,7 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 #verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
 #cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
 #MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-#
+
 #vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
 #cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
@@ -376,6 +376,7 @@ for epoch_test in range(num_epochs):
             ids.append(np.tile(batch_['ids'],(config.test_size,1)))
             ious.append(iou_image_t) 
             ious32.append(iou_image_32t)   
+            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
         except tf.errors.OutOfRangeError:
             print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
             break
