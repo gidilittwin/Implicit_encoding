@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/mnist_light.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=128)
+    parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=0)
@@ -33,6 +33,11 @@ def parse_args():
     parser.add_argument('--grid_size_v', type=int,  default=28)
     parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
+    
+    parser.add_argument('--embedding_size', type=int,  default=256)
+    parser.add_argument('--num_blocks', type=int,  default=4)
+    parser.add_argument('--block_width', type=int,  default=32)
+    parser.add_argument('--bottleneck', type=int,  default=512)
     
     parser.add_argument('--img_size', type=int,  default=[28,28])
     parser.add_argument('--im_per_obj', type=int,  default=128)
@@ -131,7 +136,7 @@ def f_embedding(image,args_):
 
 def g_embedding(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
-        evaluated_function = CNN.mlp(coordinates,args_[0],args_[1],args_[2])
+        evaluated_function = CNN.mnist(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
 
 
@@ -167,8 +172,11 @@ next_batch['images']  = tf.placeholder(tf.uint8,shape=(None,28,28,1), name='imag
 
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
+    # embedding             = f_wrapper(images,[mode_node,config])
+    # evals_function        = SF.sample_points_list_2D(model_fn = g_wrapper,args=[mode_node,embedding,config],shape = [batch_size,config.grid_size], use_samps=False)
     embedding             = f_embedding(images,[mode_node,config])
     evals_function        = SF.sample_points_list_2D(model_fn = g_embedding,args=[mode_node,embedding,config],shape = [batch_size,config.grid_size], use_samps=False)
+
     labels                = tf.cast(next_batch['images'],tf.float32)/255.
     logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,config.grid_size,config.grid_size,1))) #- levelset
     loss                  = tf.reduce_mean((labels-logits)**2)

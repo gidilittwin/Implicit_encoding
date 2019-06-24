@@ -132,7 +132,7 @@ def process_batch_render(next_element,idx_node,config):
     y_lr           = np.linspace(-1, 1, grid_size_lr)
     z_lr           = np.linspace(-1, 1, grid_size_lr)    
     xx_lr,yy_lr,zz_lr    = np.meshgrid(x_lr, y_lr, z_lr) 
-    samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1))
+    samples_xyz_np       = tf.cast(np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.batch_size,1,1)),dtype=tf.float32)
 
     samples_ijk_np       = tf.cast(tf.round(((samples_xyz_np+1)/2*(config.grid_size-1))),dtype=tf.int32)
     batch_idx            = tf.constant(np.tile(np.reshape(np.arange(0,config.batch_size,dtype=np.int32),(config.batch_size,1,1)),(1,config.num_samples+config.global_points,1)))

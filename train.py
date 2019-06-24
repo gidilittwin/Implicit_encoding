@@ -20,7 +20,7 @@ from skimage import measure
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
     parser.add_argument('--experiment_name', type=str, default= 'test')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_sdf.json')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_sdf2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
     parser.add_argument('--batch_size', type=int,  default=2)
@@ -36,7 +36,6 @@ def parse_args():
     parser.add_argument('--alpha', type=float,  default=0.003)
     parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--grid_size_v', type=int,  default=256)
-    parser.add_argument('--compression', type=int,  default=0)
     parser.add_argument('--pretrained', type=int,  default=0)
     
     parser.add_argument('--embedding_size', type=int,  default=256)
@@ -56,32 +55,35 @@ def parse_args():
     parser.add_argument('--eval_grid_scale', type=int,  default=1)
     parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--bn_l0', type=int,  default=0)
-    parser.add_argument('--augment', type=int,  default=1)
+    parser.add_argument('--augment', type=int,  default=0)
     parser.add_argument('--rgba', type=int,  default=1)
-    parser.add_argument('--symetric', type=int,  default=0)
+    parser.add_argument('--symetric', type=int,  default=1)
     parser.add_argument('--num_samples', type=int,  default=0)
     parser.add_argument('--global_points', type=int,  default=36**3) 
     parser.add_argument('--global_points_test', type=int,  default=36**3)    
     parser.add_argument('--noise_scale', type=float,  default=[0.1])
 #    parser.add_argument('--categories'      , type=str,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--categories'      , type=int,  default=[0,1,2,3,4,5,6,7,8,9,10,11,12], help='number of point samples')
-#    parser.add_argument('--categories'      , type=int,  default=[2], help='number of point samples')
+    # parser.add_argument('--categories'      , type=int,  default=[0], help='number of point samples')
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--learning_rate', type=float,  default=0.000001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
     parser.add_argument('--finetune'  , type=bool,  default=False)
     parser.add_argument('--plot_every', type=int,  default=1000)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
+        parser.add_argument('--compression', type=int,  default=1)
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/media/gidi/SSD/Thesis/Data/Checkpoints/")
         parser.add_argument("--pretrained_path",  type=str, default="/media/gidi/SSD/Thesis/Data/pretrained/")
     elif socket.gethostname() == 'Gidis-MBP-3':
+        parser.add_argument('--compression', type=int,  default=0)
         parser.add_argument("--path"            , type=str, default="/Users/gidilittwin/meta_data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/Users/gidilittwin/meta_data/checkpoints/")
         parser.add_argument("--saved_model_path", type=str, default="/Users/gidilittwin/meta_data/checkpoints/")   
         parser.add_argument("--pretrained_path",  type=str, default="/Users/gidilittwin/meta_data/pretrained/")
     else:
+        parser.add_argument('--compression', type=int,  default=1)
         parser.add_argument("--path"            , type=str, default="/private/home/wolf/gidishape/data/ShapeNet_TF")
         parser.add_argument("--checkpoint_path" , type=str, default="/private/home/wolf/gidishape/checkpoints2/")
         parser.add_argument("--saved_model_path", type=str, default="/private/home/wolf/gidishape/checkpoints2/")   
@@ -388,8 +390,7 @@ def build_graph(next_batch,config,batch_size):
         g_weights             = f_wrapper(images,[mode_node,config])
 
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
-    evals_function        = SF.render_sil(evals_function,evals_target,config)
-    loss_class            = evals_function['loss_sil']
+    evals_function        = SF.render_sil(evals_function,evals_target,config,batch_size)
     
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
@@ -400,6 +401,8 @@ def build_graph(next_batch,config,batch_size):
     accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
     err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     # loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
+    loss_class            = evals_function['loss_sil']
+
 #    loss_sdf              = tf.reduce_mean((evals_function['dydx_norm']-1.0)**2)
     loss                  = tf.reduce_mean(loss_class) #+ config.norm_loss_alpha*loss_sdf
     X                     = tf.cast(labels,tf.bool)
@@ -467,7 +470,7 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
     optimizer     = tf.train.AdamOptimizer(lr_node,beta1=config.beta1,beta2=0.999)
     grads         = optimizer.compute_gradients(train_dict['loss'],var_list=cnn_vars)
     global_step   = tf.train.get_or_create_global_step()
-    clip_constant = 10
+    clip_constant = 10.
     g_v_rescaled  = [(tf.clip_by_norm(gv[0],clip_constant),gv[1]) for gv in grads]
     train_op_cnn  = optimizer.apply_gradients(g_v_rescaled, global_step=global_step)
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
@@ -579,8 +582,8 @@ for epoch in range(1000000):
             iou_mov_avg  = iou_mov.push(train_dict_['iou'])   
 #            sdf_mov_avg  = sdf_mov.push(train_dict_['loss_sdf'])   
 
-            if step % 10 == 0:
-                print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
+            # if step % 10 == 0:
+            print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.plot_every == 0:
                 acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
                 loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
