@@ -29,12 +29,12 @@ def parse_args():
     parser.add_argument('--alpha', type=float,  default=0.003)
     parser.add_argument('--grid_size', type=int,  default=32)
     parser.add_argument('--grid_size_v', type=int,  default=256)
-    parser.add_argument('--compression', type=int,  default=0)
+    parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
     
     parser.add_argument('--img_size', type=int,  default=[224,224])
     parser.add_argument('--im_per_obj', type=int,  default=20)
-    parser.add_argument('--test_size', type=int,  default=1)
+    parser.add_argument('--test_size', type=int,  default=20)
     parser.add_argument('--shuffle_size', type=int,  default=100)  
     parser.add_argument('--test_every', type=int,  default=20000)    
     parser.add_argument('--save_every', type=int,  default=10000) 
@@ -141,7 +141,7 @@ print('levelset= ',str(config.levelset))
 #%% Data iterators
 
 test_iterator  = TFH.iterator(config.path+'test/',
-                              1,
+                              config.test_size,
                               epochs=10000,
                               shuffle=False,
                               img_size=config.img_size[0],
@@ -174,8 +174,8 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 ##session.run(mode_node.assign(False)) 
 #session.run(test_iterator.initializer)
 #batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-##batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-#
+#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+
 #idx =0
 #psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
 #verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
@@ -197,8 +197,8 @@ xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 #cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
 #MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 #
-#
-#
+
+
 #pic = batch_['images'][idx,:,:,0:3]
 #fig = plt.figure()
 #plt.imshow(pic)
@@ -274,6 +274,8 @@ def build_graph(next_batch,config,batch_size):
         g_weights             = f_wrapper(images,[mode_node,config])
 #    g_weights             = m_wrapper(next_batch['ids'] ,[mode_node,config])
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+#    evals_function        = SF.render_sil(evals_function,evals_target,config)
+    
     labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
     logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
     logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
@@ -381,7 +383,7 @@ for epoch_test in range(num_epochs):
             ids.append(np.tile(batch_['ids'],(config.test_size,1)))
             ious.append(iou_image_t) 
             ious32.append(iou_image_32t)   
-            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
+#            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
         except tf.errors.OutOfRangeError:
             print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
             break
@@ -413,7 +415,7 @@ if True==False:
     z            = np.linspace(-1, 1, grid_size_lr)
     xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
     
-    dispaly_iterator  = TFH.iterator(config.path+'train/',
+    dispaly_iterator  = TFH.iterator(config.path+'test/',
                                   1,
                                   epochs=10000,
                                   shuffle=True,
@@ -437,6 +439,7 @@ if True==False:
     evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
     g_weights             = f_wrapper(images,[mode_node,config])
     evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [1,config.num_samples],samples=evals_target['x'] , use_samps=True)
+    evals_function        = SF.render_sil(evals_function,evals_target,config)
     
     all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     loader   = tf.train.Saver(var_list=all_vars)
@@ -455,6 +458,10 @@ if True==False:
       
     evals_target_, evals_function_ = session.run([evals_target, evals_function],feed_dict=feed_dict) 
                 
+    
+    
+    
+    
     field              = np.reshape(evals_function_['y'][0,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
     if np.min(field[:,:,:,0])<0.0 and np.max(field[:,:,:,0])>0.0:
@@ -473,26 +480,48 @@ if True==False:
      
     
 
-    vertices             = evals_target_['x']
-    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
-    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#    vertices             = evals_target_['x']
+#    cubed = {'vertices':vertices[0,:,:],'faces':faces,'vertices_up':vertices[0,:,:]}
+#    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#    
+#    vertices             = batch_['samples_xyz'][:,:,:]
+#    cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#    
+#    
+#    vertices             = batch_['samples_xyz'][idx,:,:]
+#    vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+#    vertices              = vertices*vertices_on
+#    cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+#    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#    
+#    
+#    pic = batch_['images'][idx,:,:,0:3]
+#    fig = plt.figure()
+#    plt.imshow(pic)
     
-    vertices             = batch_['samples_xyz'][:,:,:]
-    cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+    import matplotlib.pyplot as plt   
+    aa=evals_function_['v_top'][0,:,:,0]
+    aag=evals_function_['v_top_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(aa)
+    fig = plt.figure(2)
+    plt.imshow(aag)
     
+    bb=evals_function_['v_right'][0,:,:,0]
+    bbg=evals_function_['v_right_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(bb)
+    fig = plt.figure(2)
+    plt.imshow(bbg)
     
-    vertices             = batch_['samples_xyz'][idx,:,:]
-    vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
-    vertices              = vertices*vertices_on
-    cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
-    MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-    
-    
-    
-    pic = batch_['images'][idx,:,:,0:3]
-    fig = plt.figure()
-    plt.imshow(pic)
-    
+    cc=evals_function_['v_front'][0,:,:,0]
+    ccg=evals_function_['v_front_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(cc)
+    fig = plt.figure(2)
+    plt.imshow(ccg)
+
+
 
     

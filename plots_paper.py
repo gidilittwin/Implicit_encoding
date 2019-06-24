@@ -9,10 +9,15 @@ from src.models import scalar_functions as SF
 from src.models import feature_extractor as CNN
 from skimage import measure
 from provider_binvox import ShapeNet as ShapeNet 
-from src.utilities import raytrace as RAY
+#from src.utilities import raytrace as RAY
 import os
 import argparse
 import socket
+
+with open('./classes.json', 'r') as f:
+    classes2name = json.load(f)
+#for ii,key in enumerate(config.categories):
+#    classes2name[key]['id']=ii
 
  
 ious_per_class        = []

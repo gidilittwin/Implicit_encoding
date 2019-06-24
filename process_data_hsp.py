@@ -88,7 +88,7 @@ for ii in range(0,SN_test.train_size):
 #        batch = SN_test.preprocess_iccv(type_='')
         print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
         path =config.path_tf+'test/'
-        TFH.dataset_builder_fn(path,batch,compress=True)  
+        TFH.dataset_builder_fn(path,batch,compress=False)  
     except:
         print(str(ii))
     
