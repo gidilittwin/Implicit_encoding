@@ -27,8 +27,8 @@ def parse_args():
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
+    parser.add_argument('--alpha', type=float,  default=1.)
     
-    parser.add_argument('--alpha', type=float,  default=0.003)
     parser.add_argument('--grid_size', type=int,  default=28)
     parser.add_argument('--grid_size_v', type=int,  default=28)
     parser.add_argument('--compression', type=int,  default=1)
@@ -173,7 +173,7 @@ def build_graph(next_batch,config,batch_size):
     evals_function        = SF.sample_points_list_2D(model_fn = g_blend,args=[mode_node,embedding,config,next_batch['alpha']],shape = [batch_size,config.grid_size], use_samps=False)
     labels                = tf.cast(next_batch['images'],tf.float32)/255.
     logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,config.grid_size,config.grid_size,1))) #- levelset
-    labels_blend          = next_batch['alpha'][:,0,0]*labels + (1.-next_batch['alpha'][:,0,0])*tf.reverse(labels,axis=[2])
+    labels_blend          = (1.-next_batch['alpha'][:,0,0])*labels + next_batch['alpha'][:,0,0]*tf.reverse(labels,axis=[2])
     loss                  = tf.reduce_mean((labels_blend-logits)**2)
     err                   = tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
     acc                   = 1.-tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
