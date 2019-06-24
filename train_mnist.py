@@ -16,11 +16,11 @@ mnist = tf.keras.datasets.mnist
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'mnist_embeddings')
-    parser.add_argument('--model_params_path', type=str, default= './archs/mnist_light.json')
+    parser.add_argument('--experiment_name', type=str, default= 'mnist_meta')
+    parser.add_argument('--model_params_path', type=str, default= './archs/mnist_blend.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=128)
+    parser.add_argument('--batch_size', type=int,  default=64)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=0)
@@ -116,6 +116,13 @@ def g_wrapper(coordinates,args_):
     with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
         evaluated_function = SF.deep_shape(coordinates,args_[0],args_[1],args_[2])
         return evaluated_function
+    
+def g_blend(coordinates,args_):
+    with tf.variable_scope('model',reuse=tf.AUTO_REUSE):
+        alpha = tf.tile(args_[-1],(1,coordinates.get_shape().as_list()[1],1))
+        coordinates = tf.concat((coordinates,alpha),axis=-1)
+        evaluated_function = SF.deep_shape(coordinates,args_[0],args_[1],args_[2])
+        return evaluated_function    
 
 def f_wrapper(image,args_):
     with tf.variable_scope('2d_cnn_model',reuse=tf.AUTO_REUSE):
@@ -144,6 +151,8 @@ def g_embedding(coordinates,args_):
 #%% Training graph 
 next_batch = {}
 next_batch['images']  = tf.placeholder(tf.uint8,shape=(None,28,28,1), name='images')  
+next_batch['alpha']  = tf.placeholder(tf.float32,shape=(None,1,1), name='alpha')  
+
     
 #def build_graph(next_batch,config,batch_size):
 #    images                = next_batch['images'] 
@@ -157,29 +166,29 @@ next_batch['images']  = tf.placeholder(tf.uint8,shape=(None,28,28,1), name='imag
 #    return {'loss':loss,'err':err,'accuracy':acc,'logits':logits,'images':next_batch['images'] }
 
 
-#def build_dispaly_graph(next_batch,config,batch_size):
-#    images                = next_batch['images'] 
-#    g_weights             = f_wrapper(images,[mode_node,config])
-#    evals_function        = SF.sample_points_list_2D(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = 1024, use_samps=False)
-#    logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,1024,1024,1))) #- levelset
-#    return {'logits':logits,'images':next_batch['images'] }
-
 
 def build_graph(next_batch,config,batch_size):
     images                = next_batch['images'] 
-    embedding             = f_embedding(images,[mode_node,config])
-    evals_function        = SF.sample_points_list_2D(model_fn = g_embedding,args=[mode_node,embedding,config],shape = [batch_size,config.grid_size], use_samps=False)
+    embedding             = f_wrapper(images,[mode_node,config])
+    evals_function        = SF.sample_points_list_2D(model_fn = g_blend,args=[mode_node,embedding,config,next_batch['alpha']],shape = [batch_size,config.grid_size], use_samps=False)
     labels                = tf.cast(next_batch['images'],tf.float32)/255.
     logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,config.grid_size,config.grid_size,1))) #- levelset
-    loss                  = tf.reduce_mean((labels-logits)**2)
-    err                   = tf.reduce_mean(tf.sqrt((labels-logits)**2))
-    acc                   = 1.-tf.reduce_mean(tf.sqrt((labels-logits)**2))
+    labels_blend          = next_batch['alpha'][:,0,0]*labels + (1.-next_batch['alpha'][:,0,0])*tf.reverse(labels,axis=[2])
+    loss                  = tf.reduce_mean((labels_blend-logits)**2)
+    err                   = tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
+    acc                   = 1.-tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
     return {'loss':loss,'err':err,'accuracy':acc,'logits':logits,'images':next_batch['images'] }
 
 
+def build_dispaly_graph(next_batch,config,batch_size):
+    images                = next_batch['images'] 
+    g_weights             = f_wrapper(images,[mode_node,config])
+    evals_function        = SF.sample_points_list_2D(model_fn = g_blend,args=[mode_node,g_weights,config,next_batch['alpha']],shape = [batch_size,1024], use_samps=False)
+    logits                = tf.sigmoid(tf.reshape(evals_function['y'],(batch_size,1024,1024,1))) #- levelset
+    return {'logits':logits,'images':next_batch['images'] }
 
-train_dict = build_graph(next_batch,config,batch_size=config.batch_size)
-#display_dict = build_dispaly_graph(next_batch,config,batch_size=config.batch_size)
+train_dict   = build_graph(next_batch,config,batch_size=config.batch_size)
+display_dict = build_dispaly_graph(next_batch,config,batch_size=config.batch_size)
 
 
 
@@ -197,7 +206,7 @@ with tf.variable_scope('optimization_cnn',reuse=tf.AUTO_REUSE):
 
 all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
 saver    = tf.train.Saver(var_list=all_vars)
-loader   = tf.train.Saver(var_list=all_vars)
+loader   = tf.train.Saver(var_list=cnn_vars)
 
 
 
@@ -213,6 +222,8 @@ acc_plot_test_max = 0.
 acc_mov        = MOV_AVG(300) # moving mean
 loss_mov       = MOV_AVG(300) # moving mean
 epoch          = 0
+if config.finetune:
+    loader.restore(session, directory+'/latest_train-0')
 
 while epoch < 1000000:
     idx  = np.random.permutation(np.arange(0,60000))
@@ -220,7 +231,8 @@ while epoch < 1000000:
     session.run(mode_node.assign(True)) 
     while step<60000/config.batch_size:
         feed_dict = {lr_node             :config.learning_rate,
-                     next_batch['images']: X_train[step*config.batch_size:(step+1)*config.batch_size,:,:,:]}     
+                     next_batch['images']: X_train[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
+                     next_batch['alpha']:np.random.rand(config.batch_size,1,1)}     
         _, train_dict_ = session.run([train_op_cnn, train_dict],feed_dict=feed_dict) 
         acc_mov_avg  = acc_mov.push(train_dict_['accuracy'])
         loss_mov_avg = loss_mov.push(train_dict_['loss'])
@@ -240,7 +252,8 @@ while epoch < 1000000:
     loss_mov_test       = MOV_AVG(10000000) # moving mean
     while step<10000/config.batch_size:
         feed_dict = {lr_node             :config.learning_rate,
-                     next_batch['images']: X_test[step*config.batch_size:(step+1)*config.batch_size,:,:,:]}     
+                     next_batch['images']: X_test[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
+                     next_batch['alpha']:  np.random.rand(config.batch_size,1,1)}     
         train_dict_  = session.run(train_dict,feed_dict=feed_dict) 
         acc_mov_avg_test  = acc_mov_test.push(train_dict_['accuracy'])
         loss_mov_avg_test = loss_mov_test.push(train_dict_['loss'])
@@ -264,7 +277,7 @@ feed_dict = {lr_node             :config.learning_rate,
 display_dict_  = session.run(display_dict,feed_dict=feed_dict) 
 reconstructed_hd = (display_dict_['logits']*255.).astype(np.uint8)
 
-index = 96
+index = 0
 import matplotlib.pyplot as plt   
 pic = reconstructed[index,:,:,0]
 fig = plt.figure(1)

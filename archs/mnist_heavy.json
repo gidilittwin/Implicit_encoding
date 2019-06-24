@@ -1,0 +1,24 @@
+{
+    "theta"           : [{"w":16,"in":2}, {"w":16,"in":16}, {"w":16,"in":16}, {"w":16,"in":16}, {"w":16,"in":16}, {"w":1 ,"in":16}],
+    "dnn_params"      : {"activations":"tanh","normalize":false},
+    "decoder"         : [{"size":64,"act":true, "batch_norm":false},
+                         {"size":128,"act":true,"batch_norm":false}],
+    "expand"          : [{"l":1,"factor":2,"activation":"tanh"}],
+    "encoder"         : {"base_size":16, "BN":false, "input":{"k":3,"stride":1},
+                            "residuals":[{"k":3, "s_in":1, "s_out":1, "stride":1},
+                                         {"k":3, "s_in":1, "s_out":1, "stride":1},
+                                         {"k":3, "s_in":1, "s_out":2, "stride":1},
+                                         
+                                         {"k":3, "s_in":2, "s_out":2, "stride":2},
+                                         {"k":3, "s_in":2, "s_out":2, "stride":1},
+                                         {"k":3, "s_in":2, "s_out":4, "stride":1},
+                                         
+                                         {"k":3, "s_in":4, "s_out":4, "stride":2},
+                                         {"k":3, "s_in":4, "s_out":4, "stride":1},
+                                         {"k":3, "s_in":4, "s_out":8, "stride":1},
+                                         
+                                         {"k":3, "s_in":8, "s_out":8, "stride":2},
+                                         {"k":3, "s_in":8, "s_out":8, "stride":1},
+                                         {"k":3, "s_in":8, "s_out":16, "stride":1}]}
+
+}
