@@ -89,12 +89,17 @@ class ShapeNet(object):
     
     def getBenchmarkICCV(self,files,list_):
         paths = []
-        for cat in list_:
-            file_ = self.path_+'_'+cat+'.txt'
-            with open(file_, 'r') as f:
-                data = f.readlines()
-                data_ = [cat+'/'+s[0:-5] for s in data]
-            paths = paths+data_
+        if len(files)==0:
+
+            for cat in list_:
+                file_ = self.path_+'_'+cat+'.txt'
+                with open(file_, 'r') as f:
+                    data = f.readlines()
+                    data_ = [cat+'/'+s[0:-5] for s in data]
+                paths = paths+data_
+        else:
+           paths = files  
+            
         return  paths 
 
 
@@ -271,6 +276,7 @@ class ShapeNet(object):
         train_paths   = [self.train_paths[indexes]]
         train_id      = [self.obj_id[indexes]]
         voxels      = []
+        obj_names   = []
         sdf         = []
         images      = []
         alpha       = []
@@ -304,11 +310,13 @@ class ShapeNet(object):
             else:
                 verts   = np.load(self.path_[0:last_slash]+'/blenderRenderPreprocess/'+train_paths[j]+'/verts0.npy')
                 verts = verts[:,(0,2,1)]
+                obj_name = files[j][-44:-36]   + ' ' + files[j][-35:-4]+'.obj'
             num_points = verts.shape[0]
             arr_ = np.arange(0,num_points)
             perms = np.random.choice(arr_,self.num_samples)
             verts_sampled = verts[perms,:]
             Verts.append(verts_sampled[:,(2,0,1)])
+            obj_names.append(obj_name)
         vertices.append(np.stack(Verts,axis=-1))
         perm = np.random.permutation(len(image_files[0]))        
         for im in range(self.batch_size):
@@ -335,7 +343,7 @@ class ShapeNet(object):
         classes  = np.tile(np.stack(train_classes,axis=0) ,(self.batch_size,1)) 
         ids      = np.tile(np.stack(train_id,axis=0)  ,(self.batch_size,1))         
         vertices = np.tile(np.stack(vertices,axis=0) ,(self.batch_size,1,1,1))         
-        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'obj_names':obj_names}
 #        return {'classes':classes,'voxels':voxels,'ids':ids,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'camera':camera}
 
 
