@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/rebuttal1/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/rebuttal3/'
 baseline = 'study_dnn32_arch33'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values_test.npy')
@@ -33,7 +33,7 @@ name = 'light_128_v3_'; postfix = '1_128'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-256'
 
-name = 'render_v5_exp'; postfix = '0_36'
+name = 'render_v6_exp'; postfix = '0_36'
 
 plot_idx =15
 
