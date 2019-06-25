@@ -33,7 +33,7 @@ name = 'light_128_v3_'; postfix = '1_128'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-256'
 
-name = 'render_v6_exp'; postfix = '0_36'
+name = 'render_v4_exp'; postfix = '0_36'
 
 plot_idx =15
 
