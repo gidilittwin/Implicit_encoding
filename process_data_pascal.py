@@ -3,10 +3,10 @@ import tensorflow as tf
 import numpy as np
 #import matplotlib.pyplot as plt
 from provider_binvox import ShapeNet as ShapeNet 
-#import matplotlib.pyplot as plt
-#from src.utilities import mesh_handler as MESHPLOT
-#import scipy.ndimage as ndi
-#from skimage import measure
+import matplotlib.pyplot as plt
+from src.utilities import mesh_handler as MESHPLOT
+import scipy.ndimage as ndi
+from skimage import measure
 import tfrecords_handler as TFH
 import argparse
 import socket
@@ -60,27 +60,40 @@ for k, v in f.items():
 batches = {}
 batches['images'] = np.transpose(arrays['image_train'],(3,1,2,0))
 batches['classes'] = np.expand_dims(np.transpose(arrays['model_train'][0,:]),-1)
-batches['voxels'] = np.transpose(np.reshape(arrays['model_train'][1:,:],(30,30,30,3734)),(3,0,1,2))
+batches['voxels'] = np.flip(np.transpose(np.reshape(arrays['model_train'][1:,:],(30,30,30,3734)),(3,1,2,0)),2)
+
+for ii in range(0,batches['voxels'].shape[0]):
+
+    batch = {}
+    batch['images'] = np.tile(batches['images'][ii,:,:,:],(20,1,1,1))
+    batch['classes'] = np.tile(batches['classes'][ii,:],(20,1,1,1))
+
+
+    verts, faces, normals, values = measure.marching_cubes_lewiner(batches['voxels'][0,:,:,:],0.5)
+    verts         = verts[:,(0,2,1)]
+    arr_          = np.arange(0,verts.shape[0])
+    perms         = np.random.choice(arr_,10000)
+    verts_sampled = verts[perms,:]   
 
 
 
-    
+    print(str(ii)+' /'+str(batches['voxels'].shape[0]))
+    path =config.path_tf+'test/'
+    TFH.dataset_builder_fn(path,batch,compress=True)  
+
+
+
+ 
 
 import matplotlib.pyplot as plt   
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-#session.run(mode_node.assign(False)) 
-session.run(test_iterator.initializer)
-batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
 
-idx =0
-psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+idx =45
+psudo_sdf = batches['voxels'][idx,:,:,:]*1.0
 verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
 cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
 MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
 
-vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
+vertices             = verts_sampled[:,:,:]/(config.grid_size_v-1)*2-1
 cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
 MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
 
