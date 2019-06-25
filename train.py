@@ -34,8 +34,8 @@ def parse_args():
 
     parser.add_argument('--surfaces', type=int,  default=0)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=32)
-    parser.add_argument('--grid_size_v', type=int,  default=256)
+    parser.add_argument('--grid_size', type=int,  default=30)
+    parser.add_argument('--grid_size_v', type=int,  default=30)
     parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
     
@@ -98,6 +98,20 @@ if config.grid_size==32:
     config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)    
     config.fast_eval   = 0
     config.path        = config.path+str(config.grid_size)+'/'
+elif config.grid_size==30:
+    config.grid_size_v = 30
+    config.img_size    = [100,100]
+    config.im_per_obj  = 20
+    config.test_size   = 20
+    config.shuffle_size= 1000
+    config.test_every  = 10000
+    config.save_every  = 1000
+#    config.postfix     = str(config.stage)+'_'+str(config.grid_size)
+    config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
+    config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)    
+    config.fast_eval   = 0
+    config.path        = config.path+str(config.grid_size)+'/'       
+    
 elif config.grid_size==64:
     config.grid_size_v = 256
     config.img_size    = [224,224]
@@ -283,7 +297,7 @@ if True==False:
     #
     #
     #
-    pic = batch_['images'][0,:,:,3]
+    pic = batch_['images'][0,:,:,0:3]
     fig = plt.figure()
     plt.imshow(pic)
     

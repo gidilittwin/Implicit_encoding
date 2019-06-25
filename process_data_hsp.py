@@ -77,7 +77,7 @@ lineList = [w.replace('\n', '') for w in lineList]
 
   
 SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
-                 files=lineList,
+                 files=[],
                  rand=False,
                  batch_size=BATCH_SIZE,
                  grid_size=config.grid_size,
@@ -88,12 +88,10 @@ SN_test     = ShapeNet(config.iccv_path+'test',config.mesh_path,
                  reduce = reduce)
 for ii in range(0,SN_test.train_size):
 #    try:
-
-        batch = SN_test.get_batch_multi(type_='')
 #       batch = SN_test.preprocess_iccv(type_='')
         print(str(SN_test.train_step)+' /'+str(SN_test.train_size))
         path =config.path_tf+'test/'
-        TFH.dataset_builder_fn(path,batch,compress=True)  
+        TFH.dataset_builder_fn(path,batch,compress=False)  
 
 #    except:
 #        print(str(ii))
