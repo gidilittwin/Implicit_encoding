@@ -19,14 +19,14 @@ from skimage import measure
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'study_dnn32_stage_v3_18')
-    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
+    parser.add_argument('--experiment_name', type=str, default= 'pascal_v1')
+    parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=2)
+    parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=0)
+    parser.add_argument('--stage', type=int,  default=1)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
@@ -69,7 +69,7 @@ def parse_args():
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--learning_rate', type=float,  default=0.00001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=False)
+    parser.add_argument('--finetune'  , type=bool,  default=True)
     parser.add_argument('--plot_every', type=int,  default=1000)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF")
@@ -544,19 +544,19 @@ max_test_iou   = 0.
 if config.pretrained:
     pretrained.restore(session,config.pretrained_path+'resnet_v2_50.ckpt')
 if config.finetune:
-#    loader.restore(session, directory+'/latest_train'+config.postfix_load+'-0')
-    loader.restore(session, directory+'/latest_stage2-32-0')
+    loader.restore(session, directory+'/latest'+config.postfix_load+'-0')
+#    loader.restore(session, directory+'/latest_stage2-32-0')
     
-    loss_plot     = np.load(directory+'/loss_values'+config.postfix_load+'.npy')
-    acc_plot      = np.load(directory+'/accuracy_values'+config.postfix_load+'.npy')  
-    iou_plot      = np.load(directory+'/iou_values'+config.postfix_load+'.npy')      
-    acc_plot_test = np.load(directory+'/accuracy_values_test'+config.postfix_load+'.npy') 
-    iou_plot_test = np.load(directory+'/iou_values_test'+config.postfix_load+'.npy') 
-    loss_plot     = np.split(loss_plot,loss_plot.shape[0])
-    acc_plot      = np.split(acc_plot,acc_plot.shape[0])
-    iou_plot      = np.split(iou_plot,iou_plot.shape[0])
-    acc_plot_test = np.split(acc_plot_test,acc_plot_test.shape[0])
-    iou_plot_test = np.split(iou_plot_test,iou_plot_test.shape[0])    
+#    loss_plot     = np.load(directory+'/loss_values'+config.postfix_load+'.npy')
+#    acc_plot      = np.load(directory+'/accuracy_values'+config.postfix_load+'.npy')  
+#    iou_plot      = np.load(directory+'/iou_values'+config.postfix_load+'.npy')      
+#    acc_plot_test = np.load(directory+'/accuracy_values_test'+config.postfix_load+'.npy') 
+#    iou_plot_test = np.load(directory+'/iou_values_test'+config.postfix_load+'.npy') 
+#    loss_plot     = np.split(loss_plot,loss_plot.shape[0])
+#    acc_plot      = np.split(acc_plot,acc_plot.shape[0])
+#    iou_plot      = np.split(iou_plot,iou_plot.shape[0])
+#    acc_plot_test = np.split(acc_plot_test,acc_plot_test.shape[0])
+#    iou_plot_test = np.split(iou_plot_test,iou_plot_test.shape[0])    
 step           = 0
 acc_mov        = MOV_AVG(300) # moving mean
 loss_mov       = MOV_AVG(300) # moving mean
@@ -581,7 +581,7 @@ for epoch in range(1000000):
             loss_mov_avg = loss_mov.push(train_dict_['loss_class'])
             iou_mov_avg  = iou_mov.push(train_dict_['iou'])   
 #            sdf_mov_avg  = sdf_mov.push(train_dict_['loss_sdf'])   
-
+            print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
             if step % 10 == 0:
                 print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg)+' ,IOU: '+str(iou_mov_avg)+' ,max_test_IOU: '+str(max_test_iou))
             if step % config.plot_every == 0:
@@ -697,7 +697,7 @@ if True==False:
                                   categories = config.categories,
                                   compression = config.compression)
 
-    next_element_display = dispaly_iterator.get_next()
+    next_element_display = train_iterator.get_next()
     next_batch_display   = TFH.process_batch_test(next_element_display,idx_node,config)
     
     images                = next_batch_display['images'] 
@@ -718,13 +718,13 @@ if True==False:
     session.run(tf.initialize_all_variables())
     loader.restore(session, directory+'/latest'+config.postfix_load+'-0')
     session.run(mode_node.assign(False)) 
-    session.run(dispaly_iterator.initializer)
+    session.run(train_iterator.initializer)
     feed_dict = {idx_node           :0,
                  level_set          :0}   
     
     
       
-    evals_target_, evals_function_ = session.run([evals_target, evals_function],feed_dict=feed_dict) 
+    evals_target_, evals_function_,next_element_display_ = session.run([evals_target, evals_function, next_element_display],feed_dict=feed_dict) 
                 
     field              = np.reshape(evals_function_['y'][0,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
@@ -742,7 +742,15 @@ if True==False:
         cubed_plot = {'vertices':verts/(grid_size_lr-1)*2-1,'faces':faces,'vertices_up':verts/(grid_size_lr-1)*2-1}
         MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')  
      
+    import matplotlib.pyplot as plt   
+    pic = next_element_display_['images'][0,0,:,:,0:3]
+    fig = plt.figure()
+    plt.imshow(pic)
     
+    
+    
+    
+
 
 
 
