@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int,  default=8)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=1)
+    parser.add_argument('--stage', type=int,  default=2)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
