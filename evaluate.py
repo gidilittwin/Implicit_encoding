@@ -141,68 +141,68 @@ print('levelset= ',str(config.levelset))
 
 #%% Data iterators
 
-test_iterator  = TFH.iterator(config.path+'test/',
-                              config.test_size,
-                              epochs=10000,
-                              shuffle=False,
-                              img_size=config.img_size[0],
-                              im_per_obj=config.im_per_obj,
-                              grid_size=config.grid_size,
-                              num_samples=config.num_samples,
-                              shuffle_size=config.shuffle_size,
-                              categories = config.categories,
-                              compression = config.compression)
-    
-
-idx_node          = tf.placeholder(tf.int32,shape=(), name='idx_node')  
-level_set         = tf.placeholder(tf.float32,shape=(),   name='levelset')  
-next_element_test = test_iterator.get_next()
-next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
-
-
-grid_size_lr = config.grid_size
-x            = np.linspace(-1, 1, grid_size_lr)
-y            = np.linspace(-1, 1, grid_size_lr)
-z            = np.linspace(-1, 1, grid_size_lr)
-xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
-
-
-
-
-import matplotlib.pyplot as plt   
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-#session.run(mode_node.assign(False)) 
-session.run(test_iterator.initializer)
-batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
-
-idx =0
-psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
-verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
-cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
-MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
-
-vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
-cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-vertices             = batch_['samples_xyz'][:,:,:]
-cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-
-vertices             = batch_['samples_xyz'][idx,:,:]
-vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
-vertices              = vertices*vertices_on
-cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
-MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
-
-
-
-pic = batch_['images'][idx,:,:,0:3]
-fig = plt.figure()
-plt.imshow(pic)
+#test_iterator  = TFH.iterator(config.path+'test/',
+#                              config.test_size,
+#                              epochs=10000,
+#                              shuffle=False,
+#                              img_size=config.img_size[0],
+#                              im_per_obj=config.im_per_obj,
+#                              grid_size=config.grid_size,
+#                              num_samples=config.num_samples,
+#                              shuffle_size=config.shuffle_size,
+#                              categories = config.categories,
+#                              compression = config.compression)
+#    
+#
+#idx_node          = tf.placeholder(tf.int32,shape=(), name='idx_node')  
+#level_set         = tf.placeholder(tf.float32,shape=(),   name='levelset')  
+#next_element_test = test_iterator.get_next()
+#next_batch_test = TFH.process_batch_test(next_element_test,idx_node,config)
+#
+#
+#grid_size_lr = config.grid_size
+#x            = np.linspace(-1, 1, grid_size_lr)
+#y            = np.linspace(-1, 1, grid_size_lr)
+#z            = np.linspace(-1, 1, grid_size_lr)
+#xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
+#
+#
+#
+#
+#import matplotlib.pyplot as plt   
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+##session.run(mode_node.assign(False)) 
+#session.run(test_iterator.initializer)
+#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+#batch,batch_ = session.run([next_element_test,next_batch_test],feed_dict={idx_node:0})
+#
+#idx =0
+#psudo_sdf = batch['voxels'][idx,:,:,:]*1.0
+#verts0, faces0, normals0, values0 = measure.marching_cubes_lewiner(psudo_sdf, 0.0)
+#cubed0 = {'vertices':verts0/(config.grid_size-1)*2-1,'faces':faces0,'vertices_up':verts0/(config.grid_size-1)*2-1}
+#MESHPLOT.mesh_plot([cubed0],idx=0,type_='mesh')    
+#
+#vertices             = batch['vertices'][:,:,:]/(config.grid_size_v-1)*2-1
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#vertices             = batch_['samples_xyz'][:,:,:]
+#cubed = {'vertices':vertices[idx,:,:],'faces':faces0,'vertices_up':vertices[idx,:,:]}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#
+#vertices             = batch_['samples_xyz'][idx,:,:]
+#vertices_on          = batch_['samples_sdf'][idx,:,:]<0.
+#vertices              = vertices*vertices_on
+#cubed = {'vertices':vertices,'faces':faces0,'vertices_up':vertices}
+#MESHPLOT.mesh_plot([cubed],idx=0,type_='cloud')  
+#
+#
+#
+#pic = batch_['images'][idx,:,:,0:3]
+#fig = plt.figure()
+#plt.imshow(pic)
 
 
 
@@ -261,57 +261,57 @@ def injection_wrapper(current,args_):
 
 
 #%% Training graph 
-def build_graph(next_batch,config,batch_size):
-    images                = next_batch['images'] 
-    samples_sdf           = next_batch['samples_sdf']  
-    samples_xyz           = next_batch['samples_xyz']
-    evals_target          = {}
-    evals_target['x']     = samples_xyz
-    evals_target['y']     = samples_sdf
-    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
-    if config.pretrained:
-        g_weights             = f2_wrapper(images,[mode_node,config])
-    else:
-        g_weights             = f_wrapper(images,[mode_node,config])
-#    g_weights             = m_wrapper(next_batch['ids'] ,[mode_node,config])
-    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
-#    evals_function        = SF.render_sil(evals_function,evals_target,config)
-    
-    labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
-    logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
-    logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
-    logits_ce             = tf.concat((logits,-logits),axis=-1)
-    predictions           = tf.nn.softmax(logits_iou)
-    correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
-    accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
-    err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
-    loss                  = tf.reduce_mean(loss_class)
-    if config.multi_image:
-       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
-       loss = loss + config.alpha*center_loss
-    X                     = tf.cast(labels,tf.bool)
-    Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
-    iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
-    iou                   = tf.reduce_mean(iou_image)
-    X_32 = tf.reshape(X,(1,config.grid_size,config.grid_size,config.grid_size,1))
-    Y_32 = tf.reshape(Y,(1,config.grid_size,config.grid_size,config.grid_size,1))
-    X_32 = tf.nn.max_pool3d(tf.cast(X_32,tf.float32),ksize=(1,8,8,8,1),strides=(1,8,8,8,1),padding='VALID')
-    Y_32 = tf.nn.max_pool3d(tf.cast(Y_32,tf.float32),ksize=(1,8,8,8,1),strides=(1,8,8,8,1),padding='VALID')
-    X_32 = tf.reshape(tf.greater(X_32,0.5),(1,-1))
-    Y_32 = tf.reshape(tf.greater(Y_32,0.5),(1,-1))
-    iou_32_image             = tf.reduce_sum(tf.cast(tf.logical_and(X_32,Y_32),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_32,Y_32),tf.float32),axis=1)
-    iou_32                   = tf.reduce_mean(iou_32_image)
-    
-    return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'X':X,'Y':Y,'iou_32_image':iou_32_image,'iou_32':iou_32}
-
-test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
-all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-saver    = tf.train.Saver(var_list=all_vars)
-loader   = tf.train.Saver(var_list=all_vars)
-if config.pretrained:
-    pretrained_vars   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = 'resnet_v2_50')
-    pretrained        = tf.train.Saver(var_list=pretrained_vars)
+#def build_graph(next_batch,config,batch_size):
+#    images                = next_batch['images'] 
+#    samples_sdf           = next_batch['samples_sdf']  
+#    samples_xyz           = next_batch['samples_xyz']
+#    evals_target          = {}
+#    evals_target['x']     = samples_xyz
+#    evals_target['y']     = samples_sdf
+#    evals_target['mask']  = tf.cast(tf.greater(samples_sdf,0),tf.float32)
+#    if config.pretrained:
+#        g_weights             = f2_wrapper(images,[mode_node,config])
+#    else:
+#        g_weights             = f_wrapper(images,[mode_node,config])
+##    g_weights             = m_wrapper(next_batch['ids'] ,[mode_node,config])
+#    evals_function        = SF.sample_points_list(model_fn = g_wrapper,args=[mode_node,g_weights,config],shape = [batch_size,config.num_samples],samples=evals_target['x'] , use_samps=True)
+##    evals_function        = SF.render_sil(evals_function,evals_target,config)
+#    
+#    labels                = tf.cast(tf.less_equal(tf.reshape(evals_target['y'],(batch_size,-1)),0.0),tf.int64)
+#    logits                = tf.reshape(evals_function['y'],(batch_size,-1,1)) #- levelset
+#    logits_iou            = tf.concat((logits-level_set,-logits+level_set),axis=-1)
+#    logits_ce             = tf.concat((logits,-logits),axis=-1)
+#    predictions           = tf.nn.softmax(logits_iou)
+#    correct_prediction    = tf.equal(tf.argmax(predictions, 2), labels)
+#    accuracy              = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
+#    err                   = 1-tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#    loss_class            = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,logits=logits_ce,name='cross-entropy'),axis=-1)
+#    loss                  = tf.reduce_mean(loss_class)
+#    if config.multi_image:
+#       center_loss = 0.5*tf.reduce_mean((tf.get_collection('embeddings')[0] - tf.get_collection('centers')[0]) **2)
+#       loss = loss + config.alpha*center_loss
+#    X                     = tf.cast(labels,tf.bool)
+#    Y                     = tf.cast(tf.argmax(predictions, 2),tf.bool)
+#    iou_image             = tf.reduce_sum(tf.cast(tf.logical_and(X,Y),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X,Y),tf.float32),axis=1)
+#    iou                   = tf.reduce_mean(iou_image)
+#    X_32 = tf.reshape(X,(1,config.grid_size,config.grid_size,config.grid_size,1))
+#    Y_32 = tf.reshape(Y,(1,config.grid_size,config.grid_size,config.grid_size,1))
+#    X_32 = tf.nn.max_pool3d(tf.cast(X_32,tf.float32),ksize=(1,8,8,8,1),strides=(1,8,8,8,1),padding='VALID')
+#    Y_32 = tf.nn.max_pool3d(tf.cast(Y_32,tf.float32),ksize=(1,8,8,8,1),strides=(1,8,8,8,1),padding='VALID')
+#    X_32 = tf.reshape(tf.greater(X_32,0.5),(1,-1))
+#    Y_32 = tf.reshape(tf.greater(Y_32,0.5),(1,-1))
+#    iou_32_image             = tf.reduce_sum(tf.cast(tf.logical_and(X_32,Y_32),tf.float32),axis=1)/tf.reduce_sum(tf.cast(tf.logical_or(X_32,Y_32),tf.float32),axis=1)
+#    iou_32                   = tf.reduce_mean(iou_32_image)
+#    
+#    return {'loss':loss,'accuracy':accuracy,'err':err,'iou':iou,'iou_image':iou_image,'X':X,'Y':Y,'iou_32_image':iou_32_image,'iou_32':iou_32}
+#
+#test_dict  = build_graph(next_batch_test,config,batch_size=config.test_size)
+#all_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+#saver    = tf.train.Saver(var_list=all_vars)
+#loader   = tf.train.Saver(var_list=all_vars)
+#if config.pretrained:
+#    pretrained_vars   = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = 'resnet_v2_50')
+#    pretrained        = tf.train.Saver(var_list=pretrained_vars)
 
 
 
@@ -334,18 +334,18 @@ def ma_iou(ious_test,classes_test,config):
 
 
     
-session = tf.Session()
-session.run(tf.initialize_all_variables())
-loss_plot      = []
-acc_plot       = []
-iou_plot       = []
-acc_plot_test  = []
-iou_plot_test  = []
-max_test_acc   = 0.
-max_test_iou   = 0.
+#session = tf.Session()
+#session.run(tf.initialize_all_variables())
+#loss_plot      = []
+#acc_plot       = []
+#iou_plot       = []
+#acc_plot_test  = []
+#iou_plot_test  = []
+#max_test_acc   = 0.
+#max_test_iou   = 0.
 
 #loader.restore(session, directory+'/latest'+config.postfix+'-0')
-loader.restore(session, directory+'/latest_stage2-32-0')
+#loader.restore(session, directory+'/latest_stage2-32-0')
 #loss_plot     = np.load(directory+'/loss_values'+config.postfix+'.npy')
 #acc_plot      = np.load(directory+'/accuracy_values'+config.postfix+'.npy')  
 #iou_plot      = np.load(directory+'/iou_values'+config.postfix+'.npy')      
@@ -356,53 +356,53 @@ loader.restore(session, directory+'/latest_stage2-32-0')
 #iou_plot      = np.split(iou_plot,iou_plot.shape[0])
 #acc_plot_test = np.split(acc_plot_test,acc_plot_test.shape[0])
 #iou_plot_test = np.split(iou_plot_test,iou_plot_test.shape[0])    
-step           = 0
 
 
-session.run(mode_node.assign(False)) 
-acc_mov_test  = MOV_AVG(3000000) # exact mean
-iou_mov_test  = MOV_AVG(3000000) # exact mean
-iou_mov_test_32  = MOV_AVG(3000000) # exact mean
-
-classes       = []
-ids           = []  
-ious          = []
-ious32        = []
-num_epochs = config.im_per_obj/config.test_size
-for epoch_test in range(num_epochs):
-    session.run(test_iterator.initializer)
-    while True:
-        try:
-            feed_dict = {idx_node           :epoch_test%config.im_per_obj,
-                         level_set          :config.levelset}  
-            accuracy_t_ ,iou_t_, iou_image_t, iou_32t_, iou_image_32t, batch_ = session.run([test_dict['accuracy'],test_dict['iou'],test_dict['iou_image'],test_dict['iou_32'],test_dict['iou_32_image'], next_element_test],feed_dict=feed_dict) 
-            acc_mov_avg_test = acc_mov_test.push(accuracy_t_)
-            iou_mov_avg_test = iou_mov_test.push(iou_t_)
-            iou_mov_avg_test_32 = iou_mov_test_32.push(iou_32t_)
-            
-            classes.append(np.tile(batch_['classes'],(config.test_size,1)))
-            ids.append(np.tile(batch_['ids'],(config.test_size,1)))
-            ious.append(iou_image_t) 
-            ious32.append(iou_image_32t)   
+#step           = 0
+#session.run(mode_node.assign(False)) 
+#acc_mov_test  = MOV_AVG(3000000) # exact mean
+#iou_mov_test  = MOV_AVG(3000000) # exact mean
+#iou_mov_test_32  = MOV_AVG(3000000) # exact mean
+#
+#classes       = []
+#ids           = []  
+#ious          = []
+#ious32        = []
+#num_epochs = config.im_per_obj/config.test_size
+#for epoch_test in range(num_epochs):
+#    session.run(test_iterator.initializer)
+#    while True:
+#        try:
+#            feed_dict = {idx_node           :epoch_test%config.im_per_obj,
+#                         level_set          :config.levelset}  
+#            accuracy_t_ ,iou_t_, iou_image_t, iou_32t_, iou_image_32t, batch_ = session.run([test_dict['accuracy'],test_dict['iou'],test_dict['iou_image'],test_dict['iou_32'],test_dict['iou_32_image'], next_element_test],feed_dict=feed_dict) 
+#            acc_mov_avg_test = acc_mov_test.push(accuracy_t_)
+#            iou_mov_avg_test = iou_mov_test.push(iou_t_)
+#            iou_mov_avg_test_32 = iou_mov_test_32.push(iou_32t_)
+#            
+#            classes.append(np.tile(batch_['classes'],(config.test_size,1)))
+#            ids.append(np.tile(batch_['ids'],(config.test_size,1)))
+#            ious.append(iou_image_t) 
+#            ious32.append(iou_image_32t)   
+##            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
+#        except tf.errors.OutOfRangeError:
 #            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
-        except tf.errors.OutOfRangeError:
-            print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))
-            break
-
-print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))    
-classes  = np.concatenate(classes,axis=0)[:,0]
-ious     = np.concatenate(ious,axis=0) 
-ious32   = np.concatenate(ious32,axis=0) 
-ids      = np.concatenate(ids,axis=0)[:,0]     
-
-np.save(directory+'/classes_ls='+str(config.levelset)+'.npy',classes)
-np.save(directory+'/ious_ls='+str(config.levelset)+'.npy',ious) 
-np.save(directory+'/ious32_ls='+str(config.levelset)+'.npy',ious32)
-np.save(directory+'/ids_ls='+str(config.levelset)+'.npy',ids)
+#            break
+#
+#print('TEST::  epoch: '+str(epoch_test)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,IOU: '+str(iou_mov_avg_test)+' ,IOU32: '+str(iou_mov_avg_test_32))    
+#classes  = np.concatenate(classes,axis=0)[:,0]
+#ious     = np.concatenate(ious,axis=0) 
+#ious32   = np.concatenate(ious32,axis=0) 
+#ids      = np.concatenate(ids,axis=0)[:,0]     
+#
+#np.save(directory+'/classes_ls='+str(config.levelset)+'.npy',classes)
+#np.save(directory+'/ious_ls='+str(config.levelset)+'.npy',ious) 
+#np.save(directory+'/ious32_ls='+str(config.levelset)+'.npy',ious32)
+#np.save(directory+'/ids_ls='+str(config.levelset)+'.npy',ids)
 
 
 
-if True==False:
+if True==True:
     
 
     

@@ -4,7 +4,7 @@ import numpy as np
 import os
 import glob
 import random
-
+import math
 
 
 
@@ -179,6 +179,21 @@ def process_batch_evaluate(next_element,idx_node,config):
         images           = images[:,:,:,0:3]
     return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':tf.tile(next_element['ids'],(config.test_size,1))}
 
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    axis = axis / math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta / 2.0)
+    b, c, d = -axis * math.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
 
 
 def process_batch_test(next_element,idx_node,config):
@@ -197,6 +212,13 @@ def process_batch_test(next_element,idx_node,config):
     if config.test_size==1:
         images    = tf.expand_dims(tf.gather(images,idx_node,axis=0),axis=0)
     samples_xyz_np       = np.tile(np.reshape(np.stack((xx_lr,yy_lr,zz_lr),axis=-1),(1,-1,3)),(config.test_size,1,1))
+    
+#    axis = [4, 4, 1]
+#    theta = 1.2
+#    rotmat = rotation_matrix(axis, theta)
+#    samples_xyz_np=np.matmul(samples_xyz_np, rotmat)
+#    samples_xyz_np[samples_xyz_np>1] = 1
+#    samples_xyz_np[samples_xyz_np<-1] = -1
     
     samples_ijk_np       = np.round(((samples_xyz_np+1)/2*(config.grid_size-1))).astype(np.int32)
     samples_xyz_np       = tf.cast(tf.constant(samples_xyz_np),dtype=tf.float32)
