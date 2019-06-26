@@ -90,44 +90,18 @@ for ii in range(1300):
     classes_ = np.stack(classes)[:,0,0]
 
 
-    ious_per_class        = []
-    iou_per_class        = []
+    cd_per_class        = []
+    cds_per_class        = []
     ids_per_class        = []
     for cc in range(0,13):
-        ious_per_class.append(cds_[classes_==cc])
-        iou_per_class.append(np.mean(cds_[classes_==cc]))
+        cds_per_class.append(cds_[classes_==cc])
+        cd_per_class.append(np.mean(cds_[classes_==cc]))
 
-    mean_iou = np.mean(iou_per_class)    
-    print(mean_iou)
+    mean_cd = np.mean(cd_per_class)    
+    print(mean_cd)
 
 
     
-    import matplotlib.pyplot as plt   
-    aa=evals_function_['v_top'][0,:,:,0]
-    aag=evals_function_['v_top_gt'][0,:,:,0]
-    fig = plt.figure(1)
-    plt.imshow(aa)
-    fig = plt.figure(2)
-    plt.imshow(aag)
-    
-    bb=evals_function_['v_right'][0,:,:,0]
-    bbg=evals_function_['v_right_gt'][0,:,:,0]
-    fig = plt.figure(1)
-    plt.imshow(bb)
-    fig = plt.figure(2)
-    plt.imshow(bbg)
-    
-    cc=evals_function_['v_front'][0,:,:,0]
-    ccg=evals_function_['v_front_gt'][0,:,:,0]
-    fig = plt.figure(1)
-    plt.imshow(cc)
-    fig = plt.figure(2)
-    plt.imshow(ccg)
-
-
-
-
-
 
 
 

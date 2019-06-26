@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/rebuttal3/'
+path     = '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/rebuttal4/'
 baseline = 'study_dnn32_arch33'
 accuracy_values     =np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values.npy')
 accuracy_values_test=np.load('/media/gidi/SSD/Thesis/Data/Checkpoints/Results/records23/'+baseline+'/accuracy_values_test.npy')
@@ -33,7 +33,8 @@ name = 'light_128_v3_'; postfix = '1_128'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-32'
 #name = 'study_dnn32_stage_v3_'; postfix = '_stage2-256'
 
-name = 'render_v6_exp'; postfix = '0_36'
+#name = 'render_v6_exp'; postfix = '0_36'
+name = 'render_v4_exp'; postfix = '0_36'
 
 plot_idx =15
 
@@ -84,16 +85,31 @@ for ii in range(num_plots_alive):
         kill_list.append(strings_test[ii])
 
 
-if True==False:
-    ii=1
-    plt.figure()
-    plt.title('test iou')
-    plt.plot(iou_values_test,'--')
-    if np.max(iou_test[ii])>0.0:
-        plt.plot(iou_test[ii])
-        plt.text(len(iou_test[ii])-1,iou_test[ii][-1],strings_test[ii])
+plt.figure()
+plt.title('test acc')
+plt.plot(accuracy_values_test,'--')
+for ii in range(num_plots_alive):
+    if np.max(acc_test[ii])>0.00:
+        plt.plot(acc_test[ii])
+        plt.text(len(acc_test[ii])-1,acc_test[ii][-1],strings_test[ii])
+    if np.max(acc_test[ii])<0.20:
+        kill_list.append(strings_test[ii])
 
-        
+
+   
+    
+       
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/monday_morning2/*.out'
 #evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/metafunctionals_mondaymorning/*.out'
 

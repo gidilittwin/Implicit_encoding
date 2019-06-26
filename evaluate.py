@@ -426,7 +426,7 @@ if True==False:
                                   num_samples=config.num_samples,
                                   shuffle_size=config.shuffle_size,
 #                                  categories = [0],
-                                  categories = config.categories,
+                                  categories = [0],
                                   compression = config.compression)
 
     next_element_display = dispaly_iterator.get_next()
@@ -456,9 +456,9 @@ if True==False:
     feed_dict = {idx_node           :0,
                  level_set          :0}   
 
-    evals_target_, evals_function_ = session.run([evals_target, evals_function],feed_dict=feed_dict) 
 
- 
+
+    evals_target_, evals_function_ ,images_= session.run([evals_target, evals_function, images],feed_dict=feed_dict) 
     
     field              = np.reshape(evals_function_['y'][0,:,:],(-1,))
     field              = np.reshape(field,(grid_size_lr,grid_size_lr,grid_size_lr,1))
@@ -477,6 +477,34 @@ if True==False:
         MESHPLOT.mesh_plot([cubed_plot],idx=0,type_='mesh')  
         
         
+    import matplotlib.pyplot as plt   
+    aa=evals_function_['v_top'][0,:,:,0]
+    aag=evals_function_['v_top_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(aa)
+    fig = plt.figure(2)
+    plt.imshow(aag)
+    
+    bb=evals_function_['v_right'][0,:,:,0]
+    bbg=evals_function_['v_right_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(bb)
+    fig = plt.figure(2)
+    plt.imshow(bbg)
+    
+    cc=evals_function_['v_front'][0,:,:,0]
+    ccg=evals_function_['v_front_gt'][0,:,:,0]
+    fig = plt.figure(1)
+    plt.imshow(cc)
+    fig = plt.figure(2)
+    plt.imshow(ccg)
+
+
+
+    pic = images_[0,:,:,0:3]
+    fig = plt.figure()
+    plt.imshow(pic)
+
         
         
         
