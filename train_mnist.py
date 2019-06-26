@@ -16,18 +16,18 @@ mnist = tf.keras.datasets.mnist
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Experiments')
-    parser.add_argument('--experiment_name', type=str, default= 'mnist_meta')
+    parser.add_argument('--experiment_name', type=str, default= 'mnist_meta/checkpoints/mnist_v1_exp10')
     parser.add_argument('--model_params_path', type=str, default= './archs/mnist_blend.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=64)
+    parser.add_argument('--batch_size', type=int,  default=1)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=0)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
-    parser.add_argument('--alpha', type=float,  default=1.)
+    parser.add_argument('--alpha', type=float,  default=0.)
     
     parser.add_argument('--grid_size', type=int,  default=28)
     parser.add_argument('--grid_size_v', type=int,  default=28)
@@ -36,7 +36,7 @@ def parse_args():
     
     parser.add_argument('--img_size', type=int,  default=[28,28])
     parser.add_argument('--im_per_obj', type=int,  default=128)
-    parser.add_argument('--test_size', type=int,  default=128)
+    parser.add_argument('--test_size', type=int,  default=2)
     parser.add_argument('--shuffle_size', type=int,  default=1000)  
     parser.add_argument('--test_every', type=int,  default=10000)    
     parser.add_argument('--save_every', type=int,  default=1000) 
@@ -58,7 +58,7 @@ def parse_args():
     parser.add_argument('--category_names', type=int,  default=["02691156","02828884","02933112","02958343","03001627","03211117","03636649","03691459","04090263","04256520","04379243","04401088","04530566"], help='number of point samples')
     parser.add_argument('--learning_rate', type=float,  default=0.00001)
     parser.add_argument('--levelset'  , type=float,  default=0.0)
-    parser.add_argument('--finetune'  , type=bool,  default=False)
+    parser.add_argument('--finetune'  , type=bool,  default=True)
     parser.add_argument('--plot_every', type=int,  default=1000)
     if socket.gethostname() == 'gidi-To-be-filled-by-O-E-M':
         parser.add_argument("--path"            , type=str, default="/media/gidi/SSD/Thesis/Data/ShapeNet_TF")
@@ -177,7 +177,7 @@ def build_graph(next_batch,config,batch_size):
     loss                  = tf.reduce_mean((labels_blend-logits)**2)
     err                   = tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
     acc                   = 1.-tf.reduce_mean(tf.sqrt((labels_blend-logits)**2))
-    return {'loss':loss,'err':err,'accuracy':acc,'logits':logits,'images':next_batch['images'] }
+    return {'loss':loss,'err':err,'accuracy':acc,'logits':logits,'images':next_batch['images'] ,'labels_blend':labels_blend}
 
 
 def build_dispaly_graph(next_batch,config,batch_size):
@@ -223,73 +223,99 @@ acc_mov        = MOV_AVG(300) # moving mean
 loss_mov       = MOV_AVG(300) # moving mean
 epoch          = 0
 if config.finetune:
-    loader.restore(session, directory+'/latest_train-0')
+    loader.restore(session, directory+'/best_test-0')
 
-while epoch < 1000000:
-    idx  = np.random.permutation(np.arange(0,60000))
-    step = 0
-    session.run(mode_node.assign(True)) 
-    while step<60000/config.batch_size:
-        feed_dict = {lr_node             :config.learning_rate,
-                     next_batch['images']: X_train[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
-                     next_batch['alpha']:np.random.rand(config.batch_size,1,1)}     
-        _, train_dict_ = session.run([train_op_cnn, train_dict],feed_dict=feed_dict) 
-        acc_mov_avg  = acc_mov.push(train_dict_['accuracy'])
-        loss_mov_avg = loss_mov.push(train_dict_['loss'])
-        if step % 100 == 0:
-            print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg))
-        step+=1    
-    acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
-    loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
-    np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
-    np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
-    saver.save(session, directory+'/latest_train', global_step=0)
+#while epoch < 1000000:
+#    idx  = np.random.permutation(np.arange(0,60000))
+#    step = 0
+#    session.run(mode_node.assign(True)) 
+#    while step<60000/config.batch_size:
+#        feed_dict = {lr_node             :config.learning_rate,
+#                     next_batch['images']: X_train[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
+#                     next_batch['alpha']:np.random.rand(config.batch_size,1,1)}     
+#        _, train_dict_ = session.run([train_op_cnn, train_dict],feed_dict=feed_dict) 
+#        acc_mov_avg  = acc_mov.push(train_dict_['accuracy'])
+#        loss_mov_avg = loss_mov.push(train_dict_['loss'])
+#        if step % 100 == 0:
+#            print('Training: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg)+' ,avg_loss: '+str(loss_mov_avg))
+#        step+=1    
+#    acc_plot.append(np.expand_dims(np.array(acc_mov_avg),axis=-1))
+#    loss_plot.append(np.expand_dims(np.array(np.log(loss_mov_avg)),axis=-1))
+##    np.save(directory+'/loss_values.npy',np.concatenate(loss_plot))
+##    np.save(directory+'/accuracy_values.npy',np.concatenate(acc_plot))  
+##    saver.save(session, directory+'/latest_train', global_step=0)
+#
+#    idx  = np.random.permutation(np.arange(0,10000))
+#    step = 0
+#    session.run(mode_node.assign(False)) 
+#    acc_mov_test        = MOV_AVG(10000000) # moving mean
+#    loss_mov_test       = MOV_AVG(10000000) # moving mean
+#    while step<10000/config.batch_size:
+#        feed_dict = {lr_node             :config.learning_rate,
+#                     next_batch['images']: X_test[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
+#                     next_batch['alpha']:  np.random.rand(config.batch_size,1,1)}     
+#        train_dict_  = session.run(train_dict,feed_dict=feed_dict) 
+#        acc_mov_avg_test  = acc_mov_test.push(train_dict_['accuracy'])
+#        loss_mov_avg_test = loss_mov_test.push(train_dict_['loss'])
+#        if step % 100 == 0:
+#            print('Testing: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,avg_loss: '+str(loss_mov_avg_test))
+#        step+=1  
+#    acc_plot_test.append(np.expand_dims(np.array(acc_mov_avg_test),axis=-1))
+#    loss_plot_test.append(np.expand_dims(np.array(np.log(loss_mov_avg_test)),axis=-1))
+##    np.save(directory+'/loss_values_test.npy',np.concatenate(loss_plot_test))
+##    np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
+##    if np.max(acc_plot_test)>acc_plot_test_max:
+##        acc_plot_test_max = np.max(acc_plot_test)
+##        saver.save(session, directory+'/best_test', global_step=0)
+#    epoch+=1
+aa = tf.reverse(train_dict['images'],axis=[2])
 
-    idx  = np.random.permutation(np.arange(0,10000))
-    step = 0
-    session.run(mode_node.assign(False)) 
-    acc_mov_test        = MOV_AVG(10000000) # moving mean
-    loss_mov_test       = MOV_AVG(10000000) # moving mean
-    while step<10000/config.batch_size:
-        feed_dict = {lr_node             :config.learning_rate,
-                     next_batch['images']: X_test[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
-                     next_batch['alpha']:  np.random.rand(config.batch_size,1,1)}     
-        train_dict_  = session.run(train_dict,feed_dict=feed_dict) 
-        acc_mov_avg_test  = acc_mov_test.push(train_dict_['accuracy'])
-        loss_mov_avg_test = loss_mov_test.push(train_dict_['loss'])
-        if step % 100 == 0:
-            print('Testing: epoch: '+str(epoch)+' ,avg_accuracy: '+str(acc_mov_avg_test)+' ,avg_loss: '+str(loss_mov_avg_test))
-        step+=1  
-    acc_plot_test.append(np.expand_dims(np.array(acc_mov_avg_test),axis=-1))
-    loss_plot_test.append(np.expand_dims(np.array(np.log(loss_mov_avg_test)),axis=-1))
-    np.save(directory+'/loss_values_test.npy',np.concatenate(loss_plot_test))
-    np.save(directory+'/accuracy_values_test.npy',np.concatenate(acc_plot_test))  
-    if np.max(acc_plot_test)>acc_plot_test_max:
-        acc_plot_test_max = np.max(acc_plot_test)
-        saver.save(session, directory+'/best_test', global_step=0)
-    epoch+=1
+step = 12
+alpha = np.array([[[1.]]])*0.
+feed_dict = {lr_node             :config.learning_rate,
+             next_batch['images']: X_test[step*config.batch_size:(step+1)*config.batch_size,:,:,:],
+             next_batch['alpha']: alpha }     
+train_dict_,aa_  = session.run([train_dict,aa],feed_dict=feed_dict) 
+
 
 
 reconstructed = (train_dict_['logits']*255.).astype(np.uint8)
+blend = (train_dict_['labels_blend']*255.).astype(np.uint8)
+
 originals     = train_dict_['images']
 feed_dict = {lr_node             :config.learning_rate,
-             next_batch['images']: originals}     
+             next_batch['images']: originals,
+             next_batch['alpha']:  alpha}     
 display_dict_  = session.run(display_dict,feed_dict=feed_dict) 
-reconstructed_hd = (display_dict_['logits']*255.).astype(np.uint8)
-
 index = 0
 import matplotlib.pyplot as plt   
+
+
+
 pic = reconstructed[index,:,:,0]
 fig = plt.figure(1)
 plt.imshow(pic)
 
-pic2 = originals[index,:,:,0]
+pic = aa_[index,:,:,0]
 fig = plt.figure(2)
+plt.imshow(pic)
+
+pic2 = originals[index,:,:,0]
+fig = plt.figure(3)
 plt.imshow(pic2)
 
-pic3 = reconstructed_hd[index,:,:,0]
-fig = plt.figure(3)
-plt.imshow(pic3)
+pic2 = blend[index,:,:,0]
+fig = plt.figure(4)
+plt.imshow(pic2)
+
+
+#reconstructed_hd = (display_dict_['logits']*255.).astype(np.uint8)
+#pic3 = reconstructed_hd[index,:,:,0]
+#fig = plt.figure(3)
+#plt.imshow(pic3)
+
+
+
 
 
 
