@@ -35,9 +35,9 @@ def mesh_plot(obj,idx=0,type_='mesh'):
 
     
     # Grid limits
-    traces.append(go.Scatter3d(x=[-1,-1,-1,-1,1,1,1,1],
-                               y=[-1,-1,1,1,-1,-1,1,1],
-                               z=[-1,1,-1,1,-1,1,-1,1],
+    traces.append(go.Scatter3d(x=[-1.2,-1.2,-1.2,-1.2,1.2,1.2,1.2,1.2],
+                               y=[-1.2,-1.2,1.2,1.2,-1.2,-1.2,1.2,1.2],
+                               z=[-1.2,1.2,-1.2,1.2,-1.2,1.2,-1.2,1.2],
                                mode='markers',
                                opacity=0.0,
                                marker=dict(size=0.0,opacity=0.0 ))   ) 
@@ -103,15 +103,15 @@ def mesh_plot(obj,idx=0,type_='mesh'):
         autosize=False,
         title='Mesh',
         scene=dict(
-            xaxis=dict(range=[-1, 1],
+            xaxis=dict(range=[-1.3, 1.3],
                 gridcolor='rgb(255, 255, 255)',
                 showbackground=False,
                 backgroundcolor='rgb(255, 255,255)'),
-            yaxis=dict(range=[-1, 1],
+            yaxis=dict(range=[-1.3, 1.3],
                 gridcolor='rgb(255, 255, 255)',
                 showbackground=False,
                 backgroundcolor='rgb(255, 255,255)'),
-            zaxis=dict(range=[-1, 1],
+            zaxis=dict(range=[-1.3, 1.3],
                 gridcolor='rgb(255, 255, 255)',
                 showbackground=False,
                 backgroundcolor='rgb(255,255,255)')

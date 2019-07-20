@@ -23,10 +23,10 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_5_light2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=8)
+    parser.add_argument('--batch_size', type=int,  default=1)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
-    parser.add_argument('--stage', type=int,  default=2)
+    parser.add_argument('--stage', type=int,  default=3)
     parser.add_argument('--multi_image', type=int,  default=0)
     parser.add_argument('--multi_image_views', type=int,  default=24)
     parser.add_argument('--multi_image_pool', type=str,  default='max')
@@ -53,12 +53,12 @@ def parse_args():
     parser.add_argument("--postfix_load"   , type=str, default="")
     parser.add_argument('--fast_eval', type=int,  default=1)    
 
-    parser.add_argument('--eval_grid_scale', type=int,  default=1)
+    parser.add_argument('--eval_grid_scale', type=int,  default=2)
     parser.add_argument('--batch_norm', type=int,  default=0)
     parser.add_argument('--bn_l0', type=int,  default=0)
     parser.add_argument('--augment', type=int,  default=1)
     parser.add_argument('--rgba', type=int,  default=1)
-    parser.add_argument('--symetric', type=int,  default=0)
+    parser.add_argument('--symetric', type=int,  default=1)
     parser.add_argument('--num_samples', type=int,  default=0)
     parser.add_argument('--global_points', type=int,  default=1000) 
     parser.add_argument('--global_points_test', type=int,  default=1000)    
@@ -670,9 +670,21 @@ if True==False:
     
     
     
+    #%% Data iterators
+    train_iterator = TFH.iterator(config.path+'test/',
+                                  train_iterator_batch_size,
+                                  epochs=10000,
+                                  shuffle=True,
+                                  img_size=config.img_size[0],
+                                  im_per_obj=config.im_per_obj,
+                                  grid_size=config.grid_size,
+                                  num_samples=10000,
+                                  shuffle_size=config.shuffle_size,
+                                  categories = config.categories,
+                                  compression = config.compression)
     
-    
-    
+        
+        
     
     
     config.test_size=1
@@ -684,18 +696,7 @@ if True==False:
     y            = np.linspace(-1, 1, grid_size_lr)
     z            = np.linspace(-1, 1, grid_size_lr)
     xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
-    
-    dispaly_iterator  = TFH.iterator(config.path+'train/',
-                                  1,
-                                  epochs=10000,
-                                  shuffle=True,
-                                  img_size=config.img_size[0],
-                                  im_per_obj=config.im_per_obj,
-                                  grid_size=config.grid_size,
-                                  num_samples=config.num_samples,
-                                  shuffle_size=config.shuffle_size,
-                                  categories = config.categories,
-                                  compression = config.compression)
+  
 
     next_element_display = train_iterator.get_next()
     next_batch_display   = TFH.process_batch_test(next_element_display,idx_node,config)
@@ -722,7 +723,7 @@ if True==False:
     feed_dict = {idx_node           :0,
                  level_set          :0}   
     
-    
+    grid_size_lr = 60
       
     evals_target_, evals_function_,next_element_display_ = session.run([evals_target, evals_function, next_element_display],feed_dict=feed_dict) 
                 
