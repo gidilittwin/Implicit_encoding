@@ -12,6 +12,7 @@ from scipy import misc
 from skimage import measure
 import scipy.io
 import skimage.transform 
+import sklearn.preprocessing
 
 
 
@@ -146,21 +147,39 @@ class ShapeNet(object):
             return v
         return v / norm    
     
+#    def camera_info(self,param):
+#        theta = np.deg2rad(param[0])
+#        phi = np.deg2rad(param[1])
+#        camY = param[3]*np.sin(phi)
+#        temp = param[3]*np.cos(phi)
+#        camX = temp * np.cos(theta)    
+#        camZ = temp * np.sin(theta)        
+#        cam_pos = np.array([camX, camY, camZ])        
+#        axisZ = cam_pos.copy()
+#        axisY = np.array([0,1,0])
+#        axisX = np.cross(axisY, axisZ)
+#        axisY = np.cross(axisZ, axisX)
+#        cam_mat = np.array([self.unit(axisX), self.unit(axisY), self.unit(axisZ)])
+#        return cam_mat, cam_pos
+
     def camera_info(self,param):
         theta = np.deg2rad(param[0])
         phi = np.deg2rad(param[1])
+    
         camY = param[3]*np.sin(phi)
         temp = param[3]*np.cos(phi)
         camX = temp * np.cos(theta)    
         camZ = temp * np.sin(theta)        
         cam_pos = np.array([camX, camY, camZ])        
+    
         axisZ = cam_pos.copy()
         axisY = np.array([0,1,0])
         axisX = np.cross(axisY, axisZ)
         axisY = np.cross(axisZ, axisX)
-        cam_mat = np.array([self.unit(axisX), self.unit(axisY), self.unit(axisZ)])
+    
+        cam_mat = np.array([axisX, axisY, axisZ])
+        cam_mat = sklearn.preprocessing.normalize(cam_mat, axis=1)
         return cam_mat, cam_pos
-
     
     def reset(self):
         if self.rand==False:
@@ -270,13 +289,13 @@ class ShapeNet(object):
         image_files   = [self.train_image_files[indexes]]
         train_paths   = [self.train_paths[indexes]]
         train_id      = [self.obj_id[indexes]]
+        params        = self.cam_params[indexes]
         voxels      = []
         sdf         = []
         images      = []
         alpha       = []
         vertices    = []
-        camera_mat  = []
-        camera_pose = []          
+       
         last_slash  = self.path_.rfind('/')
         j=0
         if self.grid_size!=256:
@@ -313,7 +332,8 @@ class ShapeNet(object):
         perm = np.random.permutation(len(image_files[0]))        
         for im in range(self.batch_size):
             with open(image_files[0][perm[im]], 'rb') as f:
-                image = (misc.imread(f).astype(np.float32)/255.)*2-1.
+#                image = (misc.imread(f).astype(np.float32)/255.)*2-1.
+                image = misc.imread(f).astype(np.uint8)
 #                image = ((skimage.transform.resize(image, (137,137))+1.)/2.*255.).astype(np.float32)
                 rgb   = image[:,:,0:3]
                 alph  = image[:,:,3:4]
@@ -322,12 +342,20 @@ class ShapeNet(object):
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
 #            if self.grid_size!=256:
-#               camera_pose.append(self.cam_params[indexes])
+#                camera_pose.append(self.cam_params[indexes])
 #                cam_mat,cam_pose = self.camera_info(params)
 #                camera_mat.append(cam_mat)
 #                camera_pose.append(cam_pose)                
-                
-        camera   = self.cam_params[indexes]
+        params = params[perm,:]      
+        camera_mat  = []
+        camera_pose = []   
+        for cc in range(self.batch_size):
+            cam_mat,cam_pose = self.camera_info(params[cc,:])
+            camera_mat.append(cam_mat)
+            camera_pose.append(cam_pose)        
+        camera_mat=(np.stack(camera_mat,axis=0)).astype(np.float32)
+        camera_pose=(np.stack(camera_pose,axis=0)).astype(np.float32)
+        
         voxels   = np.tile(np.transpose(np.stack(voxels,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
         sdf      = np.tile(np.transpose(np.stack(sdf,axis=0),(0,1,3,2)),(self.batch_size,1,1,1))
         images   = np.stack(images,axis=0)
@@ -335,7 +363,7 @@ class ShapeNet(object):
         classes  = np.tile(np.stack(train_classes,axis=0) ,(self.batch_size,1)) 
         ids      = np.tile(np.stack(train_id,axis=0)  ,(self.batch_size,1))         
         vertices = np.tile(np.stack(vertices,axis=0) ,(self.batch_size,1,1,1))         
-        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices}
+        return {'classes':classes,'ids':ids,'voxels':voxels,'sdf':sdf,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'vertices':vertices,'camera_mat':camera_mat,'camera_pose':camera_pose}
 #        return {'classes':classes,'voxels':voxels,'ids':ids,'indexes':np.expand_dims(indexes,axis=1),'images':images,'alpha':alpha,'camera':camera}
 
 

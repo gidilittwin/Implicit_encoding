@@ -144,7 +144,7 @@ elif config.grid_size==256:
     config.path        = config.path+str(config.grid_size)+'_v2/'
 elif config.grid_size==36:
     config.grid_size_v = 36
-    config.path        = config.path+'/'
+    config.path        = config.path+'_v2/'
     config.postfix_load     = str(config.stage-1)+'_'+str(config.grid_size)
     config.postfix_save     = str(config.stage)+'_'+str(config.grid_size)    
 if config.pretrained==1:
@@ -259,6 +259,10 @@ z            = np.linspace(-1, 1, grid_size_lr)
 xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)
 
 
+
+
+
+
 if True==False:
 
     import matplotlib.pyplot as plt   
@@ -301,8 +305,6 @@ if True==False:
     plt.imshow(pic)
     
     
-    
-    
     aa=np.max(psudo_sdf*(zz_lr+1)/2.,axis=-1)
     fig = plt.figure()
     plt.imshow(aa)    
@@ -314,6 +316,32 @@ if True==False:
     aa=np.max(psudo_sdf*(yy_lr+1)/2.,axis=-3)
     fig = plt.figure()
     plt.imshow(aa)   
+
+
+
+    size = 224
+    position =  (batch['vertices'][0:1,:,:]/(config.grid_size_v-1) -0.5)* 0.57 *36/36.
+    x,y,z = np.split(position,3,axis=2)
+#    pt_trans = np.concatenate((-y,-x,-z),axis=-1)
+    pt_trans = np.concatenate((x,y,z),axis=-1)
+
+    pt_trans = np.dot(pt_trans-batch['camera_pose'][0:1,0:1,:], batch['camera_mat'][0,0,:].transpose())
+    F = 250
+    pt_trans_x,pt_trans_y,pt_trans_z = np.split(pt_trans,3,axis=2)
+    h = (-pt_trans_y)/(-pt_trans_z)*F + size/2.0
+    w = pt_trans_x/(-pt_trans_z)*F + size/2.0
+    h = np.minimum(np.maximum(h, 0), size-1)
+    w = np.minimum(np.maximum(w, 0), size-1)
+    img = np.zeros(shape=(size,size),dtype=np.float32)
+    img[np.round(w).astype(int), np.round(h).astype(int)] = 1.    
+    img = np.flip(img,1)
+    
+
+    pic = batch_['images'][0,:,:,0:3]
+    fig = plt.figure()
+    plt.imshow(pic)
+    fig1 = plt.figure()
+    plt.imshow(img)
 
 
 

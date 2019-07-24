@@ -24,7 +24,8 @@ def dataset_builder_fn(path,batch,compress=True):
         'images': _bytes_feature(batch['images'].astype(np.uint8).tostring()),
         'classes': _bytes_feature(batch['classes'][0,0].tostring()),
         'ids': _bytes_feature(batch['ids'][0,0].tostring()),
-#        'camera': _bytes_feature(batch['camera'].tostring()),
+        'camera_mat': _bytes_feature(batch['camera_mat'].tostring()),
+        'camera_pose': _bytes_feature(batch['camera_pose'].tostring()),
         'vertices': _bytes_feature((batch['vertices'][0,:,:,:]*10).astype(np.int32).tostring()),
         }))
     dir_name = path+str(batch['classes'][0,0])
@@ -52,6 +53,8 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,gri
         "classes":  tf.FixedLenFeature((), tf.string, default_value=""),
         "ids":      tf.FixedLenFeature((), tf.string, default_value=""),
         "vertices": tf.FixedLenFeature((), tf.string, default_value=""),
+        "camera_mat": tf.FixedLenFeature((), tf.string, default_value=""),
+        "camera_pose": tf.FixedLenFeature((), tf.string, default_value=""),
     }
     parsed   = tf.parse_single_example(record, keys_to_features)
     parsed['images']   = tf.reshape(tf.decode_raw(parsed['images'],out_type=tf.uint8),(im_per_obj,img_size,img_size,4))
@@ -59,6 +62,8 @@ def dataset_input_fn(filenames,batch_size,epochs,shuffle,img_size,im_per_obj,gri
     parsed['classes']  = tf.reshape(tf.decode_raw(parsed['classes'],out_type=tf.int64),(1,))
     parsed['ids']      = tf.reshape(tf.decode_raw(parsed['ids'],out_type=tf.int64),(1,))
     parsed['vertices'] = tf.cast(tf.reshape(tf.decode_raw(parsed['vertices'],out_type=tf.int32),(num_samples,3)),tf.float32)/10.
+    parsed['camera_mat'] = tf.reshape(tf.decode_raw(parsed['camera_mat'],out_type=tf.float32),(im_per_obj,3,3))
+    parsed['camera_pose'] = tf.reshape(tf.decode_raw(parsed['camera_pose'],out_type=tf.float32),(im_per_obj,3))
     return parsed
   if shuffle:
       dataset = dataset.shuffle(buffer_size=shuffle_size)
@@ -144,6 +149,10 @@ def process_batch_render(next_element,idx_node,config):
     samples_sdf_np       = tf.reshape(-1.*tf.cast(voxels_gathered,tf.float32) + 0.5,(config.batch_size,-1,1))
     images               = next_element['images']
     images               = tf.cast(tf.gather(images,idx_node,axis=1),dtype=tf.float32)/255.
+    
+    masks = next_element['images']
+#    camera_mat = next_element['camera_mat']
+#    camera_pose = next_element['camera_pose']
     if config.augment:
 #        shuf_idx = tf.transpose(tf.random_shuffle(tf.tile(tf.constant([[0],[1],[2]]),(1,config.batch_size))))
 #        rgb_idx  = tf.concat((shuf_idx,tf.tile(tf.constant([[3]]),(config.batch_size,1))),axis=1)
@@ -154,8 +163,8 @@ def process_batch_render(next_element,idx_node,config):
         samples_xyz_np = samples_xyz_np*filp_xyz
     if config.rgba==0:
         images           = images[:,:,:,0:3]
-    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids']}
-
+#    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids'],'masks':masks,'camera_mat':camera_mat,'camera_pose':camera_pose}
+    return {'samples_xyz':samples_xyz_np,'samples_sdf':samples_sdf_np,'images':images,'ids':next_element['ids'],'masks':masks}
 
 def process_batch_center_train(next_element,config):
     mini_batch_size      = config.batch_size/config.multi_image_views
