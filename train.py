@@ -34,7 +34,7 @@ def parse_args():
 
     parser.add_argument('--surfaces', type=int,  default=0)
     parser.add_argument('--alpha', type=float,  default=0.003)
-    parser.add_argument('--grid_size', type=int,  default=32)
+    parser.add_argument('--grid_size', type=int,  default=36)
     parser.add_argument('--grid_size_v', type=int,  default=256)
     parser.add_argument('--compression', type=int,  default=1)
     parser.add_argument('--pretrained', type=int,  default=0)
