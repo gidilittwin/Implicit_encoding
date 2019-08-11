@@ -318,26 +318,27 @@ if True==False:
     plt.imshow(aa)   
 
 
-
+    batch = session.run(next_element,feed_dict={idx_node:0})
+    pic = batch['images'][0,0,:,:,0:3]
+#    pic = pic[5:-5,5:-5,:]
+    from skimage.transform import resize
     size = 224
-    position =  (batch['vertices'][0:1,:,:]/(config.grid_size_v-1) -0.5)* 0.57 *36/36.
+    pic = resize(pic, (size, size))    
+    position =  (batch['vertices'][0:1,:,:]/(config.grid_size_v-1) -0.5)* 0.57 *32/36 
     x,y,z = np.split(position,3,axis=2)
-#    pt_trans = np.concatenate((-y,-x,-z),axis=-1)
-    pt_trans = np.concatenate((x,y,z),axis=-1)
-
-    pt_trans = np.dot(pt_trans-batch['camera_pose'][0:1,0:1,:], batch['camera_mat'][0,0,:].transpose())
-    F = 250
-    pt_trans_x,pt_trans_y,pt_trans_z = np.split(pt_trans,3,axis=2)
+    pt_trans = np.concatenate((y,z,x),axis=-1)
+    pt_trans_ = np.dot(pt_trans-batch['camera_pose'][0:1,0:1,:], batch['camera_mat'][0,0,:].transpose())
+    F = 250.
+    pt_trans_x,pt_trans_y,pt_trans_z = np.split(pt_trans_,3,axis=2)
     h = (-pt_trans_y)/(-pt_trans_z)*F + size/2.0
     w = pt_trans_x/(-pt_trans_z)*F + size/2.0
     h = np.minimum(np.maximum(h, 0), size-1)
     w = np.minimum(np.maximum(w, 0), size-1)
     img = np.zeros(shape=(size,size),dtype=np.float32)
-    img[np.round(w).astype(int), np.round(h).astype(int)] = 1.    
-    img = np.flip(img,1)
-    
+    img[np.round(h).astype(int), np.round(w).astype(int)] = 1.    
+    pic[np.round(h).astype(int), np.round(w).astype(int),:] = 1.
 
-    pic = batch_['images'][0,:,:,0:3]
+
     fig = plt.figure()
     plt.imshow(pic)
     fig1 = plt.figure()

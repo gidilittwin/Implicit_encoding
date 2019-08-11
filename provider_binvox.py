@@ -115,7 +115,11 @@ class ShapeNet(object):
             prefix = paths[i]
             if self.grid_size==36:
                 vox_file  = self.path_+prefix+self.binvox_32
-                images = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
+#                images = glob.glob(os.path.join(self.path_,prefix, 'rendering/*.png'))
+                images_ = os.path.join(self.path_,prefix, 'rendering/')
+                images = []
+                for jj in range(24):
+                    images.append(images_+str(jj).zfill(2)+'.png')
                 meta = np.loadtxt(self.path_+ prefix+'/rendering/rendering_metadata.txt')    
                 first_slash = prefix.find('/')
                 cat = prefix[0:first_slash]
@@ -295,7 +299,8 @@ class ShapeNet(object):
         images      = []
         alpha       = []
         vertices    = []
-       
+        camera_mat  = []
+        camera_pose = [] 
         last_slash  = self.path_.rfind('/')
         j=0
         if self.grid_size!=256:
@@ -341,18 +346,17 @@ class ShapeNet(object):
 #                     rgb = rgb[:,:,np.random.permutation(3)]
                 images.append(np.concatenate((rgb,alph),axis=-1))
                 alpha.append(image[:,:,3:4])
-#            if self.grid_size!=256:
-#                camera_pose.append(self.cam_params[indexes])
-#                cam_mat,cam_pose = self.camera_info(params)
-#                camera_mat.append(cam_mat)
-#                camera_pose.append(cam_pose)                
-        params = params[perm,:]      
-        camera_mat  = []
-        camera_pose = []   
-        for cc in range(self.batch_size):
-            cam_mat,cam_pose = self.camera_info(params[cc,:])
-            camera_mat.append(cam_mat)
-            camera_pose.append(cam_pose)        
+            if self.grid_size!=256:
+                params_ = params[perm[im],:]
+                cam_mat,cam_pose = self.camera_info(params_)
+                camera_mat.append(cam_mat)
+                camera_pose.append(cam_pose)                
+#        params = params[perm,:]      
+
+#        for cc in range(self.batch_size):
+#            cam_mat,cam_pose = self.camera_info(params[cc,:])
+#            camera_mat.append(cam_mat)
+#            camera_pose.append(cam_pose)        
         camera_mat=(np.stack(camera_mat,axis=0)).astype(np.float32)
         camera_pose=(np.stack(camera_pose,axis=0)).astype(np.float32)
         
