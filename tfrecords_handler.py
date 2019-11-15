@@ -121,8 +121,8 @@ def process_batch_train(next_element,idx_node,config):
 #        rgb_idx  = tf.concat((shuf_idx,tf.tile(tf.constant([[3]]),(config.batch_size,1))),axis=1)
         rgb_idx = tf.concat((tf.random_shuffle(tf.constant([0,1,2])),tf.constant([3])),axis=0)
         images  = tf.gather(images,rgb_idx,axis=-1)
-        images = tf.concat((images[0:config.batch_size/2,:,:,:],tf.reverse(images[(config.batch_size/2):,:,:,:],axis=[2])),axis=0)
-        filp_xyz = tf.concat((tf.tile(tf.constant([[[1.,1.,1.]]]),(config.batch_size/2,1,1)),tf.tile(tf.constant([[[-1.,1.,1.]]]),(config.batch_size/2,1,1))),axis=0)
+        images = tf.concat((images[0:int(config.batch_size/2),:,:,:],tf.reverse(images[int(config.batch_size/2):,:,:,:],axis=[2])),axis=0)
+        filp_xyz = tf.concat((tf.tile(tf.constant([[[1.,1.,1.]]]),(int(config.batch_size/2),1,1)),tf.tile(tf.constant([[[-1.,1.,1.]]]),(int(config.batch_size/2),1,1))),axis=0)
         samples_xyz_np = samples_xyz_np*filp_xyz
     if config.rgba==0:
         images           = images[:,:,:,0:3]

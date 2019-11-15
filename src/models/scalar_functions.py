@@ -31,7 +31,6 @@ def BatchNorm(inputT, is_training=True, scope=None):
     
 
 def CONV2D(shape,bias=True):
-#   initializer = tf.random_normal_initializer( stddev=1./np.sqrt(shape[0]*shape[1]*shape[2]))
    initializer = tf.random_normal_initializer( stddev=np.sqrt(2./(shape[0]*shape[1]*shape[2])))
    conv_weights = tf.get_variable('weights',shape, initializer = initializer)
    if bias==True:
@@ -50,11 +49,7 @@ def lrelu(x, leak=0.2, name="LRelU"):
 def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
     with tf.variable_scope(scope):
         if normalize==True:
-#            shape = weights['w'].get_shape().as_list()
-#            weights['w'] = tf.eye(batch_shape=[shape[0]],num_rows=shape[1],num_columns=shape[2],dtype=tf.float32) + weights['w']/tf.norm(weights['w'],axis=2,keep_dims=True)
-#            c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']  
-            c1 = tf.matmul(in_node,weights['w']) + weights['b'] + 0.*weights['g'] 
-            
+            c1 = tf.matmul(in_node,weights['w']) + weights['b'] + 0.*weights['g']
         else:
             c1 = tf.matmul(in_node,weights['w'])*weights['g'] + weights['b']
         if bn==True:
@@ -63,40 +58,6 @@ def cell_2d_cnn(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
             c1 = act(c1)
     return c1
 
-
-def cell_conv_t(in_node,scope,mode,weights,act=True,normalize=False,bn=False):
-    with tf.variable_scope(scope):
-
-        ww          = weights['w']
-        bb          = weights['b']
-        ww_shape    = ww.get_shape().as_list()       
-        input_shape = in_node.get_shape().as_list()
-        batch_size  = in_node.get_shape().as_list()[0]
-        if len(input_shape)==3:
-            ww     = tf.transpose(tf.squeeze(ww,(1,2)),(0,2,1))
-            bb     = tf.squeeze(bb,1)
-            c1     = tf.matmul(in_node,ww) + bb 
-            result = tf.reshape(c1,(batch_size,2,2,-1))        
-        else:
-            result = []
-            for inst in range(batch_size):
-                if ww_shape[1]==3:
-                    c1 = tf.nn.conv2d_transpose(in_node[inst:inst+1,:,:,:],
-                                            ww[inst,:,:,:,:],
-                                            [1,input_shape[1]*2,input_shape[2]*2,ww_shape[-2]],
-                                            strides = [1,2,2,1]) 
-                elif ww_shape[1]==1:
-                    c1 = tf.nn.conv2d_transpose(in_node[inst:inst+1,:,:,:],
-                                            ww[inst,:,:,:,:],
-                                            [1,input_shape[1],input_shape[2],ww_shape[-2]],
-                                            strides = [1,1,1,1])                     
-                result.append(c1)
-            result = tf.concat(result,axis=0) + bb
-        if bn==True:
-            result = BatchNorm(result,mode,scope)
-        if act!=None:
-            result = act(result)
-    return result
 
 
 
@@ -141,63 +102,7 @@ def deep_shape(xyz, mode_node, theta, config):
     return sdf
 
 
-def deep_sensor(image, mode_node, theta, config):
-    dnn_params = config.model_params['dnn_params']    
-    if dnn_params['activations']=='relu':
-        act_=tf.nn.relu
-    elif dnn_params['activations']=='elu':
-        act_=tf.nn.elu
-    elif dnn_params['activations']=='tanh':
-        act_=tf.tanh        
-    elif dnn_params['activations']=='lrelu':
-        act_=lrelu 
-        
-    for ii in range(len(theta)):
-        if ii<len(theta)-1:
-            act=act_
-            bn = False
-        else:
-            act=None
-            bn = False
-        in_size = image.get_shape().as_list()[-1]
-        print('layer '+str(ii)+' size = ' + str(in_size) +' out size='+str(theta[ii]['w']))
-        image = cell_conv_t(image,   'l'+str(ii),mode_node,theta[ii],act=act,normalize=dnn_params['normalize'],bn=bn) 
-    sdf = image
-    return sdf
 
-
-
-
-
-def sample_points(model_fn,args,shape = [1,100,100],samples=None,use_samps=False):
-    if use_samps==False:
-        grid_shape  = [shape[0],shape[1],shape[2],3]
-        samples     = tf.random_uniform(grid_shape,
-                                        minval=-1.0,
-                                        maxval=1.0,
-                                        dtype=tf.float32)
-        samples = samples/tf.norm(samples,axis=-1,keep_dims=True)    
-        grid_shape  = [shape[0],shape[1],shape[2],1]
-        U           = tf.random_uniform(grid_shape,
-                                        minval=0.0,
-                                        maxval=1.0,
-                                        dtype=tf.float32)   
-        samples = samples*tf.pow(U,1/3.)
-        
-    response    = model_fn(samples,args)
-    dy_dx   = []
-    d2y_dx2 = []
-    for ii in range(shape[0]):
-        dydx   = tf.gradients(response[ii,:,:],samples)[0]
-        d2ydx2 = tf.gradients(dydx,samples)[0]
-        dy_dx.append(dydx)     
-        d2y_dx2.append(d2ydx2)     
-    dy_dx = tf.concat(dy_dx,axis=0) 
-    d2y_dx2 = tf.concat(d2y_dx2,axis=0) 
-    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
-    evals = {'x':samples,'y':response,'dydx':dy_dx,'d2ydx2':d2y_dx2,'dydx_norm':dy_dx_n}
-    return evals
-        
 
 
 
@@ -215,111 +120,11 @@ def sample_points_list(model_fn,args,shape = [1,1000],samples=None,use_samps=Fal
                                         maxval=1.0,
                                         dtype=tf.float32)   
         samples = samples*tf.pow(U,1/3.)
-        
     response    = model_fn(samples,args)
-    
     dy_dx   = []
-#    dy_dx = tf.gradients(response,samples)[0]
-#    for ii in range(shape[0]):
-#        dydx   = tf.gradients(response[0,0,:],samples[0,0,:])[0]
-#        dy_dx.append(dydx)     
-#    dy_dx = tf.concat(dy_dx,axis=0) 
-#    dy_dx_n = tf.norm(dy_dx,axis=-1,keep_dims=True)
-    
-    
-    evals = {'x':samples,'y':response}#,'dydx':dy_dx,'dydx_norm':dy_dx_n}
-    return evals
-        
-
-
-
-
-
-def sample_points_list_2D(model_fn,args,shape = [32,28],samples=None,use_samps=False):
-    config = args[-1]
-    if use_samps==False:
-        x = np.linspace(0.,1., shape[1])
-        u,v = np.meshgrid(x,x)
-        samples = tf.concat((tf.reshape(u,(1,-1,1)),tf.reshape(v,(1,-1,1))),axis=-1)
-        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
-    response    = model_fn(samples,args)
     evals = {'x':samples,'y':response}
     return evals
         
-
-def const_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
-    config = args[-1]
-    if use_samps==False:
-        samples = tf.ones((shape[0],1,shape[1]),tf.float32)
-#        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
-    response    = model_fn(samples,args)
-    evals = {'x':samples,'y':response}
-    return evals
-
-
-
-def camera_vector(model_fn,args,shape = [32,10],samples=None,use_samps=False):
-    config = args[-1]
-    if use_samps==False:
-        samples = tf.ones((shape[0],1,shape[1]),tf.float32)
-#        samples = tf.cast(tf.tile(samples,(shape[0],1,1)),tf.float32)
-    response    = model_fn(samples,args)
-    evals = {'x':samples,'y':response}
-    return evals
-
-
-
-
-def render_sil(evals_function,evals_target,config):
-    
-    occupancy_gt = -1*(-0.5+tf.reshape(evals_target['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1)))
-    occupancy = 0.5*(1-tf.tanh(tf.reshape(evals_function['y'],(-1,config.grid_size,config.grid_size,config.grid_size,1))))
-    emptyness = 1.-occupancy
-    
-    # grid_size_lr = config.grid_size
-    # x            = np.linspace(-1, 1, grid_size_lr)
-    # y            = np.linspace(-1, 1, grid_size_lr)
-    # z            = np.linspace(-1, 1, grid_size_lr)
-    # xx_lr,yy_lr,zz_lr    = np.meshgrid(x, y, z)    
-    
-    
-    v_top = tf.cumprod(emptyness,
-                    axis=3,
-                    exclusive=True,
-                    reverse=True,
-                    name='z_vis')*occupancy
-
-    v_right = tf.cumprod(emptyness,
-                    axis=2,
-                    exclusive=True,
-                    reverse=True,
-                    name='z_vis')*occupancy                                        
-
-
-    v_front = tf.cumprod(emptyness,
-                    axis=1,
-                    exclusive=True,
-                    reverse=True,
-                    name='z_vis')*occupancy
-
-    evals_function['v_top']   = tf.reduce_sum(v_top ,axis=3)
-    evals_function['v_right']   = tf.reduce_sum(v_right    ,axis=2)                            
-    evals_function['v_front']   = tf.reduce_sum(v_front  ,axis=1)
-    evals_function['v_top_gt']   = tf.reduce_max(occupancy_gt ,axis=3)
-    evals_function['v_right_gt']   = tf.reduce_max(occupancy_gt    ,axis=2)                            
-    evals_function['v_front_gt']   = tf.reduce_max(occupancy_gt  ,axis=1) 
-    
-    
-    evals_function['loss_sil'] = 0.5*(tf.reduce_mean(((evals_function['v_top']-evals_function['v_top_gt'])**2),axis=(1,2))
-                                +tf.reduce_mean((evals_function['v_right']-evals_function['v_right_gt'])**2,axis=(1,2))
-                                +tf.reduce_mean((evals_function['v_front']-evals_function['v_front_gt'])**2,axis=(1,2)))
-    
-
-                              
-    return evals_function
-
-
-
 
 
 
