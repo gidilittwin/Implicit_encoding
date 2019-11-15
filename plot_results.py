@@ -110,7 +110,7 @@ for ii in range(num_plots_alive):
     
     
     
-evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/monday_morning2/*.out'
+evalpath =  '/Users/gidilittwin/Desktop/metafunctionals_mondaymorning/*.out'
 #evalpath =  '/media/gidi/SSD/Thesis/Data/Checkpoints/Results/metafunctionals_mondaymorning/*.out'
 
 import glob
@@ -125,14 +125,14 @@ for ii in range(len(slurms)):
     with open(slurm) as myfile:
         line = list(myfile)[-5]
         try:
-#            iou_256.append(float(line[line.find('IOU: ')+5:line.find('IOU: ')+12]))
-#            iou_32.append(float(line[line.find('IOU32: ')+7:line.find('IOU32: ')+14]))
+            iou_256.append(float(line[line.find('IOU: ')+5:line.find('IOU: ')+12]))
+            iou_32.append(float(line[line.find('IOU32: ')+7:line.find('IOU32: ')+14]))
             
-            iou_128.append(float(line[line.find('max_test_IOU: ')+15:line.find('max_test_IOU: ')+20]))
+            # iou_128.append(float(line[line.find('max_test_IOU: ')+15:line.find('max_test_IOU: ')+20]))
         except:
-#            iou_256.append(0.)
-#            iou_32.append(0.)  
-            iou_128.append(0.0)
+            iou_256.append(0.)
+            iou_32.append(0.)  
+            # iou_128.append(0.0)
         NAMES.append(slurm)     
             
             

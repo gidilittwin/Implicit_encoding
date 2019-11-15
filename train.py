@@ -3,9 +3,6 @@ import json
 import tensorflow as tf
 import numpy as np
 from src.utilities import mesh_handler as MESHPLOT
-#from src.utilities.depthestimate import tf_nndistance as CHAMFER
-#from src.utilities.external import tf_nndistance as CHAMFER
-#from src.utilities.nn_distance import tf_nndistance_cpu as CHAMFER
 from src.models import scalar_functions as SF
 from src.models import feature_extractor as CNN
 import os
@@ -14,7 +11,6 @@ import tfrecords_handler as TFH
 import socket
 from skimage import measure
 
-# tar -czvf meta_functionals.tar.gz metafunctionals/ --exclude-vcs
 
 
 def parse_args():
@@ -23,7 +19,7 @@ def parse_args():
     parser.add_argument('--model_params_path', type=str, default= './archs/resnet_branch_tanh2.json')
     parser.add_argument('--padding', type=str, default= 'VALID')
     parser.add_argument('--model_params', type=str, default= None)
-    parser.add_argument('--batch_size', type=int,  default=2)
+    parser.add_argument('--batch_size', type=int,  default=32)
     parser.add_argument('--beta1', type=float,  default=0.9)
     parser.add_argument('--dropout', type=float,  default=1.0)
     parser.add_argument('--stage', type=int,  default=0)
